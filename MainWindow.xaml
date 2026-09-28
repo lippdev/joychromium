@@ -1,0 +1,128 @@
+<Window x:Class="JoyChromium.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="JoyChromium" Width="1440" Height="900" MinWidth="900" MinHeight="600"
+        Background="#0C0E13" Foreground="#F3F5F9" Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Window.Resources>
+        <Style x:Key="ToolbarButton" TargetType="Button">
+            <Setter Property="Background" Value="#20242D" />
+            <Setter Property="Foreground" Value="#F3F5F9" />
+            <Setter Property="BorderBrush" Value="#343A46" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="46" />
+            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#303744" />
+                    <Setter Property="BorderBrush" Value="#64DDB5" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#64DDB5" />
+                    <Setter Property="BorderThickness" Value="2" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="KeyButton" TargetType="Button">
+            <Setter Property="Background" Value="#272C36" />
+            <Setter Property="Foreground" Value="#F3F5F9" />
+            <Setter Property="BorderBrush" Value="#3B4351" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="Background" Value="#176C57" />
+                    <Setter Property="BorderBrush" Value="#64DDB5" />
+                    <Setter Property="BorderThickness" Value="2" />
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#343C4B" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="30" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#14171E" BorderBrush="#282D37" BorderThickness="0,0,0,1" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
+                    <Border Width="38" Height="38" CornerRadius="12" Background="#64DDB5" VerticalAlignment="Center">
+                        <TextBlock Text="J" Foreground="#07120F" FontWeight="Black" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="JOYCHROMIUM" FontSize="13" FontWeight="Bold" Foreground="#F3F5F9" />
+                        <TextBlock Text="TV MODE · ALWAYS ON" FontSize="9" FontWeight="Bold" Foreground="#64DDB5" />
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="1" Style="{StaticResource ToolbarButton}" Content="‹" ToolTip="Back · LB / B" Click="Back_Click" />
+                <Button Grid.Column="2" Style="{StaticResource ToolbarButton}" Content="›" ToolTip="Forward · RB" Click="Forward_Click" />
+                <Button Grid.Column="3" Style="{StaticResource ToolbarButton}" Content="⟳" ToolTip="Reload · X" Click="Reload_Click" />
+                <Button Grid.Column="4" Style="{StaticResource ToolbarButton}" Content="⌂" ToolTip="YouTube TV · Home" Click="Home_Click" />
+                <TextBox Grid.Column="5" x:Name="AddressBox" Height="46" Margin="12,0,8,0" Padding="16,0"
+                         VerticalContentAlignment="Center" FontSize="16" Foreground="#F3F5F9" Background="#0D1016"
+                         BorderBrush="#343A46" BorderThickness="1" CaretBrush="#64DDB5"
+                         SelectionBrush="#176C57" ToolTip="URL or search · Y opens controller keyboard"
+                         KeyDown="AddressBox_KeyDown" />
+                <Button Grid.Column="6" Style="{StaticResource ToolbarButton}" Width="74" Content="GO" FontSize="14" FontWeight="Bold"
+                        Foreground="#07120F" Background="#64DDB5" BorderBrush="#64DDB5" Click="Go_Click" />
+                <Border Grid.Column="7" Margin="14,0,0,0" Padding="12,7" CornerRadius="8" BorderBrush="#315548" BorderThickness="1" Background="#12231D" VerticalAlignment="Center">
+                    <TextBlock Text="TV ON" Foreground="#64DDB5" FontSize="12" FontWeight="Bold" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Background="#0C0E13">
+            <wv2:WebView2CompositionControl x:Name="Browser" />
+            <Border x:Name="KeyboardPanel" Panel.ZIndex="10" Visibility="Collapsed" HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom" Margin="24" Padding="18" CornerRadius="16"
+                    Background="#F0161A22" BorderBrush="#46505E" BorderThickness="1" MaxWidth="920">
+                <StackPanel>
+                    <DockPanel Margin="4,0,4,10">
+                        <TextBlock x:Name="KeyboardTitle" Text="CONTROLLER KEYBOARD" Foreground="#64DDB5" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                        <TextBlock DockPanel.Dock="Right" Text="D-PAD MOVE  ·  A SELECT  ·  B CLOSE" Foreground="#AAB2C0" FontSize="10" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <UniformGrid x:Name="KeyboardKeys" Rows="4" Columns="10" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                        <Button Style="{StaticResource KeyButton}" Width="90" Content="SHIFT" Click="Shift_Click" />
+                        <Button Style="{StaticResource KeyButton}" Width="160" Content="SPACE" Click="Space_Click" />
+                        <Button Style="{StaticResource KeyButton}" Width="100" Content="⌫" ToolTip="Backspace" Click="Backspace_Click" />
+                        <Button Style="{StaticResource KeyButton}" Width="120" Content="ENTER" Click="Enter_Click" />
+                        <Button Style="{StaticResource KeyButton}" Width="100" Content="DONE" Click="Done_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#14171E" BorderBrush="#282D37" BorderThickness="0,1,0,0" Padding="14,0">
+            <DockPanel LastChildFill="True">
+                <TextBlock x:Name="ControllerText" DockPanel.Dock="Left" Text="XINPUT · SEARCHING" Foreground="#AAB2C0" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
+                <TextBlock x:Name="StatusText" Text="STARTING · TV IDENTITY ON" Foreground="#AAB2C0" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <TextBlock DockPanel.Dock="Right" Text="Y / START KEYBOARD   ·   LB / RB HISTORY   ·   X RELOAD" Foreground="#778190" FontSize="10" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

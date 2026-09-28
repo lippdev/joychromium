@@ -1,14 +1,30 @@
 # JoyChromium
 
-A Windows browser based on Chromium, designed for complete navigation with a game controller and a persistent TV-compatible browsing identity.
+A Windows browser prototype with a controller-first shell and an always-on TV user-agent marker. The first build uses WPF and Microsoft WebView2 (the Chromium engine shipped as the Edge WebView2 Runtime); it is **not** a fork or checkout of `chromium/chromium`.
 
-## Product requirements
+## Run
 
-- Make core browser flows usable with a gamepad alone; keyboard and mouse are optional, not prerequisites.
-- Keep a TV/device identity signal enabled for every page so supported services can offer their TV experience. Validate this against YouTube and other supported sites; the implementation mechanism is still to be determined.
-- Take interaction and visual inspiration from Edge on Xbox without reusing Microsoft branding or assets.
-- Keep Chromium as the upstream browser engine and preserve a clear path for upstream security updates.
+Requirements: Windows 10/11, .NET 8 SDK, and the Microsoft Edge WebView2 Evergreen Runtime.
 
-## Status
+```powershell
+dotnet run --project .\JoyChromium.csproj
+```
 
-Pre-alpha. This repository is the product project, not a fork, and does not contain Chromium source or a runnable browser yet. The Chromium source/build integration will be chosen before implementation begins.
+It opens YouTube's TV route. The address bar accepts URLs or search text; the in-app keyboard also opens when a page text field receives focus.
+
+## Controller
+
+An Xbox/XInput-compatible controller is supported. D-pad and left stick move the on-screen keyboard or send arrow keys into the page; A selects/activates, B goes back or closes the keyboard, LB/RB go back/forward, X reloads, and Y/Start opens the controller keyboard. `Ctrl+L` and `Ctrl+R` are available too.
+
+## TV identity
+
+Before the first navigation, the app appends `JoyChromiumTV/0.1 (TV; SmartTV)` to WebView2's user-agent. WebView2 applies it to site navigations and subresources; it cannot be toggled off in this prototype. Overriding the user-agent can clear User-Agent Client Hints, and a TV token does not guarantee every site— including YouTube—will serve its TV interface. The app bridges controller directions as keyboard arrows; page-level Gamepad API support still depends on WebView2/runtime behavior.
+
+## Build and checks
+
+```powershell
+dotnet build .\JoyChromium.csproj --configuration Release
+dotnet run --project .\tests\TvIdentity.Smoke.csproj --configuration Release
+```
+
+GitHub Actions runs these checks on Windows. This is an early single-page prototype: it has no tab strip, extension support, or independent Chromium update pipeline.
