@@ -1,27 +1,95 @@
 name: Release
 
+# Two ways in:
+#   1. A push to main whose commit bumped Electron (Dependabot's "chore(deps): bump electron ...") — the engine
+#      changed, so users get a new build automatically. The version is bumped (patch) and tagged here.
+#   2. A manual dispatch with a bump level, for feature releases.
+# Either way: build on Windows and Linux, publish installers + update metadata to a GitHub Release. Installed apps
+# pick it up through electron-updater.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  release:
-    runs-on: windows-latest
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      bump: ${{ steps.decide.outputs.bump }}
+    steps:
+      - id: decide
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"; echo "bump=${{ inputs.bump }}" >> "$GITHUB_OUTPUT"
+          elif printf '%s' "$MESSAGE" | grep -qiE '^chore\(deps\): bump electron '; then
+            echo "release=true" >> "$GITHUB_OUTPUT"; echo "bump=patch" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  tag:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
-      - name: Version from tag
-        shell: bash
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - run: dotnet tool install -g vpk
-      - run: dotnet publish JoyChromium.csproj -c Release -r win-x64 --self-contained -o publish -p:Version=${{ env.VERSION }}
-      - run: dotnet test tests/JoyChromium.Tests -c Release
-      - name: Pack
-        run: vpk pack -u JoyChromium -v ${{ env.VERSION }} -p publish -e JoyChromium.exe --packTitle JoyChromium --packAuthors lippdev
-      - name: Publish to GitHub Releases
-        run: vpk upload github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }} --publish --releaseName "JoyChromium ${{ env.VERSION }}" --tag ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: bump
+        working-directory: app
+        run: |
+          git config user.name "joychromium-bot"
+          git config user.email "bot@users.noreply.github.com"
+          npm version ${{ needs.decide.outputs.bump }} --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          git commit -am "chore(release): v$VERSION [skip ci]"
+          git tag "v$VERSION"
+          git push origin HEAD:main --follow-tags
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: tag
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.tag.outputs.version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Build and publish installers
+        run: npm run build && npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

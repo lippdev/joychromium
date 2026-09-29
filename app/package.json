@@ -26,5 +26,75 @@
     "@ghostery/adblocker": "2.18.2",
     "@ghostery/adblocker-electron": "2.18.2",
     "electron-updater": "6.8.9"
-  }
+  },
+  "build": {
+    "appId": "dev.lipp.joychromium",
+    "productName": "JoyChromium",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "asar": true,
+    "publish": {
+      "provider": "github",
+      "owner": "lippdev",
+      "repo": "joychromium",
+      "releaseType": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Network",
+      "synopsis": "Controller-first browser for the TV",
+      "desktop": {
+        "entry": {
+          "Name": "JoyChromium",
+          "Categories": "Network;WebBrowser;"
+        }
+      }
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ]
+    }
+  },
+  "author": {
+    "name": "lippdev",
+    "email": "alyxmedical@gmail.com"
+  },
+  "homepage": "https://github.com/lippdev/joychromium"
 }
