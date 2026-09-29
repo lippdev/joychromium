@@ -1,3 +1,4 @@
+import { Request } from "@ghostery/adblocker";
 import { ElectronBlocker } from "@ghostery/adblocker-electron";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
@@ -53,7 +54,5 @@ export class AdBlock {
 }
 
 function requestOf(url: string, sourceUrl: string) {
-  // Lazy require keeps the core package internal to this module.
-  const { Request } = require("@ghostery/adblocker") as typeof import("@ghostery/adblocker");
   return Request.fromRawDetails({ url, sourceUrl, type: "script" });
 }

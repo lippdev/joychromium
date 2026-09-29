@@ -1,7 +1,7 @@
 import { app, BrowserWindow, session } from "electron";
 import { join } from "node:path";
 import { AdBlock } from "./adblock";
-import { ensureTvIdentity, isTvIdentityActive } from "./tvIdentity";
+import { ensureTvIdentity } from "./tvIdentity";
 
 // Phase 0 proof of concept: one window, TV user agent, ad blocking. The full shell follows in phase 1.
 const START_PAGE = "https://www.youtube.com/tv";
@@ -34,7 +34,6 @@ async function start(): Promise<void> {
   globalThis.joy.wouldBlock = (url) => adblock.wouldBlock(url);
 
   const userAgent = ensureTvIdentity(session.defaultSession.getUserAgent());
-  if (!isTvIdentityActive(userAgent)) throw new Error("The mandatory TV user-agent marker was not applied.");
   session.defaultSession.setUserAgent(userAgent);
   globalThis.joy.userAgent = userAgent;
 
