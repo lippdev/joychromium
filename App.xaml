@@ -2,5 +2,22 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
-    <Application.Resources />
+    <Application.Resources>
+        <!-- Defaults; ThemeService overwrites these at startup and whenever the theme changes. -->
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#0C0E13" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#14171E" />
+        <SolidColorBrush x:Key="Surface2Brush" Color="#20242D" />
+        <SolidColorBrush x:Key="HoverBrush" Color="#303744" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#343A46" />
+        <SolidColorBrush x:Key="InputBrush" Color="#0D1016" />
+        <SolidColorBrush x:Key="TextBrush" Color="#F3F5F9" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#AAB2C0" />
+        <SolidColorBrush x:Key="TextFaintBrush" Color="#778190" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#64DDB5" />
+        <SolidColorBrush x:Key="AccentTextBrush" Color="#07120F" />
+        <SolidColorBrush x:Key="AccentDimBrush" Color="#176C57" />
+        <SolidColorBrush x:Key="AccentBgBrush" Color="#12231D" />
+        <SolidColorBrush x:Key="AccentBorderBrush" Color="#315548" />
+        <SolidColorBrush x:Key="KeyboardBgBrush" Color="#F0161A22" />
+    </Application.Resources>
 </Application>
