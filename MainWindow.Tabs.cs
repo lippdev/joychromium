@@ -80,7 +80,11 @@ public partial class MainWindow
             tab.IsPlayingAudio = core.IsDocumentPlayingAudio;
             UpdateKeepAwake();
         };
-        core.IsMutedChanged += (_, _) => tab.IsMuted = core.IsMuted;
+        core.IsMutedChanged += (_, _) =>
+        {
+            tab.IsMuted = core.IsMuted;
+            UpdateKeepAwake();
+        };
         core.NavigationStarting += (_, args) =>
         {
             tab.InputFrame = null;
