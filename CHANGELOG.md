@@ -16,3 +16,4 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e SemVer.
 - Refactor: `MainWindow` dividido em arquivos parciais por responsabilidade; P/Invoke em `NativeInput.cs`.
 - Ícone do app, mute por aba com indicador de áudio (Ctrl+M), menu de contexto da aba (duplicar, fechar outras, reabrir), clique do meio fecha, tela não apaga durante mídia.
 - Testes migrados para xUnit (`tests/JoyChromium.Tests`); cache de NuGet e do uBO no CI.
+- Migração para Electron, fase 0: app/ com Electron 44 (Chromium 152), UA de TV, bloqueio via motor Ghostery, testes vitest + Playwright.
