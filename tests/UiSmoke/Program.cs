@@ -2,8 +2,6 @@ using System.Diagnostics;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
-using FlaUI.Core.Input;
-using FlaUI.Core.WindowsAPI;
 using FlaUI.UIA3;
 
 // Drives the real shell through UI Automation: start, open a tab, open settings, close.
@@ -32,9 +30,9 @@ try
         ?.FindAllChildren().Length ?? 0;
     Check(Wait(TabCount, n => n == 1, "first tab") == 1, "one tab after start");
 
-    window.Focus();
-    Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_T);
-    Check(Wait(TabCount, n => n == 2, "second tab") == 2, "Ctrl+T opens a second tab");
+    // Keystrokes depend on foreground focus, which the desktop may refuse; drive the real buttons through UI Automation.
+    Invoke(window, "New tab");
+    Check(Wait(TabCount, n => n == 2, "second tab") == 2, "New tab button opens a second tab");
 
     var address = window.FindFirstDescendant(cf => cf.ByAutomationId("AddressBox"))!.AsTextBox();
     // Keystrokes do not reliably reach the shell once focus is inside the page on the CI runner; drive the real buttons instead.

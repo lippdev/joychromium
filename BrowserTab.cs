@@ -11,6 +11,13 @@ public sealed class BrowserTab : INotifyPropertyChanged
     private string _title = "New tab";
     private string _url = "";
     private bool _isActive;
+    private System.Windows.Media.ImageSource? _favicon;
+
+    public System.Windows.Media.ImageSource? Favicon
+    {
+        get => _favicon;
+        set => Set(ref _favicon, value);
+    }
 
     public BrowserTab(WebView2CompositionControl view) => View = view;
 

@@ -25,6 +25,8 @@
   .tile i { width: 48px; height: 48px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 18%, var(--bg)); color: var(--accent); display: grid; place-items: center; font: 700 20px/1 "Segoe UI"; }
   .tile span { font-size: 14px; text-align: center; }
   .hint { color: var(--muted); font-size: 12px; }
+  .hint a { color: var(--accent); text-decoration: none; outline: none; padding: 2px 6px; border-radius: 6px; }
+  .hint a:focus-visible, .hint a:hover { box-shadow: 0 0 0 2px var(--accent); }
   kbd { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; }
 </style>
 </head>
@@ -33,7 +35,11 @@
   <form id="search"><input id="q" autofocus placeholder="Search or type a web address" autocomplete="off"><button class="go" type="submit">GO</button></form>
   <div class="engine" id="engine"></div>
   <div class="grid" id="tiles"></div>
-  <div class="hint"><kbd>Y</kbd> opens the controller keyboard · <kbd>D-pad</kbd> moves · <kbd>A</kbd> selects</div>
+  <div class="hint"><kbd>Y</kbd> opens the controller keyboard · <kbd>D-pad</kbd> moves · <kbd>A</kbd> selects · <a href="joychromium://favorites" id="fav">★ Favorites</a> · <a href="joychromium://history" id="hist">History</a></div>
+  <script>
+    for (const [id, url] of [['fav', 'joychromium://favorites'], ['hist', 'joychromium://history']])
+      document.getElementById(id).addEventListener('click', e => { e.preventDefault(); post('navigate', { url }); });
+  </script>
 <script>
   const $ = id => document.getElementById(id);
   const post = (type, payload) => { try { window.chrome.webview.postMessage(JSON.stringify({ type, ...payload })); } catch (_) {} };
@@ -50,7 +56,8 @@
     const v = parseInt(t.accent.slice(1), 16);
     r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#07120F' : '#FFFFFF');
     $('engine').textContent = `Searching with ${msg.searchEngine.name}`;
-    $('tiles').replaceChildren(...msg.shortcuts.map(s => {
+    const favorites = (msg.favorites || []).filter(f => !msg.shortcuts.some(s => s.url === f.url));
+    $('tiles').replaceChildren(...[...msg.shortcuts, ...favorites].map(s => {
       const b = document.createElement('button');
       b.className = 'tile'; b.title = s.url;
       b.innerHTML = `<i>${s.name.trim()[0].toUpperCase()}</i><span>${s.name}</span>`;

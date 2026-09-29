@@ -53,7 +53,7 @@ public static class Log
     }
 
     /// <summary>Zips logs plus settings (site permissions stripped) for a bug report. Returns the zip path.</summary>
-    public static string ExportDiagnostics(string targetFolder)
+    public static string ExportDiagnostics(string targetFolder, IEnumerable<string> environmentLines)
     {
         Directory.CreateDirectory(targetFolder);
         var zipPath = Path.Combine(targetFolder, $"joychromium-diagnostics-{DateTime.UtcNow:yyyyMMdd-HHmmss}.zip");
@@ -70,12 +70,10 @@ public static class Log
         var info = zip.CreateEntry("environment.txt");
         using (var writer = new StreamWriter(info.Open()))
         {
-            writer.WriteLine($"JoyChromium {AppUpdater.Version}");
             writer.WriteLine($"OS {Environment.OSVersion} x64={Environment.Is64BitOperatingSystem}");
             writer.WriteLine($".NET {Environment.Version}");
-            writer.WriteLine($"uBlock Origin {AdBlock.ActiveVersion ?? "none"} · {AdBlock.Status}");
-            writer.WriteLine($"Policy {PolicyService.Status}");
-            writer.WriteLine($"App update {AppUpdater.Status}");
+            foreach (var line in environmentLines)
+                writer.WriteLine(line);
         }
         return zipPath;
     }

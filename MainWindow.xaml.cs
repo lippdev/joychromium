@@ -241,6 +241,25 @@ public partial class MainWindow : Window
             tab.Title = (tab.IsPrivate ? "🕶 " : "") + core.DocumentTitle;
             if (tab == _active)
                 Title = $"{tab.Title} - JoyChromium";
+            if (!tab.IsPrivate)
+                History.Default.Record(core.Source, core.DocumentTitle, DateTime.UtcNow);
+        };
+        core.FaviconChanged += async (_, _) =>
+        {
+            try
+            {
+                using var stream = await core.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png);
+                tab.Favicon = stream is null || stream.Length == 0 ? null : LoadImage(stream);
+            }
+            catch (Exception ex) when (ex is COMException or InvalidOperationException or NotSupportedException or IOException)
+            {
+                tab.Favicon = null;
+            }
+        };
+        core.ContainsFullScreenElementChanged += (_, _) =>
+        {
+            if (tab == _active)
+                SetChromeVisible(!core.ContainsFullScreenElement);
         };
         core.NavigationStarting += (_, args) =>
         {
@@ -285,8 +304,13 @@ public partial class MainWindow : Window
                 core.Navigate(Pages.ErrorPageFor(pendingHttp ?? core.Source, args.WebErrorStatus.ToString(), pendingHttp is not null));
                 return;
             }
+            if (args.IsSuccess && !tab.IsPrivate)
+                History.Default.Record(core.Source, core.DocumentTitle, DateTime.UtcNow);
             if (tab == _active)
+            {
                 StatusText.Text = args.IsSuccess ? "READY · TV IDENTITY ON" : $"LOAD ISSUE · {args.WebErrorStatus}";
+                UpdateFavoriteButton();
+            }
         };
         core.ServerCertificateErrorDetected += (_, args) =>
         {
@@ -455,6 +479,9 @@ public partial class MainWindow : Window
         if (tab.View.CoreWebView2?.IsSuspended == true)
             tab.View.CoreWebView2.Resume();
         AddressBox.Text = tab.Url;
+        SuggestionsPopup.IsOpen = false;
+        UpdateFavoriteButton();
+        SetChromeVisible(tab.View.CoreWebView2?.ContainsFullScreenElement != true);
         Title = $"{tab.Title} - JoyChromium";
         KeyboardPanel.Visibility = Visibility.Collapsed;
         tab.View.Focus();
@@ -466,6 +493,8 @@ public partial class MainWindow : Window
         if (index < 0)
             return;
         Tabs.RemoveAt(index);
+        if (Pages.IsWebUrl(tab.Url))
+            _closedTabs.Push((tab.Url, tab.IsPrivate));
         BrowserHost.Children.Remove(tab.View);
         if (_active == tab)
         {
@@ -476,6 +505,139 @@ public partial class MainWindow : Window
                 ActivateTab(Tabs[Math.Min(index, Tabs.Count - 1)]);
         }
         tab.View.Dispose();
+    }
+
+    private static System.Windows.Media.Imaging.BitmapImage LoadImage(Stream stream)
+    {
+        var image = new System.Windows.Media.Imaging.BitmapImage();
+        image.BeginInit();
+        image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+        image.StreamSource = stream;
+        image.EndInit();
+        image.Freeze();
+        return image;
+    }
+
+    // ---- Favorites, find, zoom, fullscreen, reopen ----
+
+    private readonly Stack<(string Url, bool IsPrivate)> _closedTabs = new();
+
+    private void UpdateFavoriteButton()
+    {
+        var isFavorite = _active is not null && SettingsStore.Current.IsFavorite(_active.Url);
+        FavoriteButton.Content = isFavorite ? "" : "";
+        FavoriteButton.ToolTip = isFavorite ? "Remove from favorites · Ctrl+D · LB+Y" : "Add to favorites · Ctrl+D · LB+Y";
+        FavoriteButton.Foreground = (System.Windows.Media.Brush)FindResource(isFavorite ? "AccentBrush" : "TextBrush");
+    }
+
+    private void Favorite_Click(object sender, RoutedEventArgs e) => ToggleFavorite();
+
+    private void ToggleFavorite()
+    {
+        if (_active is null || !Pages.IsWebUrl(_active.Url))
+            return;
+        var name = _active.Title.Replace("🕶 ", "", StringComparison.Ordinal).Trim();
+        var (settings, isFavorite) = SettingsStore.Current.ToggleFavorite(_active.Url, name);
+        SettingsStore.Save(settings);
+        UpdateFavoriteButton();
+        StatusText.Text = isFavorite ? "ADDED TO FAVORITES" : "REMOVED FROM FAVORITES";
+    }
+
+    private async Task ReopenClosedTabAsync()
+    {
+        if (_closedTabs.TryPop(out var closed))
+            await OpenTabAsync(closed.Url, isPrivate: closed.IsPrivate);
+    }
+
+    private void SetChromeVisible(bool visible)
+    {
+        var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        TitleBar.Visibility = visibility;
+        Toolbar.Visibility = visibility;
+        StatusBar.Visibility = visibility;
+        if (!visible && WindowState != WindowState.Maximized)
+            SystemCommands.MaximizeWindow(this);
+    }
+
+    private async Task ExitPageFullscreenAsync()
+    {
+        if (Core is { ContainsFullScreenElement: true } core)
+            await core.ExecuteScriptAsync("document.exitFullscreen && document.exitFullscreen()");
+    }
+
+    private void SetZoom(double factor)
+    {
+        if (_active is null)
+            return;
+        _active.View.ZoomFactor = Math.Clamp(factor, 0.5, 3.0);
+        StatusText.Text = $"ZOOM {Math.Round(_active.View.ZoomFactor * 100)}%";
+    }
+
+    private void OpenFind()
+    {
+        FindPanel.Visibility = Visibility.Visible;
+        FindBox.Focus();
+        FindBox.SelectAll();
+    }
+
+    private void CloseFind()
+    {
+        FindPanel.Visibility = Visibility.Collapsed;
+        _active?.View.Focus();
+    }
+
+    private async Task FindAsync(bool backwards)
+    {
+        var text = FindBox.Text;
+        if (Core is null || text.Length == 0)
+            return;
+        var literal = JsonSerializer.Serialize(text);
+        // window.find is the one primitive every Chromium exposes without an extra API surface; it wraps and highlights.
+        var found = await Core.ExecuteScriptAsync($"window.find({literal}, false, {(backwards ? "true" : "false")}, true, false, true, false)");
+        StatusText.Text = found == "true" ? $"FOUND · {text}" : $"NOT FOUND · {text}";
+    }
+
+    private async void FindBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Enter: e.Handled = true; await FindAsync((Keyboard.Modifiers & ModifierKeys.Shift) != 0); break;
+            case Key.Escape: e.Handled = true; CloseFind(); break;
+        }
+    }
+
+    private async void FindBox_TextChanged(object sender, TextChangedEventArgs e) => await FindAsync(false);
+    private async void FindNext_Click(object sender, RoutedEventArgs e) => await FindAsync(false);
+    private async void FindPrev_Click(object sender, RoutedEventArgs e) => await FindAsync(true);
+    private void FindClose_Click(object sender, RoutedEventArgs e) => CloseFind();
+
+    // ---- Address suggestions ----
+
+    private void AddressBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!AddressBox.IsKeyboardFocusWithin && KeyboardPanel.Visibility != Visibility.Visible)
+            return;
+        var items = Suggestion.Build(AddressBox.Text, SettingsStore.Current.Favorites, History.Default.Recent(500));
+        SuggestionsList.ItemsSource = items;
+        SuggestionsPopup.IsOpen = items.Count > 0 && AddressBox.Text != _active?.Url;
+    }
+
+    private void AcceptSuggestion()
+    {
+        if (SuggestionsList.SelectedItem is Suggestion s)
+        {
+            AddressBox.Text = s.Url;
+            SuggestionsPopup.IsOpen = false;
+            NavigateFromAddress();
+        }
+    }
+
+    private void Suggestion_Click(object sender, MouseButtonEventArgs e) => AcceptSuggestion();
+
+    private void Suggestions_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { e.Handled = true; AcceptSuggestion(); }
+        else if (e.Key == Key.Escape) { e.Handled = true; SuggestionsPopup.IsOpen = false; AddressBox.Focus(); }
     }
 
     private void SwitchTab(int offset)
@@ -625,6 +787,7 @@ public partial class MainWindow : Window
                     adBlockAvailable = AdBlock.IsBundled,
                     path = SettingsStore.SettingsPath,
                     startup = current.Startup.ToString(),
+                    favorites = current.Favorites,
                     startupUrl = current.StartupUrl,
                     newTab = current.NewTab.ToString(),
                     newTabUrl = current.NewTabUrl,
@@ -673,6 +836,19 @@ public partial class MainWindow : Window
                     Shortcuts = parsed.Shortcuts.Select(s => Shortcut.TryParse(s.Name, s.Url)).OfType<Shortcut>().ToList(),
                 });
                 break;
+            case "history-search":
+                core.PostWebMessageAsString(JsonSerializer.Serialize(new { type = "history", entries = History.Default.Search(parsed.Query ?? "") }, JsonOptions));
+                break;
+            case "history-remove" when !string.IsNullOrWhiteSpace(parsed.Url):
+                History.Default.Remove(parsed.Url);
+                break;
+            case "history-clear":
+                History.Default.Clear();
+                break;
+            case "favorite-remove" when !string.IsNullOrWhiteSpace(parsed.Url):
+                SettingsStore.Save(current with { Favorites = current.Favorites.Where(f => f.Url != parsed.Url).ToList() });
+                UpdateFavoriteButton();
+                break;
             case "navigate" when !string.IsNullOrWhiteSpace(parsed.Url):
                 if (parsed.AllowHttp == true && SecurityPolicy.HostOf(parsed.Url) is { } httpHost)
                     _httpAllowedHosts.Add(httpHost);
@@ -711,7 +887,14 @@ public partial class MainWindow : Window
             case "export-diagnostics":
                 try
                 {
-                    var zip = Log.ExportDiagnostics(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "JoyChromium"));
+                    var zip = Log.ExportDiagnostics(
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "JoyChromium"),
+                        [
+                            $"JoyChromium {AppUpdater.Version}",
+                            $"uBlock Origin {AdBlock.ActiveVersion ?? "none"} · {AdBlock.Status}",
+                            $"Policy {PolicyService.Status}",
+                            $"App update {AppUpdater.Status}",
+                        ]);
                     core.PostWebMessageAsString(JsonSerializer.Serialize(new { type = "diagnostics", path = zip }, JsonOptions));
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -750,7 +933,7 @@ public partial class MainWindow : Window
         string? Startup, string? StartupUrl, string? NewTab, string? NewTabUrl, string? HomeUrl,
         List<SettingsShortcut>? Shortcuts, string? Url, bool? AllowHttp,
         bool? HttpsOnly, string? TrackingPrevention, string? DnsOverHttps, bool? PasswordAutosave, bool? Autofill,
-        bool? BlockDangerousDownloads, string? Host);
+        bool? BlockDangerousDownloads, string? Host, string? Query);
     private sealed record SettingsShortcut(string? Name, string? Url);
     private sealed record SettingsTheme(string? Accent, string? Background, string? Surface, string? Text);
     private sealed record SettingsSearch(string? Name, string? Template);
@@ -894,33 +1077,59 @@ public partial class MainWindow : Window
 
     private void AddressBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        switch (e.Key)
         {
-            NavigateFromAddress();
-            e.Handled = true;
+            case Key.Enter:
+                SuggestionsPopup.IsOpen = false;
+                NavigateFromAddress();
+                e.Handled = true;
+                break;
+            case Key.Down when SuggestionsPopup.IsOpen && SuggestionsList.Items.Count > 0:
+                SuggestionsList.SelectedIndex = 0;
+                (SuggestionsList.ItemContainerGenerator.ContainerFromIndex(0) as ListBoxItem)?.Focus();
+                e.Handled = true;
+                break;
+            case Key.Escape:
+                SuggestionsPopup.IsOpen = false;
+                break;
         }
     }
 
     private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape && KeyboardPanel.Visibility == Visibility.Visible)
+        if (e.Key == Key.Escape)
         {
-            HideKeyboard();
+            if (KeyboardPanel.Visibility == Visibility.Visible) { HideKeyboard(); e.Handled = true; return; }
+            if (FindPanel.Visibility == Visibility.Visible) { CloseFind(); e.Handled = true; return; }
+            if (Core?.ContainsFullScreenElement == true) { await ExitPageFullscreenAsync(); e.Handled = true; return; }
+        }
+        if (e.Key == Key.F11)
+        {
+            SetChromeVisible(TitleBar.Visibility != Visibility.Visible);
             e.Handled = true;
             return;
         }
         if ((Keyboard.Modifiers & ModifierKeys.Control) == 0)
             return;
+        var shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
         e.Handled = true;
         switch (e.Key)
         {
             case Key.L: OpenAddressKeyboard(); break;
             case Key.R: Core?.Reload(); break;
+            case Key.T when shift: await ReopenClosedTabAsync(); break;
             case Key.T: NewTab_Click(this, new RoutedEventArgs()); break;
-            case Key.N when (Keyboard.Modifiers & ModifierKeys.Shift) != 0: await OpenTabAsync(Pages.NewTabScheme, isPrivate: true); break;
+            case Key.N when shift: await OpenTabAsync(Pages.NewTabScheme, isPrivate: true); break;
             case Key.W: if (_active is not null) await CloseTabAsync(_active); break;
-            case Key.Tab: SwitchTab((Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : 1); break;
+            case Key.Tab: SwitchTab(shift ? -1 : 1); break;
             case Key.OemComma: NavigateActive(Pages.SettingsPage); break;
+            case Key.D: ToggleFavorite(); break;
+            case Key.F: OpenFind(); break;
+            case Key.H: NavigateActive(Pages.HistoryPage); break;
+            case Key.B: NavigateActive(Pages.FavoritesPage); break;
+            case Key.OemPlus or Key.Add: SetZoom((_active?.View.ZoomFactor ?? 1) + 0.1); break;
+            case Key.OemMinus or Key.Subtract: SetZoom((_active?.View.ZoomFactor ?? 1) - 0.1); break;
+            case Key.D0 or Key.NumPad0: SetZoom(1); break;
             default: e.Handled = false; break;
         }
     }
@@ -976,7 +1185,11 @@ public partial class MainWindow : Window
         if ((pressed & 0x0100) != 0) Back_Click(this, new RoutedEventArgs());       // LB
         if ((pressed & 0x0200) != 0) Forward_Click(this, new RoutedEventArgs());    // RB
         if ((pressed & 0x4000) != 0) Reload_Click(this, new RoutedEventArgs());      // X
-        if ((pressed & 0x8000) != 0) OpenAddressKeyboard();                          // Y
+        if ((pressed & 0x8000) != 0)                                                // Y (LB held: favorite)
+        {
+            if ((buttons & 0x0100) != 0) ToggleFavorite();
+            else OpenAddressKeyboard();
+        }
         if ((pressed & 0x0010) != 0) NewTab_Click(this, new RoutedEventArgs());      // Start
         if ((pressed & 0x0020) != 0 && _active is not null) await CloseTabAsync(_active); // Back (view)
         if ((pressed & 0x2000) != 0)                                               // B
