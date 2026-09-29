@@ -34,3 +34,22 @@ jobs:
       - run: dotnet build tests/UiSmoke --configuration Release
       - name: UI smoke
         run: dotnet run --project tests/UiSmoke --configuration Release --no-build -- bin/Release/net8.0-windows10.0.19041.0/JoyChromium.exe
+
+  electron:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: End-to-end (real Electron)
+        run: npm run test:e2e

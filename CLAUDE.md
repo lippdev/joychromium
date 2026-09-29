@@ -18,3 +18,8 @@ Navegador Windows controller-first (WPF + WebView2) com marcador de user-agent d
 - `MainWindow` é uma classe parcial dividida por responsabilidade: `MainWindow.xaml.cs` (ctor, start, chrome da janela), `.Tabs`, `.Navigation`, `.Keyboard`, `.PageTools`, `.Security`, `.Bridge` (mensagens das páginas internas), `.Controller`, `.Maintenance`. Código novo vai no arquivo do tema certo; P/Invoke fica em `NativeInput.cs`.
 - Antes de concluir uma tarefa: build + `dotnet test` + format passando (e o UI smoke quando mexer no shell).
 - Não subir `bin/`, `obj/`, `.vs/`.
+
+## Migração para Electron (em andamento)
+- O shell novo vive em `app/` (Electron + TypeScript). O C# na raiz é o app legado até a migração terminar.
+- Comandos em `app/`: `npm run build`, `npm test` (vitest), `npm run test:e2e` (Playwright abre o Electron de verdade), `npm run typecheck`.
+- Lógica pura fica em módulos sem dependência do Electron (ex.: `src/main/tvIdentity.ts`) e ganha teste unitário; o que toca o Electron é coberto pelo e2e.
