@@ -296,7 +296,9 @@
     if (!hosts.length) { box.innerHTML = '<p class="lead" style="margin:0">No per-site overrides yet.</p>'; return; }
     box.replaceChildren(...hosts.map(host => {
       const row = document.createElement('div'); row.className = 'row';
-      row.innerHTML = `<div>${host}<small>${modes[host]}</small></div>`;
+      const label = document.createElement('div'); label.textContent = host;
+      const mode = document.createElement('small'); mode.textContent = modes[host]; label.appendChild(mode);
+      row.appendChild(label);
       const b = document.createElement('button'); b.className = 'ghost'; b.textContent = 'Forget';
       b.addEventListener('click', () => { post('inputmode-forget', { host }); delete modes[host]; renderInputModes(modes); });
       row.appendChild(b); return row;
@@ -310,7 +312,8 @@
     box.replaceChildren(...hosts.map(host => {
       const row = document.createElement('div'); row.className = 'row';
       const desc = Object.entries(perms[host]).map(([k, v]) => `${k}: ${v ? 'allowed' : 'denied'}`).join(' · ');
-      row.innerHTML = `<div>${host}<small>${desc}</small></div>`;
+      const label = document.createElement("div"); label.textContent = host;
+      const small = document.createElement("small"); small.textContent = desc; label.appendChild(small); row.appendChild(label);
       const b = document.createElement('button'); b.className = 'ghost'; b.textContent = 'Forget';
       b.addEventListener('click', () => { post('permission-forget', { host }); delete perms[host]; renderPermissions(perms); });
       row.appendChild(b); return row;

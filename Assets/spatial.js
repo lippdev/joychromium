@@ -69,9 +69,7 @@
   const scroll = dir => {
     const dx = dir === 'left' ? -innerWidth / 2 : dir === 'right' ? innerWidth / 2 : 0;
     const dy = dir === 'up' ? -innerHeight / 2 : dir === 'down' ? innerHeight / 2 : 0;
-    const before = [scrollX, scrollY];
     scrollBy({ left: dx, top: dy, behavior: 'smooth' });
-    return before[0] !== scrollX + dx || before[1] !== scrollY + dy;
   };
   window.__joy = {
     move(dir) {
@@ -87,7 +85,9 @@
       const el = focused();
       if (!el) return 'none';
       const tag = el.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable) { el.focus(); return 'focus'; }
+      const textual = tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable ||
+        (tag === 'INPUT' && !['checkbox', 'radio', 'submit', 'button', 'reset', 'image', 'file', 'color', 'range'].includes((el.type || 'text').toLowerCase()));
+      if (textual) { el.focus(); return 'focus'; }
       el.click();
       return 'click';
     },

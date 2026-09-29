@@ -312,7 +312,8 @@ public partial class MainWindow : Window
                 // One-time self-check that the injected navigation script parsed; a syntax error would otherwise fail silently.
                 _spatialChecked = true;
                 _ = core.ExecuteScriptAsync("typeof window.__joy").ContinueWith(t =>
-                    Log.Info($"Spatial script present: {t.Result}"), TaskScheduler.FromCurrentSynchronizationContext());
+                    Log.Info(t.IsCompletedSuccessfully ? $"Spatial script present: {t.Result}" : $"Spatial script check failed: {t.Exception?.GetBaseException().Message}"),
+                    TaskScheduler.FromCurrentSynchronizationContext());
             }
             if (tab == _active)
             {
