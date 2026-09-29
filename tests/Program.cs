@@ -28,3 +28,15 @@ if (SearchEngine.IsValidTemplate("https://x.example/?q=") || SearchEngine.IsVali
 if (new AppSettings() is not { SearchEngine.Name: "Google", AdBlockEnabled: true, OnboardingCompleted: false })
     throw new InvalidOperationException("Default settings are wrong.");
 Console.WriteLine("Search engine defaults and validation are consistent.");
+
+var defaults = new AppSettings();
+if (defaults.NewTabTarget != Pages.NewTabScheme || defaults.StartupTargets([]).Single() != Pages.NewTabScheme)
+    throw new InvalidOperationException("Default new tab / startup targets are wrong.");
+var restore = defaults with { Startup = StartupMode.Restore };
+if (restore.StartupTargets(["https://a.example", "https://b.example"]).Count != 2 || restore.StartupTargets([]).Single() != Pages.NewTabScheme)
+    throw new InvalidOperationException("Session restore targets are wrong.");
+if (Pages.Resolve("JoyChromium://NewTab") != Pages.NewTabPage || Pages.Alias(Pages.SettingsPage) != Pages.SettingsScheme || Pages.Resolve("https://x.example") != "https://x.example")
+    throw new InvalidOperationException("Internal page aliasing is wrong.");
+if (Shortcut.TryParse("Bad", "ftp://x") is not null || Shortcut.TryParse(" ", "https://x.example") is not null || Shortcut.TryParse("Ok", "https://x.example") is null)
+    throw new InvalidOperationException("Shortcut validation is wrong.");
+Console.WriteLine("Startup, new tab and shortcut rules are consistent.");

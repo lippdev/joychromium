@@ -15,13 +15,7 @@ namespace JoyChromium;
 public partial class MainWindow : Window
 {
     private const string KeyboardMessage = "joychromium:show-keyboard";
-    private const string StartPage = "https://www.youtube.com/tv";
     private const int TriggerThreshold = 128;
-    private const string SettingsHost = "settings.joychromium";
-    private const string SettingsPage = $"https://{SettingsHost}/settings.html";
-    private const string SettingsScheme = "joychromium://settings";
-    private const string WelcomeScheme = "joychromium://welcome";
-    private const string OnboardingPage = $"https://{SettingsHost}/onboarding.html";
     private bool _adBlockActive;
 
     private readonly DispatcherTimer _gamepadTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
@@ -42,6 +36,7 @@ public partial class MainWindow : Window
         BuildKeyboard();
         _gamepadTimer.Tick += PollGamepad;
         _gamepadTimer.Start();
+        Closing += (_, _) => SettingsStore.SaveSession(Tabs.Select(t => t.Url).Where(u => u != Pages.WelcomeScheme && u != Pages.SettingsScheme));
         Closed += (_, _) => _gamepadTimer.Stop();
     }
 
@@ -55,7 +50,12 @@ public partial class MainWindow : Window
             var options = new CoreWebView2EnvironmentOptions { AreBrowserExtensionsEnabled = true };
             _environment = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder, options: options);
             var settings = SettingsStore.Current;
-            var tab = await OpenTabAsync(settings.OnboardingCompleted ? StartPage : OnboardingPage);
+            var targets = settings.OnboardingCompleted
+                ? settings.StartupTargets(SettingsStore.LoadSession())
+                : [Pages.OnboardingPage];
+            var tab = await OpenTabAsync(targets[0]);
+            foreach (var url in targets.Skip(1))
+                await OpenTabAsync(url, activate: false);
             await ApplyAdBlockAsync(tab, settings.AdBlockEnabled);
         }
         catch (Exception ex)
@@ -83,7 +83,7 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("The mandatory TV user-agent marker was not applied.");
 
         core.Settings.IsStatusBarEnabled = false;
-        core.SetVirtualHostNameToFolderMapping(SettingsHost, Path.Combine(AppContext.BaseDirectory, "Assets"), CoreWebView2HostResourceAccessKind.Allow);
+        core.SetVirtualHostNameToFolderMapping(Pages.Host, Path.Combine(AppContext.BaseDirectory, "Assets"), CoreWebView2HostResourceAccessKind.Allow);
         core.WebMessageReceived += (_, args) => HandleWebMessage(tab, args, null);
         core.FrameCreated += (_, args) =>
             args.Frame.WebMessageReceived += (_, message) => HandleWebMessage(tab, message, args.Frame);
@@ -102,7 +102,7 @@ public partial class MainWindow : Window
         core.NavigationStarting += (_, args) =>
         {
             tab.InputFrame = null;
-            tab.Url = args.Uri switch { SettingsPage => SettingsScheme, OnboardingPage => WelcomeScheme, _ => args.Uri };
+            tab.Url = Pages.Alias(args.Uri);
             if (tab != _active)
                 return;
             KeyboardPanel.Visibility = Visibility.Collapsed;
@@ -126,7 +126,7 @@ public partial class MainWindow : Window
             })();
             """);
 
-        core.Navigate(url);
+        core.Navigate(Pages.Resolve(url));
         return tab;
     }
 
@@ -159,7 +159,7 @@ public partial class MainWindow : Window
         {
             _active = null;
             if (Tabs.Count == 0)
-                await OpenTabAsync(StartPage);
+                await OpenTabAsync(SettingsStore.Current.NewTabTarget);
             else
                 ActivateTab(Tabs[Math.Min(index, Tabs.Count - 1)]);
         }
@@ -189,8 +189,11 @@ public partial class MainWindow : Window
 
     private async void NewTab_Click(object sender, RoutedEventArgs e)
     {
-        await OpenTabAsync(StartPage);
-        OpenAddressKeyboard();
+        var target = SettingsStore.Current.NewTabTarget;
+        await OpenTabAsync(target);
+        // The new tab page has its own search box; other targets get the address keyboard.
+        if (target != Pages.NewTabScheme)
+            OpenAddressKeyboard();
     }
 
     // ---- Window chrome ----
@@ -242,7 +245,7 @@ public partial class MainWindow : Window
         try
         {
             var message = args.TryGetWebMessageAsString();
-            if (frame is null && args.Source is SettingsPage or OnboardingPage)
+            if (frame is null && Pages.IsInternal(args.Source))
             {
                 HandleSettingsMessage(tab, message);
                 return;
@@ -263,7 +266,7 @@ public partial class MainWindow : Window
 
     // ---- Settings page ----
 
-    private void Settings_Click(object sender, RoutedEventArgs e) => Core?.Navigate(SettingsPage);
+    private void Settings_Click(object sender, RoutedEventArgs e) => Core?.Navigate(Pages.SettingsPage);
 
     private async Task ApplyAdBlockAsync(BrowserTab tab, bool enabled)
     {
@@ -309,6 +312,13 @@ public partial class MainWindow : Window
                     adBlockEnabled = current.AdBlockEnabled,
                     adBlockAvailable = AdBlock.IsBundled,
                     path = SettingsStore.SettingsPath,
+                    startup = current.Startup.ToString(),
+                    startupUrl = current.StartupUrl,
+                    newTab = current.NewTab.ToString(),
+                    newTabUrl = current.NewTabUrl,
+                    homeUrl = current.HomeUrl,
+                    shortcuts = current.Shortcuts,
+                    defaultShortcuts = Shortcut.Default,
                 }, JsonOptions));
                 break;
             case "theme-preview" when ParseTheme(parsed.Theme) is { } theme:
@@ -327,9 +337,35 @@ public partial class MainWindow : Window
                 break;
             case "onboarding-done":
                 SettingsStore.Save(SettingsStore.Current with { OnboardingCompleted = true });
-                core.Navigate(StartPage);
+                core.Navigate(Pages.Resolve(SettingsStore.Current.NewTabTarget));
+                break;
+            case "general-save":
+                SaveGeneral(parsed);
+                break;
+            case "shortcuts-save" when parsed.Shortcuts is not null:
+                SettingsStore.Save(current with
+                {
+                    Shortcuts = parsed.Shortcuts.Select(s => Shortcut.TryParse(s.Name, s.Url)).OfType<Shortcut>().ToList(),
+                });
+                break;
+            case "navigate" when !string.IsNullOrWhiteSpace(parsed.Url):
+                AddressBox.Text = parsed.Url;
+                NavigateFromAddress();
                 break;
         }
+    }
+
+    private static void SaveGeneral(SettingsMessage parsed)
+    {
+        var current = SettingsStore.Current;
+        SettingsStore.Save(current with
+        {
+            Startup = Enum.TryParse<StartupMode>(parsed.Startup, true, out var startup) ? startup : current.Startup,
+            StartupUrl = Pages.IsWebUrl(parsed.StartupUrl) ? parsed.StartupUrl! : current.StartupUrl,
+            NewTab = Enum.TryParse<NewTabMode>(parsed.NewTab, true, out var newTab) ? newTab : current.NewTab,
+            NewTabUrl = Pages.IsWebUrl(parsed.NewTabUrl) ? parsed.NewTabUrl! : current.NewTabUrl,
+            HomeUrl = Pages.IsWebUrl(parsed.HomeUrl) ? parsed.HomeUrl! : current.HomeUrl,
+        });
     }
 
     private static Theme? ParseTheme(SettingsTheme? t) =>
@@ -337,7 +373,11 @@ public partial class MainWindow : Window
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true };
 
-    private sealed record SettingsMessage(string? Type, SettingsTheme? Theme, SettingsSearch? SearchEngine, bool? AdBlockEnabled);
+    private sealed record SettingsMessage(
+        string? Type, SettingsTheme? Theme, SettingsSearch? SearchEngine, bool? AdBlockEnabled,
+        string? Startup, string? StartupUrl, string? NewTab, string? NewTabUrl, string? HomeUrl,
+        List<SettingsShortcut>? Shortcuts, string? Url);
+    private sealed record SettingsShortcut(string? Name, string? Url);
     private sealed record SettingsTheme(string? Accent, string? Background, string? Surface, string? Text);
     private sealed record SettingsSearch(string? Name, string? Template);
 
@@ -442,9 +482,10 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(text) || Core is null)
             return;
         HideKeyboard();
-        if (text.Equals(SettingsScheme, StringComparison.OrdinalIgnoreCase))
+        var resolved = Pages.Resolve(text);
+        if (resolved != text)
         {
-            Core.Navigate(SettingsPage);
+            Core.Navigate(resolved);
             return;
         }
         var uri = Uri.TryCreate(text, UriKind.Absolute, out var parsed) &&
@@ -465,7 +506,7 @@ public partial class MainWindow : Window
     }
 
     private void Reload_Click(object sender, RoutedEventArgs e) => Core?.Reload();
-    private void Home_Click(object sender, RoutedEventArgs e) => Core?.Navigate(StartPage);
+    private void Home_Click(object sender, RoutedEventArgs e) => Core?.Navigate(SettingsStore.Current.HomeUrl);
     private void Go_Click(object sender, RoutedEventArgs e) => NavigateFromAddress();
 
     private void AddressBox_KeyDown(object sender, KeyEventArgs e)
@@ -492,10 +533,10 @@ public partial class MainWindow : Window
         {
             case Key.L: OpenAddressKeyboard(); break;
             case Key.R: Core?.Reload(); break;
-            case Key.T: await OpenTabAsync(StartPage); OpenAddressKeyboard(); break;
+            case Key.T: NewTab_Click(this, new RoutedEventArgs()); break;
             case Key.W: if (_active is not null) await CloseTabAsync(_active); break;
             case Key.Tab: SwitchTab((Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : 1); break;
-            case Key.OemComma: Core?.Navigate(SettingsPage); break;
+            case Key.OemComma: Core?.Navigate(Pages.SettingsPage); break;
             default: e.Handled = false; break;
         }
     }

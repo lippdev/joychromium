@@ -41,6 +41,11 @@
   .status { color: var(--muted); font-size: 13px; margin-top: 10px; min-height: 1.5em; }
   input[type=text] { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
   input[type=text]:focus-visible { outline: 2px solid var(--accent); }
+  .radios label { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
+  .radios input[type=radio] { accent-color: var(--accent); width: 18px; height: 18px; }
+  .radios input[type=text] { width: 300px; margin-left: auto; }
+  textarea { font: 14px/1.5 Consolas, monospace; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); resize: vertical; }
+  textarea:focus-visible { outline: 2px solid var(--accent); }
   .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
   .switch input { opacity: 0; width: 0; height: 0; }
   .switch span { position: absolute; inset: 0; border-radius: 26px; background: var(--border); transition: .15s; }
@@ -55,12 +60,45 @@
 <div class="layout">
   <nav>
     <h1>Settings</h1>
-    <a href="#appearance" aria-current="page">🎨 Appearance</a>
+    <a href="#general" aria-current="page">🏠 Start &amp; new tab</a>
+    <a href="#appearance">🎨 Appearance</a>
     <a href="#search">🔎 Search</a>
     <a href="#privacy">🛡️ Privacy</a>
     <a href="#about">ℹ️ About</a>
   </nav>
   <main>
+    <h2 id="general">Start &amp; new tab</h2>
+    <p class="lead">What JoyChromium shows when it opens and when you open a tab.</p>
+    <section>
+      <h3>When JoyChromium starts</h3>
+      <div class="radios" data-group="startup">
+        <label><input type="radio" name="startup" value="NewTab"> Open the new tab page</label>
+        <label><input type="radio" name="startup" value="Home"> Open the home page</label>
+        <label><input type="radio" name="startup" value="Restore"> Restore the tabs from last time</label>
+        <label><input type="radio" name="startup" value="Custom"> Open a specific page <input type="text" id="startupUrl" placeholder="https://…"></label>
+      </div>
+    </section>
+    <section>
+      <h3>New tabs open</h3>
+      <div class="radios" data-group="newTab">
+        <label><input type="radio" name="newTab" value="NewTabPage"> The new tab page (search + shortcuts)</label>
+        <label><input type="radio" name="newTab" value="Home"> The home page</label>
+        <label><input type="radio" name="newTab" value="Custom"> A specific page <input type="text" id="newTabUrl" placeholder="https://…"></label>
+      </div>
+    </section>
+    <section>
+      <div class="row"><div>Home page<small>The ⌂ button</small></div><input type="text" id="homeUrl" style="width:360px"></div>
+      <div class="actions"><button class="primary" id="generalSave">Save</button></div>
+      <div class="status" id="generalStatus"></div>
+    </section>
+    <section>
+      <h3>New tab shortcuts</h3>
+      <p class="lead" style="margin-bottom:10px">One per line: <code>Name | https://url</code></p>
+      <textarea id="shortcuts" rows="7" style="width:100%"></textarea>
+      <div class="actions"><button class="primary" id="shortcutsSave">Save shortcuts</button><button class="ghost" id="shortcutsReset">Reset</button></div>
+      <div class="status" id="shortcutsStatus"></div>
+    </section>
+
     <h2 id="appearance">Appearance</h2>
     <p class="lead">Pick a preset or set your own colors. Changes apply live and are saved to <code id="path"></code>.</p>
 
@@ -162,6 +200,13 @@
     }));
     paint(msg.theme);
     renderEngines(msg.searchEngines, msg.searchEngine);
+    document.querySelector(`input[name=startup][value=${msg.startup}]`).checked = true;
+    document.querySelector(`input[name=newTab][value=${msg.newTab}]`).checked = true;
+    document.getElementById('startupUrl').value = msg.startupUrl;
+    document.getElementById('newTabUrl').value = msg.newTabUrl;
+    document.getElementById('homeUrl').value = msg.homeUrl;
+    defaultShortcuts = msg.defaultShortcuts;
+    document.getElementById('shortcuts').value = msg.shortcuts.map(s => `${s.name} | ${s.url}`).join('\n');
     const adblock = document.getElementById('adblock');
     adblock.checked = msg.adBlockEnabled;
     adblock.disabled = !msg.adBlockAvailable;
@@ -193,6 +238,38 @@
     const name = document.getElementById('customName').value.trim() || 'Custom';
     if (!/^https?:\/\/.+%s/.test(template)) { document.getElementById('searchStatus').textContent = 'Template must be an http(s) URL containing %s.'; return; }
     saveEngine({ name, template });
+  });
+  let defaultShortcuts = [];
+  const flash = (id, text) => { const s = document.getElementById(id); s.textContent = text; setTimeout(() => s.textContent = '', 2500); };
+  const isWebUrl = u => /^https?:\/\/\S+$/i.test(u);
+  document.getElementById('generalSave').addEventListener('click', () => {
+    const startup = document.querySelector('input[name=startup]:checked').value;
+    const newTab = document.querySelector('input[name=newTab]:checked').value;
+    const startupUrl = document.getElementById('startupUrl').value.trim();
+    const newTabUrl = document.getElementById('newTabUrl').value.trim();
+    const homeUrl = document.getElementById('homeUrl').value.trim();
+    if ((startup === 'Custom' && !isWebUrl(startupUrl)) || (newTab === 'Custom' && !isWebUrl(newTabUrl)) || !isWebUrl(homeUrl))
+      return flash('generalStatus', 'Every page must be an http(s) URL.');
+    post('general-save', { startup, newTab, startupUrl, newTabUrl, homeUrl });
+    flash('generalStatus', 'Saved.');
+  });
+  function parseShortcuts(text) {
+    return text.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+      const [name, ...rest] = l.split('|'); const url = rest.join('|').trim();
+      return { name: name.trim(), url };
+    });
+  }
+  document.getElementById('shortcutsSave').addEventListener('click', () => {
+    const list = parseShortcuts(document.getElementById('shortcuts').value);
+    const bad = list.find(s => !s.name || !isWebUrl(s.url));
+    if (bad) return flash('shortcutsStatus', `Check this line: "${bad.name} | ${bad.url}"`);
+    post('shortcuts-save', { shortcuts: list });
+    flash('shortcutsStatus', `Saved ${list.length} shortcut(s).`);
+  });
+  document.getElementById('shortcutsReset').addEventListener('click', () => {
+    document.getElementById('shortcuts').value = defaultShortcuts.map(s => `${s.name} | ${s.url}`).join('\n');
+    post('shortcuts-save', { shortcuts: defaultShortcuts });
+    flash('shortcutsStatus', 'Reset to defaults.');
   });
   document.getElementById('adblock').addEventListener('change', e => post('adblock-save', { adBlockEnabled: e.target.checked }));
   post('ready', {});
