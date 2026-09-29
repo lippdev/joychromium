@@ -11,6 +11,20 @@ public sealed class BrowserTab : INotifyPropertyChanged
     private string _title = "New tab";
     private string _url = "";
     private bool _isActive;
+    private bool _isPlayingAudio;
+    private bool _isMuted;
+
+    public bool IsPlayingAudio
+    {
+        get => _isPlayingAudio;
+        set => Set(ref _isPlayingAudio, value);
+    }
+
+    public bool IsMuted
+    {
+        get => _isMuted;
+        set => Set(ref _isMuted, value);
+    }
     private System.Windows.Media.ImageSource? _favicon;
 
     public System.Windows.Media.ImageSource? Favicon

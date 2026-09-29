@@ -45,7 +45,7 @@ Each site runs in one of three modes, remembered per host and configurable in Se
 
 ## Favorites, history and page tools
 
-★ (or `Ctrl+D`, or hold `LB` and press `Y`) toggles the current page in favorites, listed at `joychromium://favorites` (`Ctrl+B`) and as tiles on the new tab page. Visits in normal tabs are logged to `history.jsonl` (`joychromium://history`, `Ctrl+H`, searchable, removable, 5000 entries); private tabs and internal pages are never recorded. Typing in the address bar suggests favorites and history (↓ to pick). `Ctrl+F` finds in page, `Ctrl` `+`/`-`/`0` zooms, `F11` or a fullscreen video hides the chrome (Esc/B leaves), `Ctrl+Shift+T` reopens the last closed tab. Tabs show the site favicon.
+★ (or `Ctrl+D`, or hold `LB` and press `Y`) toggles the current page in favorites, listed at `joychromium://favorites` (`Ctrl+B`) and as tiles on the new tab page. Visits in normal tabs are logged to `history.jsonl` (`joychromium://history`, `Ctrl+H`, searchable, removable, 5000 entries); private tabs and internal pages are never recorded. Typing in the address bar suggests favorites and history (↓ to pick). `Ctrl+F` finds in page, `Ctrl` `+`/`-`/`0` zooms, `F11` or a fullscreen video hides the chrome (Esc/B leaves), `Ctrl+Shift+T` reopens the last closed tab. Tabs show the site favicon and a speaker while playing; `Ctrl+M` or the speaker mutes a tab; right-click a tab for duplicate / close others / reopen; middle-click closes. The display stays on while an unmuted tab plays media.
 
 ## Robustness
 

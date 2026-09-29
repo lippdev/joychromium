@@ -14,3 +14,4 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e SemVer.
 - Favoritos (★, Ctrl+D, LB+Y), histórico (`joychromium://history`), sugestões na barra de endereço, favicon nas abas, find in page (Ctrl+F), zoom (Ctrl +/-/0), fullscreen de vídeo esconde o chrome, reabrir aba fechada (Ctrl+Shift+T).
 - Modos de controle por site: Spatial (foco entre elementos via script), Cursor (mouse virtual no stick esquerdo, scroll no direito) e Arrows (setas); clique no stick direito alterna e lembra por host.
 - Refactor: `MainWindow` dividido em arquivos parciais por responsabilidade; P/Invoke em `NativeInput.cs`.
+- Ícone do app, mute por aba com indicador de áudio (Ctrl+M), menu de contexto da aba (duplicar, fechar outras, reabrir), clique do meio fecha, tela não apaga durante mídia.

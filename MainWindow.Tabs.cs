@@ -75,6 +75,12 @@ public partial class MainWindow
             if (tab == _active)
                 SetChromeVisible(!core.ContainsFullScreenElement);
         };
+        core.IsDocumentPlayingAudioChanged += (_, _) =>
+        {
+            tab.IsPlayingAudio = core.IsDocumentPlayingAudio;
+            UpdateKeepAwake();
+        };
+        core.IsMutedChanged += (_, _) => tab.IsMuted = core.IsMuted;
         core.NavigationStarting += (_, args) =>
         {
             tab.InputFrame = null;
@@ -182,4 +188,54 @@ public partial class MainWindow
             _ => CoreWebView2TrackingPreventionLevel.Balanced,
         };
     }
+
+    // ---- Tab menu, audio and keep-awake ----
+
+    private static BrowserTab? TabOf(object sender) => sender switch
+    {
+        FrameworkElement { Tag: BrowserTab tab } => tab,
+        MenuItem { Parent: ContextMenu { PlacementTarget: FrameworkElement { Tag: BrowserTab tab } } } => tab,
+        _ => null,
+    };
+
+    private void ToggleMute(BrowserTab? tab)
+    {
+        if (tab?.View.CoreWebView2 is { } core)
+        {
+            core.IsMuted = !core.IsMuted;
+            StatusText.Text = core.IsMuted ? "TAB MUTED" : "TAB UNMUTED";
+            UpdateKeepAwake();
+        }
+    }
+
+    private void MuteTab_Click(object sender, RoutedEventArgs e) => ToggleMute(TabOf(sender));
+
+    private async void DuplicateTab_Click(object sender, RoutedEventArgs e)
+    {
+        if (TabOf(sender) is { } tab)
+            await OpenTabAsync(tab.Url, isPrivate: tab.IsPrivate);
+    }
+
+    private async void CloseOtherTabs_Click(object sender, RoutedEventArgs e)
+    {
+        if (TabOf(sender) is not { } keep)
+            return;
+        foreach (var other in Tabs.Where(t => t != keep).ToList())
+            await CloseTabAsync(other);
+    }
+
+    private async void ReopenTab_Click(object sender, RoutedEventArgs e) => await ReopenClosedTabAsync();
+
+    private void Tab_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // Middle click closes, like every desktop browser.
+        if (e.ChangedButton == MouseButton.Middle && TabOf(sender) is { } tab)
+        {
+            e.Handled = true;
+            _ = CloseTabAsync(tab);
+        }
+    }
+
+    /// <summary>Keeps the display on while any unmuted tab plays audio/video; releases it otherwise.</summary>
+    private void UpdateKeepAwake() => NativeInput.KeepDisplayAwake(Tabs.Any(t => t.IsPlayingAudio && !t.IsMuted));
 }
