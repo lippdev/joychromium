@@ -15,5 +15,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - run: dotnet restore JoyChromium.csproj
+      - run: dotnet format JoyChromium.csproj --verify-no-changes --no-restore
       - run: dotnet build JoyChromium.csproj --configuration Release --no-restore
       - run: dotnet run --project tests/TvIdentity.Smoke.csproj --configuration Release

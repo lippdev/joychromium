@@ -1,10 +1,10 @@
-using Microsoft.Web.WebView2.Core;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Web.WebView2.Core;
 
 namespace JoyChromium;
 
@@ -380,14 +380,14 @@ public partial class MainWindow : Window
         await Task.CompletedTask;
     }
 
-    private static void SendVirtualKey(ushort key)
+    private static bool SendVirtualKey(ushort key)
     {
         var input = new[]
         {
             new Input { Type = 1, Union = new InputUnion { Keyboard = new KeyboardInput { VirtualKey = key } } },
             new Input { Type = 1, Union = new InputUnion { Keyboard = new KeyboardInput { VirtualKey = key, Flags = 0x0002 } } }
         };
-        SendInput((uint)input.Length, input, Marshal.SizeOf<Input>());
+        return SendInput((uint)input.Length, input, Marshal.SizeOf<Input>()) == input.Length;
     }
 
     [StructLayout(LayoutKind.Sequential)]
