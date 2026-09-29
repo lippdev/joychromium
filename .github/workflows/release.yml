@@ -43,7 +43,7 @@ jobs:
           else
             echo "release=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.decide.outputs.release == 'true'
         with:
           fetch-depth: 0
@@ -68,7 +68,7 @@ jobs:
     if: needs.decide.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Tag the release commit
         run: |
           git config user.name "joychromium-bot"
@@ -87,7 +87,7 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: v${{ needs.decide.outputs.version }}
       - uses: actions/setup-node@v4
