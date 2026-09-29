@@ -110,6 +110,7 @@ public partial class MainWindow
             case Key.Tab: SwitchTab(shift ? -1 : 1); break;
             case Key.OemComma: NavigateActive(Pages.SettingsPage); break;
             case Key.D: ToggleFavorite(); break;
+            case Key.M: ToggleMute(_active); break;
             case Key.F: OpenFind(); break;
             case Key.H: NavigateActive(Pages.HistoryPage); break;
             case Key.B: NavigateActive(Pages.FavoritesPage); break;

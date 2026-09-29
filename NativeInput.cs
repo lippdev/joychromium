@@ -44,6 +44,15 @@ internal static class NativeInput
         public IntPtr ExtraInfo;
     }
 
+    private const uint EsContinuous = 0x80000000, EsDisplayRequired = 0x00000002;
+
+    /// <summary>Prevents the screen from turning off while media plays; call with false to let Windows idle again.</summary>
+    public static void KeepDisplayAwake(bool keep) =>
+        _ = SetThreadExecutionState(keep ? EsContinuous | EsDisplayRequired : EsContinuous);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint SetThreadExecutionState(uint flags);
+
     public static bool SendVirtualKey(ushort key)
     {
         var input = new[]

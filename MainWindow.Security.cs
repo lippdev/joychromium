@@ -162,6 +162,7 @@ public partial class MainWindow
                 ActivateTab(Tabs[Math.Min(index, Tabs.Count - 1)]);
         }
         tab.View.Dispose();
+        UpdateKeepAwake();
     }
 
     private static System.Windows.Media.Imaging.BitmapImage LoadImage(Stream stream)
