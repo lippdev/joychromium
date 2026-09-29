@@ -132,8 +132,11 @@ public partial class MainWindow : Window
     {
         SaveSessionIfChanged();
         var now = DateTime.UtcNow;
-        foreach (var tab in Tabs.Where(t => t != _active && now - t.LastActiveUtc > SleepAfter))
+        // Snapshot: tabs can open/close while a suspension is awaited.
+        foreach (var tab in Tabs.Where(t => t != _active && now - t.LastActiveUtc > SleepAfter).ToList())
         {
+            if (!Tabs.Contains(tab))
+                continue;
             var core = tab.View.CoreWebView2;
             if (core is null || core.IsSuspended || core.IsDocumentPlayingAudio)
                 continue;
@@ -151,13 +154,18 @@ public partial class MainWindow : Window
 
     // ---- Crash recovery ----
 
+    private bool _recoveringEngine;
+
     private async void HandleProcessFailed(BrowserTab tab, CoreWebView2ProcessFailedEventArgs args)
     {
         Log.Error($"Process failed: {args.ProcessFailedKind} reason={args.Reason} exit={args.ExitCode} url={tab.Url}");
         switch (args.ProcessFailedKind)
         {
             case CoreWebView2ProcessFailedKind.BrowserProcessExited:
-                // The whole engine is gone; every tab's control is dead. Rebuild them from their URLs.
+                // Every tab reports this once; only the first report rebuilds. The engine is gone, so every control is dead.
+                if (_recoveringEngine)
+                    return;
+                _recoveringEngine = true;
                 StatusText.Text = "BROWSER ENGINE CRASHED · RECOVERING";
                 var urls = Tabs.Select(t => (t.Url, t.IsPrivate)).ToList();
                 var activeIndex = _active is null ? 0 : Tabs.IndexOf(_active);
@@ -168,8 +176,15 @@ public partial class MainWindow : Window
                 }
                 Tabs.Clear();
                 _active = null;
-                for (var i = 0; i < urls.Count; i++)
-                    await OpenTabAsync(urls[i].Url, activate: i == activeIndex, isPrivate: urls[i].IsPrivate);
+                try
+                {
+                    for (var i = 0; i < urls.Count; i++)
+                        await OpenTabAsync(urls[i].Url, activate: i == activeIndex, isPrivate: urls[i].IsPrivate);
+                }
+                finally
+                {
+                    _recoveringEngine = false;
+                }
                 break;
             case CoreWebView2ProcessFailedKind.RenderProcessExited:
             case CoreWebView2ProcessFailedKind.FrameRenderProcessExited:

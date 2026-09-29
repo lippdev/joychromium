@@ -161,7 +161,7 @@ public static class SettingsStore
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    /// <summary>%LocalAppData%JoyChromium, or JOYCHROMIUM_DATA when set (tests use a throwaway folder).</summary>
+    /// <summary>%LocalAppData%\JoyChromium, or JOYCHROMIUM_DATA when set (tests use a throwaway folder).</summary>
     public static string DataFolder { get; } =
         Environment.GetEnvironmentVariable("JOYCHROMIUM_DATA") is { Length: > 0 } custom
             ? custom
