@@ -36,8 +36,10 @@ try
     Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_T);
     Check(Wait(TabCount, n => n == 2, "second tab") == 2, "Ctrl+T opens a second tab");
 
-    Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.OEM_COMMA);
+    // The title only changes once the new tab's engine is up; Ctrl+, before that would hit a not-yet-created CoreWebView2.
+    Check(Wait(() => window.Title, t => t.StartsWith("New tab", StringComparison.Ordinal), "new tab ready", 60).StartsWith("New tab", StringComparison.Ordinal), "new tab page loaded");
     var address = window.FindFirstDescendant(cf => cf.ByAutomationId("AddressBox"))!.AsTextBox();
+    Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.OEM_COMMA);
     Check(Wait(() => address.Text, t => t == "joychromium://settings", "settings url") == "joychromium://settings", "Ctrl+, opens settings");
     Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_W);
     Check(Wait(TabCount, n => n == 1, "tab closed") == 1, "Ctrl+W closes the tab");

@@ -274,8 +274,9 @@ public partial class MainWindow : Window
         };
         core.NavigationCompleted += (_, args) =>
         {
-            // The cancelled http navigation completes first (OperationCanceled); keep the pending URL for the https attempt.
-            if (args.WebErrorStatus == CoreWebView2WebErrorStatus.OperationCanceled)
+            // Two non-errors: our own cancel (OperationCanceled, e.g. the http->https swap) and a navigation superseded by a
+            // newer one (ConnectionAborted = ERR_ABORTED). Browsers show nothing for either; keep the pending http URL for the retry.
+            if (args.WebErrorStatus is CoreWebView2WebErrorStatus.OperationCanceled or CoreWebView2WebErrorStatus.ConnectionAborted)
                 return;
             var pendingHttp = tab.PendingHttpsUpgrade;
             tab.PendingHttpsUpgrade = null;
