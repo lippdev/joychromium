@@ -36,8 +36,6 @@ try
     Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_T);
     Check(Wait(TabCount, n => n == 2, "second tab") == 2, "Ctrl+T opens a second tab");
 
-    // The title only changes once the new tab's engine is up; Ctrl+, before that would hit a not-yet-created CoreWebView2.
-    Check(Wait(() => window.Title, t => t.StartsWith("New tab", StringComparison.Ordinal), "new tab ready", 60).StartsWith("New tab", StringComparison.Ordinal), "new tab page loaded");
     var address = window.FindFirstDescendant(cf => cf.ByAutomationId("AddressBox"))!.AsTextBox();
     // Keystrokes do not reliably reach the shell once focus is inside the page on the CI runner; drive the real buttons instead.
     Invoke(window, "Settings");

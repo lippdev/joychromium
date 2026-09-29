@@ -309,7 +309,9 @@ public partial class MainWindow : Window
             })();
             """);
 
-        core.Navigate(Pages.Resolve(url));
+        // A request made while the engine was still starting wins over the tab's original target.
+        core.Navigate(Pages.Resolve(tab.PendingNavigation ?? url));
+        tab.PendingNavigation = null;
         return tab;
     }
 
@@ -576,7 +578,7 @@ public partial class MainWindow : Window
 
     // ---- Settings page ----
 
-    private void Settings_Click(object sender, RoutedEventArgs e) => Core?.Navigate(Pages.SettingsPage);
+    private void Settings_Click(object sender, RoutedEventArgs e) => NavigateActive(Pages.SettingsPage);
 
     private async Task ApplyAdBlockAsync(BrowserTab tab, bool enabled)
     {
@@ -851,18 +853,29 @@ public partial class MainWindow : Window
     private void NavigateFromAddress()
     {
         var text = AddressBox.Text.Trim();
-        if (string.IsNullOrEmpty(text) || Core is null)
+        if (string.IsNullOrEmpty(text) || _active is null)
             return;
         HideKeyboard();
         var resolved = Pages.Resolve(text);
         if (resolved != text)
         {
-            Core.Navigate(resolved);
+            NavigateActive(resolved);
             return;
         }
         // Anything that is not a plain web address (javascript:, file:, edge:, ...) is treated as a search.
         var uri = Pages.IsWebUrl(text) ? new Uri(text) : SettingsStore.Current.SearchEngine.BuildQuery(text);
-        Core.Navigate(uri.ToString());
+        NavigateActive(uri.ToString());
+    }
+
+    /// <summary>Navigates the active tab now, or as soon as its engine finishes initializing.</summary>
+    private void NavigateActive(string url)
+    {
+        if (_active is null)
+            return;
+        if (_active.View.CoreWebView2 is { } core)
+            core.Navigate(Pages.Resolve(url));
+        else
+            _active.PendingNavigation = url;
     }
 
     private void Back_Click(object sender, RoutedEventArgs e)
@@ -876,7 +889,7 @@ public partial class MainWindow : Window
     }
 
     private void Reload_Click(object sender, RoutedEventArgs e) => Core?.Reload();
-    private void Home_Click(object sender, RoutedEventArgs e) => Core?.Navigate(SettingsStore.Current.HomeUrl);
+    private void Home_Click(object sender, RoutedEventArgs e) => NavigateActive(SettingsStore.Current.HomeUrl);
     private void Go_Click(object sender, RoutedEventArgs e) => NavigateFromAddress();
 
     private void AddressBox_KeyDown(object sender, KeyEventArgs e)
@@ -907,7 +920,7 @@ public partial class MainWindow : Window
             case Key.N when (Keyboard.Modifiers & ModifierKeys.Shift) != 0: await OpenTabAsync(Pages.NewTabScheme, isPrivate: true); break;
             case Key.W: if (_active is not null) await CloseTabAsync(_active); break;
             case Key.Tab: SwitchTab((Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : 1); break;
-            case Key.OemComma: Core?.Navigate(Pages.SettingsPage); break;
+            case Key.OemComma: NavigateActive(Pages.SettingsPage); break;
             default: e.Handled = false; break;
         }
     }
