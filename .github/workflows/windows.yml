@@ -18,3 +18,4 @@ jobs:
       - run: dotnet format JoyChromium.csproj --verify-no-changes --no-restore
       - run: dotnet build JoyChromium.csproj --configuration Release --no-restore
       - run: dotnet run --project tests/TvIdentity.Smoke.csproj --configuration Release
+      - run: dotnet build tools/PolicySigner --configuration Release

@@ -32,6 +32,13 @@ uBlock Origin is downloaded from its official GitHub release during the build (`
 
 HTTPS-only (http is upgraded; a failed upgrade shows an internal page that can fall back for that host in this session), certificate errors are always blocked, only `http(s)` and `joychromium://` addresses navigate, camera/microphone/location/notifications prompt every time unless remembered, downloads go to `DownloadsJoyChromium` with risky extensions refused and SmartScreen checks on, tracking prevention is Balanced, password saving and autofill are off, DevTools and context menus are off in Release, popups are rate-limited, `Ctrl+Shift+N` opens a private tab. Optional DNS-over-HTTPS (Cloudflare/Quad9/Google). Everything is in Settings → Privacy & security; the app warns if the WebView2 runtime is older than `SecurityPolicy.MinimumRuntimeVersion`.
 
+## Staying up to date without releases
+
+- **Engine**: WebView2 Evergreen updates itself through Windows; the app only warns when it is older than the minimum.
+- **uBlock Origin**: once a day the app checks the official GitHub releases, downloads a newer `chromium.zip` into `%LocalAppData%JoyChromiumextensions`, validates its manifest and switches to it on the next start (the two newest copies are kept for rollback).
+- **Policy**: `policy/policy.json` (signed with `tools/PolicySigner`, public key embedded in `PolicyService`) can raise the minimum runtime, block hosts and add risky download extensions. It is fetched from `main`, verified, cached, and can only tighten the embedded defaults. To change it: edit the JSON, run `dotnet run --project tools/PolicySigner -- sign <keyfile> policy/policy.json`, commit both files.
+- **App**: installed builds self-update through Velopack from GitHub Releases (`.github/workflows/release.yml` packs and publishes on a `v*` tag). Updates download in the background and install when the app closes.
+
 ## TV identity
 
 Before the first navigation, the app appends `JoyChromiumTV/0.1 (TV; SmartTV)` to WebView2's user-agent. WebView2 applies it to site navigations and subresources; it cannot be toggled off in this prototype. Overriding the user-agent can clear User-Agent Client Hints, and a TV token does not guarantee every site— including YouTube—will serve its TV interface. The app bridges controller directions as keyboard arrows; page-level Gamepad API support still depends on WebView2/runtime behavior.

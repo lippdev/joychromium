@@ -60,3 +60,16 @@ var perms = new AppSettings().WithPermission("A.example", "Camera", false).WithP
 if (perms.SitePermissions.Count != 2 || perms.WithoutPermissions("a.example").SitePermissions.Count != 1)
     throw new InvalidOperationException("Permission bookkeeping is wrong.");
 Console.WriteLine("Security policy rules are consistent.");
+
+var policyBytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "policy.json"));
+var policySig = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "policy.json.sig"));
+if (!PolicyService.Verify(policyBytes, policySig) || PolicyService.Verify(policyBytes, policySig[..^4] + "AAAA") || PolicyService.Verify([.. policyBytes, 0x20], policySig))
+    throw new InvalidOperationException("Policy signature verification is wrong.");
+var shipped = PolicyService.Parse(policyBytes) ?? throw new InvalidOperationException("Shipped policy.json does not parse.");
+if (shipped.Version < 1 || shipped.EffectiveMinimumRuntime != SecurityPolicy.MinimumRuntimeVersion)
+    throw new InvalidOperationException("Shipped policy is inconsistent with the embedded defaults.");
+var strict = new RemotePolicy { MinimumRuntimeVersion = "999.0.0.0", BlockedHosts = ["evil.example"] };
+if (strict.EffectiveMinimumRuntime != "999.0.0.0" || !strict.BlocksHost("cdn.evil.example") || strict.BlocksHost("notevil.example") ||
+    new RemotePolicy { MinimumRuntimeVersion = "1.0.0.0" }.EffectiveMinimumRuntime != SecurityPolicy.MinimumRuntimeVersion)
+    throw new InvalidOperationException("Remote policy merge rules are wrong.");
+Console.WriteLine("Remote policy signing and merge rules are consistent.");
