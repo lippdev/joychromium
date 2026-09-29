@@ -20,6 +20,10 @@ An Xbox/XInput-compatible controller is supported. D-pad and left stick move the
 
 The gear button, `Ctrl+,` or typing `joychromium://settings` opens an internal settings page with color presets and custom accent/background/surface/text colors. The choice is saved to `%LocalAppData%JoyChromiumsettings.json` and applied at startup.
 
+## Start page, new tabs and session
+
+New tabs open an internal page (`joychromium://newtab`) with a search box and editable shortcuts. Settings → *Start & new tab* chooses what opens at startup (new tab page, home, a custom URL or the tabs from the last session), what new tabs show, and the home (⌂) URL. Open tabs are saved to `%LocalAppData%JoyChromiumsession.json` on exit.
+
 ## Ad blocking, search and onboarding
 
 uBlock Origin is downloaded from its official GitHub release during the build (`FetchUBlock` target, version pinned in the csproj) and installed into the WebView2 profile as an unpacked extension; it can be toggled in Settings. Address-bar text that is not a URL is searched with the chosen engine (Google by default; DuckDuckGo, Bing, Brave, Startpage or a custom `%s` template). On first launch a `joychromium://welcome` onboarding walks through theme, search engine and ad blocking.

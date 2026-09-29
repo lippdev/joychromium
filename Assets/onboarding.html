@@ -41,7 +41,7 @@
 </head>
 <body>
 <div class="card">
-  <div class="steps"><span class="done"></span><span></span><span></span><span></span></div>
+  <div class="steps"><span class="done"></span><span></span><span></span><span></span><span></span></div>
 
   <div class="step show" data-step="0">
     <h1>Welcome to JoyChromium</h1>
@@ -62,6 +62,13 @@
   </div>
 
   <div class="step" data-step="3">
+    <h1>Start and new tabs</h1>
+    <p class="lead">Where new tabs land. The home button (⌂) always goes to YouTube TV unless you change it in Settings.</p>
+    <div class="grid" id="newtab"></div>
+    <p class="hint" style="margin-top:22px">On startup, JoyChromium can also restore the tabs you had open last time. Change that in Settings any time.</p>
+  </div>
+
+  <div class="step" data-step="4">
     <h1>Block ads and trackers</h1>
     <p class="lead">uBlock Origin is built in. Keep it on for cleaner, faster pages.</p>
     <label class="toggle"><div>Block ads and trackers<small id="adblockNote">Powered by uBlock Origin</small></div>
@@ -89,7 +96,7 @@
     document.querySelectorAll('.step').forEach(el => el.classList.toggle('show', +el.dataset.step === n));
     document.querySelectorAll('.steps span').forEach((el, i) => el.classList.toggle('done', i <= n));
     $('back').style.visibility = n === 0 ? 'hidden' : 'visible';
-    $('next').textContent = n === 0 ? 'Get started' : n === 3 ? 'Finish' : 'Next';
+    $('next').textContent = n === 0 ? 'Get started' : n === 4 ? 'Finish' : 'Next';
     const first = document.querySelector('.step.show .opt.active, .step.show .opt, .step.show input');
     (first || $('next')).focus();
   }
@@ -104,7 +111,7 @@
   }
 
   $('next').addEventListener('click', () => {
-    if (step === 3) {
+    if (step === 4) {
       post('adblock-save', { adBlockEnabled: $('adblock').checked });
       post('onboarding-done', {});
       return;
@@ -123,6 +130,13 @@
       ([, t]) => { theme = t; paint(t); post('theme-save', { theme: t }); });
     options($('engines'), engines, e => `<span>${e.name}</span>`, e => e.template === engine.template,
       e => { engine = e; post('search-save', { searchEngine: e }); });
+    const newTabChoices = [
+      { mode: 'NewTabPage', label: 'New tab page', hint: 'Search box + shortcuts' },
+      { mode: 'Home', label: 'YouTube TV', hint: 'Straight to the couch' },
+    ];
+    options($('newtab'), newTabChoices, c => `<span><b>${c.label}</b><br><small style="color:var(--muted)">${c.hint}</small></span>`,
+      c => c.mode === msg.newTab,
+      c => post('general-save', { newTab: c.mode, startup: c.mode === 'Home' ? 'Home' : 'NewTab' }));
     $('adblock').checked = msg.adBlockEnabled;
     if (!msg.adBlockAvailable) { $('adblock').disabled = true; $('adblockNote').textContent = 'uBlock Origin is not bundled in this build.'; }
   });

@@ -31,13 +31,96 @@ public sealed record SearchEngine(string Name, string Template)
         new(Template.Replace("%s", Uri.EscapeDataString(text), StringComparison.Ordinal));
 }
 
+/// <summary>What the first tab shows when the app starts.</summary>
+public enum StartupMode { NewTab, Home, Restore, Custom }
+
+/// <summary>What a freshly opened tab shows.</summary>
+public enum NewTabMode { NewTabPage, Home, Custom }
+
+/// <summary>A tile on the new tab page.</summary>
+public sealed record Shortcut(string Name, string Url)
+{
+    public static IReadOnlyList<Shortcut> Default { get; } =
+    [
+        new("YouTube TV", "https://www.youtube.com/tv"),
+        new("Twitch", "https://www.twitch.tv"),
+        new("Netflix", "https://www.netflix.com"),
+        new("Prime Video", "https://www.primevideo.com"),
+        new("Disney+", "https://www.disneyplus.com"),
+        new("Spotify", "https://open.spotify.com"),
+    ];
+
+    public static Shortcut? TryParse(string? name, string? url) =>
+        Pages.IsWebUrl(url) && !string.IsNullOrWhiteSpace(name) ? new Shortcut(name.Trim(), url!.Trim()) : null;
+}
+
 /// <summary>Everything the user can configure. Missing or invalid values fall back to defaults on load.</summary>
 public sealed record AppSettings
 {
+    public const string DefaultHomeUrl = "https://www.youtube.com/tv";
+
     public Theme Theme { get; init; } = Theme.Default;
     public SearchEngine SearchEngine { get; init; } = SearchEngine.Google;
     public bool AdBlockEnabled { get; init; } = true;
     public bool OnboardingCompleted { get; init; }
+    public StartupMode Startup { get; init; } = StartupMode.NewTab;
+    public string StartupUrl { get; init; } = DefaultHomeUrl;
+    public NewTabMode NewTab { get; init; } = NewTabMode.NewTabPage;
+    public string NewTabUrl { get; init; } = DefaultHomeUrl;
+    public string HomeUrl { get; init; } = DefaultHomeUrl;
+    public IReadOnlyList<Shortcut> Shortcuts { get; init; } = Shortcut.Default;
+
+    /// <summary>URL a new tab should load. Internal pages are returned as their joychromium:// scheme.</summary>
+    public string NewTabTarget => NewTab switch
+    {
+        NewTabMode.Home => HomeUrl,
+        NewTabMode.Custom => NewTabUrl,
+        _ => Pages.NewTabScheme,
+    };
+
+    /// <summary>URLs to open at startup; more than one only when restoring a session.</summary>
+    public IReadOnlyList<string> StartupTargets(IReadOnlyList<string> lastSession) => Startup switch
+    {
+        StartupMode.Home => [HomeUrl],
+        StartupMode.Custom => [StartupUrl],
+        StartupMode.Restore when lastSession.Count > 0 => lastSession,
+        _ => [NewTabTarget],
+    };
+}
+
+/// <summary>Internal page addresses and their joychromium:// aliases.</summary>
+public static class Pages
+{
+    public const string Host = "settings.joychromium";
+    public const string SettingsScheme = "joychromium://settings";
+    public const string WelcomeScheme = "joychromium://welcome";
+    public const string NewTabScheme = "joychromium://newtab";
+    public const string SettingsPage = $"https://{Host}/settings.html";
+    public const string OnboardingPage = $"https://{Host}/onboarding.html";
+    public const string NewTabPage = $"https://{Host}/newtab.html";
+
+    /// <summary>Maps a joychromium:// alias to the real page, or returns the input unchanged.</summary>
+    public static string Resolve(string url) => url.ToLowerInvariant() switch
+    {
+        SettingsScheme => SettingsPage,
+        WelcomeScheme => OnboardingPage,
+        NewTabScheme => NewTabPage,
+        _ => url,
+    };
+
+    /// <summary>Maps a real internal page back to its alias for display, or returns the input unchanged.</summary>
+    public static string Alias(string url) => url switch
+    {
+        SettingsPage => SettingsScheme,
+        OnboardingPage => WelcomeScheme,
+        NewTabPage => NewTabScheme,
+        _ => url,
+    };
+
+    public static bool IsInternal(string url) => url is SettingsPage or OnboardingPage or NewTabPage;
+
+    public static bool IsWebUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }
 
 /// <summary>Reads and writes settings.json in %LocalAppData%\JoyChromium.</summary>
@@ -74,7 +157,43 @@ public static class SettingsStore
             SearchEngine = new RawSearch(settings.SearchEngine.Name, settings.SearchEngine.Template),
             AdBlockEnabled = settings.AdBlockEnabled,
             OnboardingCompleted = settings.OnboardingCompleted,
+            Startup = settings.Startup.ToString(),
+            StartupUrl = settings.StartupUrl,
+            NewTab = settings.NewTab.ToString(),
+            NewTabUrl = settings.NewTabUrl,
+            HomeUrl = settings.HomeUrl,
+            Shortcuts = settings.Shortcuts.Select(s => new RawShortcut(s.Name, s.Url)).ToList(),
         }, Options));
+    }
+
+    public static string SessionPath { get; } = Path.Combine(DataFolder, "session.json");
+
+    public static IReadOnlyList<string> LoadSession()
+    {
+        try
+        {
+            if (!File.Exists(SessionPath))
+                return [];
+            var urls = JsonSerializer.Deserialize<List<string>>(File.ReadAllText(SessionPath), Options) ?? [];
+            return urls.Where(u => Pages.IsWebUrl(u) || u == Pages.NewTabScheme).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    public static void SaveSession(IEnumerable<string> urls)
+    {
+        try
+        {
+            Directory.CreateDirectory(DataFolder);
+            File.WriteAllText(SessionPath, JsonSerializer.Serialize(urls.ToList(), Options));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Losing the session is not worth blocking shutdown.
+        }
     }
 
     private static AppSettings ReadFile()
@@ -92,6 +211,14 @@ public static class SettingsStore
                 SearchEngine = SearchEngine.TryParse(raw.SearchEngine?.Name, raw.SearchEngine?.Template) ?? SearchEngine.Google,
                 AdBlockEnabled = raw.AdBlockEnabled ?? true,
                 OnboardingCompleted = raw.OnboardingCompleted ?? false,
+                Startup = Enum.TryParse<StartupMode>(raw.Startup, true, out var startup) ? startup : StartupMode.NewTab,
+                StartupUrl = Pages.IsWebUrl(raw.StartupUrl) ? raw.StartupUrl! : AppSettings.DefaultHomeUrl,
+                NewTab = Enum.TryParse<NewTabMode>(raw.NewTab, true, out var newTab) ? newTab : NewTabMode.NewTabPage,
+                NewTabUrl = Pages.IsWebUrl(raw.NewTabUrl) ? raw.NewTabUrl! : AppSettings.DefaultHomeUrl,
+                HomeUrl = Pages.IsWebUrl(raw.HomeUrl) ? raw.HomeUrl! : AppSettings.DefaultHomeUrl,
+                Shortcuts = raw.Shortcuts is null
+                    ? Shortcut.Default
+                    : raw.Shortcuts.Select(s => Shortcut.TryParse(s.Name, s.Url)).OfType<Shortcut>().ToList(),
             };
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
@@ -107,7 +234,15 @@ public static class SettingsStore
         public RawSearch? SearchEngine { get; set; }
         public bool? AdBlockEnabled { get; set; }
         public bool? OnboardingCompleted { get; set; }
+        public string? Startup { get; set; }
+        public string? StartupUrl { get; set; }
+        public string? NewTab { get; set; }
+        public string? NewTabUrl { get; set; }
+        public string? HomeUrl { get; set; }
+        public List<RawShortcut>? Shortcuts { get; set; }
     }
+
+    private sealed record RawShortcut(string? Name, string? Url);
 
     private sealed record RawTheme(string? Accent, string? Background, string? Surface, string? Text);
     private sealed record RawSearch(string? Name, string? Template);
