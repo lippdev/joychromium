@@ -14,10 +14,22 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - name: Cache uBlock Origin download
+        uses: actions/cache@v4
+        with:
+          path: Assets/extensions
+          key: ublock-${{ hashFiles('JoyChromium.csproj') }}
       - run: dotnet restore JoyChromium.csproj
       - run: dotnet format JoyChromium.csproj --verify-no-changes --no-restore
       - run: dotnet build JoyChromium.csproj --configuration Release --no-restore
-      - run: dotnet run --project tests/TvIdentity.Smoke.csproj --configuration Release
+      - name: Unit tests
+        run: dotnet test tests/JoyChromium.Tests --configuration Release --logger "console;verbosity=normal"
       - run: dotnet build tools/PolicySigner --configuration Release
       - run: dotnet build tests/UiSmoke --configuration Release
       - name: UI smoke

@@ -22,7 +22,7 @@ Escopos sugeridos: `controller`, `keyboard`, `tv-identity`, `shell`, `ci`, `deps
 ## Checks locais
 ```powershell
 dotnet build .\JoyChromium.csproj --configuration Release
-dotnet run --project .\tests\TvIdentity.Smoke.csproj --configuration Release
+dotnet test .\tests\JoyChromium.Tests --configuration Release
 dotnet format JoyChromium.csproj --verify-no-changes
 ```
 
