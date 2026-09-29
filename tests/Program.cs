@@ -17,6 +17,14 @@ if (theme.IsLight || !Theme.Presets["Light"].IsLight)
     throw new InvalidOperationException("Light/dark detection is wrong.");
 if (Theme.TryParse("#123456", "nope", "#000000", "#FFFFFF") is not null)
     throw new InvalidOperationException("TryParse must reject invalid colors.");
-if (ThemeStore.Load() is null)
-    throw new InvalidOperationException("ThemeStore.Load must always return a theme.");
+if (SettingsStore.Load() is null)
+    throw new InvalidOperationException("SettingsStore.Load must always return settings.");
 Console.WriteLine("Theme parsing, mixing and presets are consistent.");
+
+if (SearchEngine.Google.BuildQuery("joy chromium").AbsoluteUri != "https://www.google.com/search?q=joy%20chromium")
+    throw new InvalidOperationException("Search query building is wrong.");
+if (SearchEngine.IsValidTemplate("https://x.example/?q=") || SearchEngine.IsValidTemplate("ftp://x/%s") || !SearchEngine.IsValidTemplate("https://x.example/s?q=%s"))
+    throw new InvalidOperationException("Search template validation is wrong.");
+if (new AppSettings() is not { SearchEngine.Name: "Google", AdBlockEnabled: true, OnboardingCompleted: false })
+    throw new InvalidOperationException("Default settings are wrong.");
+Console.WriteLine("Search engine defaults and validation are consistent.");

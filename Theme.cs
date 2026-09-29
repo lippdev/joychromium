@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.IO;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace JoyChromium;
@@ -68,45 +66,3 @@ public sealed record Theme(string Accent, string Background, string Surface, str
     }
 }
 
-/// <summary>Reads and writes the settings file in %LocalAppData%\JoyChromium.</summary>
-public static class ThemeStore
-{
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
-    public static string DataFolder { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JoyChromium");
-
-    public static string SettingsPath { get; } = Path.Combine(DataFolder, "settings.json");
-
-    public static Theme Load()
-    {
-        try
-        {
-            if (!File.Exists(SettingsPath))
-                return Theme.Default;
-            var file = JsonSerializer.Deserialize<SettingsFile>(File.ReadAllText(SettingsPath), Options);
-            var theme = file?.Theme;
-            return Theme.TryParse(theme?.Accent, theme?.Background, theme?.Surface, theme?.Text) ?? Theme.Default;
-        }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-        {
-            return Theme.Default;
-        }
-    }
-
-    public static void Save(Theme theme)
-    {
-        Directory.CreateDirectory(DataFolder);
-        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new SettingsFile { Theme = theme }, Options));
-    }
-
-    private sealed class SettingsFile
-    {
-        public Theme? Theme { get; set; }
-    }
-}

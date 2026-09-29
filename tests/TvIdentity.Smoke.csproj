@@ -8,5 +8,6 @@
   <ItemGroup>
     <Compile Include="../TvIdentity.cs" Link="TvIdentity.cs" />
     <Compile Include="../Theme.cs" Link="Theme.cs" />
+    <Compile Include="../Settings.cs" Link="Settings.cs" />
   </ItemGroup>
 </Project>

@@ -6,12 +6,26 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UBlockVersion>1.75.0</UBlockVersion>
+    <UBlockDir>$(MSBuildProjectDirectory)/Assets/extensions/uBlock0.chromium</UBlockDir>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
-    <Content Include="Assets/**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/**" Exclude="Assets/extensions/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3595.46" />
   </ItemGroup>
+
+  <!-- uBlock Origin is fetched from its official release at build time and bundled as an unpacked extension. -->
+  <Target Name="FetchUBlock" BeforeTargets="BeforeBuild" Condition="!Exists('$(UBlockDir)/manifest.json')">
+    <DownloadFile SourceUrl="https://github.com/gorhill/uBlock/releases/download/$(UBlockVersion)/uBlock0_$(UBlockVersion).chromium.zip"
+                  DestinationFolder="$(BaseIntermediateOutputPath)" DestinationFileName="ublock.zip" />
+    <Unzip SourceFiles="$(BaseIntermediateOutputPath)ublock.zip" DestinationFolder="$(MSBuildProjectDirectory)/Assets/extensions" />
+  </Target>
+  <Target Name="BundleExtensions" AfterTargets="FetchUBlock" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <Content Include="Assets/extensions/**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 </Project>

@@ -39,6 +39,15 @@
   button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
   button:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
   .status { color: var(--muted); font-size: 13px; margin-top: 10px; min-height: 1.5em; }
+  input[type=text] { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  input[type=text]:focus-visible { outline: 2px solid var(--accent); }
+  .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; border-radius: 26px; background: var(--border); transition: .15s; }
+  .switch span::before { content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; border-radius: 50%; background: var(--text); transition: .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::before { transform: translateX(20px); background: var(--accent-text); }
+  .switch input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent); }
   kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; font-size: 12px; }
 </style>
 </head>
@@ -47,6 +56,8 @@
   <nav>
     <h1>Settings</h1>
     <a href="#appearance" aria-current="page">🎨 Appearance</a>
+    <a href="#search">🔎 Search</a>
+    <a href="#privacy">🛡️ Privacy</a>
     <a href="#about">ℹ️ About</a>
   </nav>
   <main>
@@ -69,6 +80,29 @@
         <button class="ghost" id="reset">Reset to default</button>
       </div>
       <div class="status" id="status"></div>
+    </section>
+
+    <h2 id="search">Search</h2>
+    <p class="lead">Text typed in the address bar that is not a URL is searched with this engine.</p>
+    <section>
+      <h3>Search engine</h3>
+      <div class="presets" id="engines"></div>
+      <div class="row" style="margin-top:14px"><div>Custom<small>Use <code>%s</code> where the query goes</small></div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="customName" placeholder="Name" style="width:120px">
+          <input type="text" id="customTemplate" placeholder="https://example.com/search?q=%s" style="width:320px">
+          <button class="ghost" id="customSave">Use</button>
+        </div>
+      </div>
+      <div class="status" id="searchStatus"></div>
+    </section>
+
+    <h2 id="privacy">Privacy</h2>
+    <p class="lead">uBlock Origin ships built in and runs inside the browser engine.</p>
+    <section>
+      <div class="row"><div>Block ads and trackers<small id="adblockNote">Powered by uBlock Origin</small></div>
+        <label class="switch"><input type="checkbox" id="adblock"><span></span></label>
+      </div>
     </section>
 
     <section id="about">
@@ -127,7 +161,40 @@
       return b;
     }));
     paint(msg.theme);
+    renderEngines(msg.searchEngines, msg.searchEngine);
+    const adblock = document.getElementById('adblock');
+    adblock.checked = msg.adBlockEnabled;
+    adblock.disabled = !msg.adBlockAvailable;
+    if (!msg.adBlockAvailable) document.getElementById('adblockNote').textContent = 'uBlock Origin is not bundled in this build.';
   });
+
+  function renderEngines(engines, current) {
+    const box = document.getElementById('engines');
+    box.replaceChildren(...engines.map(e => {
+      const b = document.createElement('button');
+      b.className = 'preset' + (e.template === current.template ? ' active' : '');
+      b.textContent = e.name;
+      b.addEventListener('click', () => saveEngine(e, engines));
+      return b;
+    }));
+    if (!engines.some(e => e.template === current.template)) {
+      document.getElementById('customName').value = current.name;
+      document.getElementById('customTemplate').value = current.template;
+    }
+  }
+  function saveEngine(engine, engines) {
+    post('search-save', { searchEngine: engine });
+    renderEngines(engines || [], engine);
+    const s = document.getElementById('searchStatus');
+    s.textContent = `Searching with ${engine.name}.`; setTimeout(() => s.textContent = '', 2000);
+  }
+  document.getElementById('customSave').addEventListener('click', () => {
+    const template = document.getElementById('customTemplate').value.trim();
+    const name = document.getElementById('customName').value.trim() || 'Custom';
+    if (!/^https?:\/\/.+%s/.test(template)) { document.getElementById('searchStatus').textContent = 'Template must be an http(s) URL containing %s.'; return; }
+    saveEngine({ name, template });
+  });
+  document.getElementById('adblock').addEventListener('change', e => post('adblock-save', { adBlockEnabled: e.target.checked }));
   post('ready', {});
 </script>
 </body>
