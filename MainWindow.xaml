@@ -175,7 +175,7 @@
                             <DataTemplate DataType="{x:Type local:BrowserTab}">
                                 <Button Style="{StaticResource TabButton}" Click="Tab_Click" Tag="{Binding}" ToolTip="{Binding Url}">
                                     <DockPanel LastChildFill="True">
-                                        <Button DockPanel.Dock="Right" Style="{StaticResource TabCloseButton}" Content="&#xE8BB;" Click="CloseTab_Click" Tag="{Binding}" ToolTip="Close tab" />
+                                        <Button DockPanel.Dock="Right" AutomationProperties.Name="Close tab" Style="{StaticResource TabCloseButton}" Content="&#xE8BB;" Click="CloseTab_Click" Tag="{Binding}" ToolTip="Close tab" />
                                         <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,6,0" />
                                     </DockPanel>
                                 </Button>
@@ -183,7 +183,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Button Style="{StaticResource CaptionButton}" Width="34" Height="34" Margin="2,0,0,2" VerticalAlignment="Bottom" Focusable="True"
-                            FontSize="11" Content="&#xE710;" ToolTip="New tab · Start" Click="NewTab_Click" />
+                            AutomationProperties.Name="New tab" FontSize="11" Content="&#xE710;" ToolTip="New tab · Start" Click="NewTab_Click" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimize" Click="Minimize_Click" />
@@ -220,7 +220,7 @@
                         <TextBlock Text="TV ON" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="Bold" />
                     </Border>
                     <Button Grid.Column="7" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                            Content="&#xE713;" ToolTip="Settings · Ctrl+," Click="Settings_Click" />
+                            AutomationProperties.Name="Settings" Content="&#xE713;" ToolTip="Settings · Ctrl+," Click="Settings_Click" />
                 </Grid>
             </Border>
 

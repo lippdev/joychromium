@@ -21,6 +21,12 @@ public sealed class BrowserTab : INotifyPropertyChanged
 
     public bool IsPrivate { get; init; }
 
+    /// <summary>Last time this tab was the active one; drives tab sleeping.</summary>
+    public DateTime LastActiveUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>URL requested before CoreWebView2 existed; applied once initialization completes.</summary>
+    public string? PendingNavigation { get; set; }
+
     /// <summary>Original http URL while an automatic https upgrade is in flight, so a failure can offer the fallback.</summary>
     public string? PendingHttpsUpgrade { get; set; }
 

@@ -18,11 +18,11 @@ An Xbox/XInput-compatible controller is supported. D-pad and left stick move the
 
 ## Themes
 
-The gear button, `Ctrl+,` or typing `joychromium://settings` opens an internal settings page with color presets and custom accent/background/surface/text colors. The choice is saved to `%LocalAppData%JoyChromiumsettings.json` and applied at startup.
+The gear button, `Ctrl+,` or typing `joychromium://settings` opens an internal settings page with color presets and custom accent/background/surface/text colors. The choice is saved to `%LocalAppData%\JoyChromium\settings.json` and applied at startup.
 
 ## Start page, new tabs and session
 
-New tabs open an internal page (`joychromium://newtab`) with a search box and editable shortcuts. Settings → *Start & new tab* chooses what opens at startup (new tab page, home, a custom URL or the tabs from the last session), what new tabs show, and the home (⌂) URL. Open tabs are saved to `%LocalAppData%JoyChromiumsession.json` on exit.
+New tabs open an internal page (`joychromium://newtab`) with a search box and editable shortcuts. Settings → *Start & new tab* chooses what opens at startup (new tab page, home, a custom URL or the tabs from the last session), what new tabs show, and the home (⌂) URL. Open tabs are saved to `%LocalAppData%\JoyChromium\session.json` on exit.
 
 ## Ad blocking, search and onboarding
 
@@ -35,9 +35,13 @@ HTTPS-only (http is upgraded; a failed upgrade shows an internal page that can f
 ## Staying up to date without releases
 
 - **Engine**: WebView2 Evergreen updates itself through Windows; the app only warns when it is older than the minimum.
-- **uBlock Origin**: once a day the app checks the official GitHub releases, downloads a newer `chromium.zip` into `%LocalAppData%JoyChromiumextensions`, validates its manifest and switches to it on the next start (the two newest copies are kept for rollback).
+- **uBlock Origin**: once a day the app checks the official GitHub releases, downloads a newer `chromium.zip` into `%LocalAppData%\JoyChromium\extensions`, validates its manifest and switches to it on the next start (the two newest copies are kept for rollback).
 - **Policy**: `policy/policy.json` (signed with `tools/PolicySigner`, public key embedded in `PolicyService`) can raise the minimum runtime, block hosts and add risky download extensions. It is fetched from `main`, verified, cached, and can only tighten the embedded defaults. To change it: edit the JSON, run `dotnet run --project tools/PolicySigner -- sign <keyfile> policy/policy.json`, commit both files.
 - **App**: installed builds self-update through Velopack from GitHub Releases (`.github/workflows/release.yml` packs and publishes on a `v*` tag). Updates download in the background and install when the app closes.
+
+## Robustness
+
+A renderer crash reloads the tab; an engine crash rebuilds every tab from its URL. Background tabs are suspended after 10 minutes unless they play audio, and resume when activated. The session is saved every 30 seconds and on close. Logs live in `%LocalAppData%\JoyChromium\logs` (7 days); Settings → About → *Export* zips them with sanitized settings. `JOYCHROMIUM_DATA` overrides the data folder (used by `tests/UiSmoke`, a FlaUI script that drives the real shell in CI).
 
 ## TV identity
 

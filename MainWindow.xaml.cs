@@ -37,11 +37,13 @@ public partial class MainWindow : Window
         BuildKeyboard();
         _gamepadTimer.Tick += PollGamepad;
         _gamepadTimer.Start();
-        Closing += (_, _) => SettingsStore.SaveSession(Tabs.Where(t => !t.IsPrivate).Select(t => t.Url)
-            .Where(u => u != Pages.WelcomeScheme && u != Pages.SettingsScheme && !u.StartsWith(Pages.ErrorPage, StringComparison.Ordinal)));
+        _housekeeping.Tick += Housekeeping_Tick;
+        _housekeeping.Start();
+        Closing += (_, _) => SettingsStore.SaveSession(SessionUrls());
         Closed += (_, _) =>
         {
             _gamepadTimer.Stop();
+            _housekeeping.Stop();
             AppUpdater.ApplyOnExit();
         };
     }
@@ -52,7 +54,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JoyChromium", "WebView2");
+            var dataFolder = Path.Combine(SettingsStore.DataFolder, "WebView2");
             var settings = SettingsStore.Current;
             PolicyService.LoadCached();
             var runtime = CoreWebView2Environment.GetAvailableBrowserVersionString();
@@ -80,6 +82,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Error("Browser start failed", ex);
             StatusText.Text = "BROWSER START FAILED";
             MessageBox.Show(this, ex.Message, "JoyChromium could not start", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -101,8 +104,101 @@ public partial class MainWindow : Window
         await PolicyService.RefreshAsync(Http);
         await AdBlock.CheckForUpdateAsync(Http, DateTime.UtcNow);
         await AppUpdater.CheckAndDownloadAsync();
+        Log.Info($"Maintenance: policy='{PolicyService.Status}' ublock='{AdBlock.Status}' app='{AppUpdater.Status}'");
         if (!string.IsNullOrWhiteSpace(PolicyService.Current.Message))
             StatusText.Text = PolicyService.Current.Message!.ToUpperInvariant();
+    }
+
+    // ---- Housekeeping: periodic session save and tab sleeping ----
+
+    private static readonly TimeSpan SleepAfter = TimeSpan.FromMinutes(10);
+    private readonly DispatcherTimer _housekeeping = new() { Interval = TimeSpan.FromSeconds(30) };
+    private string _lastSavedSession = "";
+
+    private IEnumerable<string> SessionUrls() => Tabs.Where(t => !t.IsPrivate).Select(t => t.Url)
+        .Where(u => u != Pages.WelcomeScheme && u != Pages.SettingsScheme && !u.StartsWith(Pages.ErrorPage, StringComparison.Ordinal));
+
+    private void SaveSessionIfChanged()
+    {
+        var urls = SessionUrls().ToList();
+        var key = string.Join("\n", urls);
+        if (key == _lastSavedSession)
+            return;
+        SettingsStore.SaveSession(urls);
+        _lastSavedSession = key;
+    }
+
+    private async void Housekeeping_Tick(object? sender, EventArgs e)
+    {
+        SaveSessionIfChanged();
+        var now = DateTime.UtcNow;
+        // Snapshot: tabs can open/close while a suspension is awaited.
+        foreach (var tab in Tabs.Where(t => t != _active && now - t.LastActiveUtc > SleepAfter).ToList())
+        {
+            if (!Tabs.Contains(tab))
+                continue;
+            var core = tab.View.CoreWebView2;
+            if (core is null || core.IsSuspended || core.IsDocumentPlayingAudio)
+                continue;
+            try
+            {
+                if (await core.TrySuspendAsync())
+                    Log.Info($"Suspended tab {tab.Url}");
+            }
+            catch (Exception ex) when (ex is COMException or InvalidOperationException)
+            {
+                // Suspension is best-effort; a page mid-navigation just stays awake.
+            }
+        }
+    }
+
+    // ---- Crash recovery ----
+
+    private bool _recoveringEngine;
+
+    private async void HandleProcessFailed(BrowserTab tab, CoreWebView2ProcessFailedEventArgs args)
+    {
+        Log.Error($"Process failed: {args.ProcessFailedKind} reason={args.Reason} exit={args.ExitCode} url={tab.Url}");
+        switch (args.ProcessFailedKind)
+        {
+            case CoreWebView2ProcessFailedKind.BrowserProcessExited:
+                // Every tab reports this once; only the first report rebuilds. The engine is gone, so every control is dead.
+                if (_recoveringEngine)
+                    return;
+                _recoveringEngine = true;
+                StatusText.Text = "BROWSER ENGINE CRASHED · RECOVERING";
+                var urls = Tabs.Select(t => (t.Url, t.IsPrivate)).ToList();
+                var activeIndex = _active is null ? 0 : Tabs.IndexOf(_active);
+                foreach (var t in Tabs.ToList())
+                {
+                    BrowserHost.Children.Remove(t.View);
+                    t.View.Dispose();
+                }
+                Tabs.Clear();
+                _active = null;
+                try
+                {
+                    for (var i = 0; i < urls.Count; i++)
+                        await OpenTabAsync(urls[i].Url, activate: i == activeIndex, isPrivate: urls[i].IsPrivate);
+                }
+                finally
+                {
+                    _recoveringEngine = false;
+                }
+                break;
+            case CoreWebView2ProcessFailedKind.RenderProcessExited:
+            case CoreWebView2ProcessFailedKind.FrameRenderProcessExited:
+                StatusText.Text = "PAGE CRASHED · RELOADING";
+                tab.View.CoreWebView2?.Reload();
+                break;
+            case CoreWebView2ProcessFailedKind.RenderProcessUnresponsive:
+                StatusText.Text = "PAGE NOT RESPONDING · B TO GO BACK, X TO RELOAD";
+                break;
+            default:
+                // GPU, utility and sandbox helpers restart on their own.
+                StatusText.Text = $"HELPER PROCESS RESTARTED · {args.ProcessFailedKind}";
+                break;
+        }
     }
 
     // ---- Tabs ----
@@ -178,8 +274,9 @@ public partial class MainWindow : Window
         };
         core.NavigationCompleted += (_, args) =>
         {
-            // The cancelled http navigation completes first (OperationCanceled); keep the pending URL for the https attempt.
-            if (args.WebErrorStatus == CoreWebView2WebErrorStatus.OperationCanceled)
+            // Two non-errors: our own cancel (OperationCanceled, e.g. the http->https swap) and a navigation superseded by a
+            // newer one (ConnectionAborted = ERR_ABORTED). Browsers show nothing for either; keep the pending http URL for the retry.
+            if (args.WebErrorStatus is CoreWebView2WebErrorStatus.OperationCanceled or CoreWebView2WebErrorStatus.ConnectionAborted)
                 return;
             var pendingHttp = tab.PendingHttpsUpgrade;
             tab.PendingHttpsUpgrade = null;
@@ -199,7 +296,7 @@ public partial class MainWindow : Window
         };
         core.PermissionRequested += (_, args) => HandlePermissionRequest(tab, args);
         core.DownloadStarting += (_, args) => HandleDownload(args);
-        core.ProcessFailed += (_, args) => StatusText.Text = $"PAGE CRASHED · {args.ProcessFailedKind}";
+        core.ProcessFailed += (_, args) => HandleProcessFailed(tab, args);
         await core.AddScriptToExecuteOnDocumentCreatedAsync("""
             (() => {
               document.addEventListener('focusin', event => {
@@ -212,7 +309,9 @@ public partial class MainWindow : Window
             })();
             """);
 
-        core.Navigate(Pages.Resolve(url));
+        // A request made while the engine was still starting wins over the tab's original target.
+        core.Navigate(Pages.Resolve(tab.PendingNavigation ?? url));
+        tab.PendingNavigation = null;
         return tab;
     }
 
@@ -351,7 +450,10 @@ public partial class MainWindow : Window
         }
         _active = tab;
         tab.IsActive = true;
+        tab.LastActiveUtc = DateTime.UtcNow;
         tab.View.Visibility = Visibility.Visible;
+        if (tab.View.CoreWebView2?.IsSuspended == true)
+            tab.View.CoreWebView2.Resume();
         AddressBox.Text = tab.Url;
         Title = $"{tab.Title} - JoyChromium";
         KeyboardPanel.Visibility = Visibility.Collapsed;
@@ -476,7 +578,7 @@ public partial class MainWindow : Window
 
     // ---- Settings page ----
 
-    private void Settings_Click(object sender, RoutedEventArgs e) => Core?.Navigate(Pages.SettingsPage);
+    private void Settings_Click(object sender, RoutedEventArgs e) => NavigateActive(Pages.SettingsPage);
 
     private async Task ApplyAdBlockAsync(BrowserTab tab, bool enabled)
     {
@@ -605,6 +707,17 @@ public partial class MainWindow : Window
                     adBlockUpdate = AdBlock.Status,
                     policy = PolicyService.Status,
                 }, JsonOptions));
+                break;
+            case "export-diagnostics":
+                try
+                {
+                    var zip = Log.ExportDiagnostics(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "JoyChromium"));
+                    core.PostWebMessageAsString(JsonSerializer.Serialize(new { type = "diagnostics", path = zip }, JsonOptions));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    core.PostWebMessageAsString(JsonSerializer.Serialize(new { type = "diagnostics", error = ex.Message }, JsonOptions));
+                }
                 break;
             case "clear-data":
                 await core.Profile.ClearBrowsingDataAsync();
@@ -740,18 +853,29 @@ public partial class MainWindow : Window
     private void NavigateFromAddress()
     {
         var text = AddressBox.Text.Trim();
-        if (string.IsNullOrEmpty(text) || Core is null)
+        if (string.IsNullOrEmpty(text) || _active is null)
             return;
         HideKeyboard();
         var resolved = Pages.Resolve(text);
         if (resolved != text)
         {
-            Core.Navigate(resolved);
+            NavigateActive(resolved);
             return;
         }
         // Anything that is not a plain web address (javascript:, file:, edge:, ...) is treated as a search.
         var uri = Pages.IsWebUrl(text) ? new Uri(text) : SettingsStore.Current.SearchEngine.BuildQuery(text);
-        Core.Navigate(uri.ToString());
+        NavigateActive(uri.ToString());
+    }
+
+    /// <summary>Navigates the active tab now, or as soon as its engine finishes initializing.</summary>
+    private void NavigateActive(string url)
+    {
+        if (_active is null)
+            return;
+        if (_active.View.CoreWebView2 is { } core)
+            core.Navigate(Pages.Resolve(url));
+        else
+            _active.PendingNavigation = url;
     }
 
     private void Back_Click(object sender, RoutedEventArgs e)
@@ -765,7 +889,7 @@ public partial class MainWindow : Window
     }
 
     private void Reload_Click(object sender, RoutedEventArgs e) => Core?.Reload();
-    private void Home_Click(object sender, RoutedEventArgs e) => Core?.Navigate(SettingsStore.Current.HomeUrl);
+    private void Home_Click(object sender, RoutedEventArgs e) => NavigateActive(SettingsStore.Current.HomeUrl);
     private void Go_Click(object sender, RoutedEventArgs e) => NavigateFromAddress();
 
     private void AddressBox_KeyDown(object sender, KeyEventArgs e)
@@ -796,7 +920,7 @@ public partial class MainWindow : Window
             case Key.N when (Keyboard.Modifiers & ModifierKeys.Shift) != 0: await OpenTabAsync(Pages.NewTabScheme, isPrivate: true); break;
             case Key.W: if (_active is not null) await CloseTabAsync(_active); break;
             case Key.Tab: SwitchTab((Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : 1); break;
-            case Key.OemComma: Core?.Navigate(Pages.SettingsPage); break;
+            case Key.OemComma: NavigateActive(Pages.SettingsPage); break;
             default: e.Handled = false; break;
         }
     }

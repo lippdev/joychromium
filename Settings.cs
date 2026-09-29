@@ -161,8 +161,11 @@ public static class SettingsStore
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>%LocalAppData%\JoyChromium, or JOYCHROMIUM_DATA when set (tests use a throwaway folder).</summary>
     public static string DataFolder { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JoyChromium");
+        Environment.GetEnvironmentVariable("JOYCHROMIUM_DATA") is { Length: > 0 } custom
+            ? custom
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JoyChromium");
 
     public static string SettingsPath { get; } = Path.Combine(DataFolder, "settings.json");
 
@@ -178,7 +181,11 @@ public static class SettingsStore
     {
         Current = settings;
         Directory.CreateDirectory(DataFolder);
-        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new RawSettings
+        File.WriteAllText(SettingsPath, Serialize(settings));
+    }
+
+    public static string Serialize(AppSettings settings) =>
+        JsonSerializer.Serialize(new RawSettings
         {
             Theme = new RawTheme(settings.Theme.Accent, settings.Theme.Background, settings.Theme.Surface, settings.Theme.Text),
             SearchEngine = new RawSearch(settings.SearchEngine.Name, settings.SearchEngine.Template),
@@ -197,8 +204,7 @@ public static class SettingsStore
             Autofill = settings.Autofill,
             BlockDangerousDownloads = settings.BlockDangerousDownloads,
             SitePermissions = settings.SitePermissions.ToDictionary(p => p.Key, p => new Dictionary<string, bool>(p.Value)),
-        }, Options));
-    }
+        }, Options);
 
     public static string SessionPath { get; } = Path.Combine(DataFolder, "session.json");
 

@@ -19,3 +19,6 @@ jobs:
       - run: dotnet build JoyChromium.csproj --configuration Release --no-restore
       - run: dotnet run --project tests/TvIdentity.Smoke.csproj --configuration Release
       - run: dotnet build tools/PolicySigner --configuration Release
+      - run: dotnet build tests/UiSmoke --configuration Release
+      - name: UI smoke
+        run: dotnet run --project tests/UiSmoke --configuration Release --no-build -- bin/Release/net8.0-windows10.0.19041.0/JoyChromium.exe
