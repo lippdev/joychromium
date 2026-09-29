@@ -39,10 +39,11 @@ try
     // The title only changes once the new tab's engine is up; Ctrl+, before that would hit a not-yet-created CoreWebView2.
     Check(Wait(() => window.Title, t => t.StartsWith("New tab", StringComparison.Ordinal), "new tab ready", 60).StartsWith("New tab", StringComparison.Ordinal), "new tab page loaded");
     var address = window.FindFirstDescendant(cf => cf.ByAutomationId("AddressBox"))!.AsTextBox();
-    Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.OEM_COMMA);
-    Check(Wait(() => address.Text, t => t == "joychromium://settings", "settings url") == "joychromium://settings", "Ctrl+, opens settings");
-    Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_W);
-    Check(Wait(TabCount, n => n == 1, "tab closed") == 1, "Ctrl+W closes the tab");
+    // Keystrokes do not reliably reach the shell once focus is inside the page on the CI runner; drive the real buttons instead.
+    Invoke(window, "Settings");
+    Check(Wait(() => address.Text, t => t == "joychromium://settings", "settings url") == "joychromium://settings", "Settings button opens settings");
+    Invoke(window, "Close tab");
+    Check(Wait(TabCount, n => n == 1, "tab closed") == 1, "Close tab button closes the tab");
 
     window.Close();
     Check(Wait(() => app.HasExited, x => x, "exit"), "window closes cleanly");
@@ -90,4 +91,10 @@ static void Check(bool condition, string what)
     if (!condition)
         throw new InvalidOperationException("FAILED: " + what);
     Console.WriteLine("ok: " + what);
+}
+
+static void Invoke(Window window, string name)
+{
+    var button = Wait(() => window.FindFirstDescendant(cf => cf.ByName(name).And(cf.ByControlType(ControlType.Button))), b => b is not null, $"button '{name}'")!;
+    button.AsButton().Invoke();
 }
