@@ -1,5 +1,7 @@
 # JoyChromium — checklist do essencial
 
+> **Migração para Electron concluída (PRs #21–#24).** O app em `app/` substitui o shell C#/WebView2: Chromium atual em Windows e Linux, engine atualizado por Dependabot → CI → auto-merge → release automática. Os itens abaixo foram reavaliados para o app Electron; "✅" significa implementado no Electron.
+
 Estado em 2026-09-29 (após os PRs #12–#19). ✅ feito · 🔶 parcial · ⬜ falta · 🚫 precisa de algo externo (certificado, conta, hardware).
 
 ## 0. Como manter o usuário seguro sem lançar update toda hora

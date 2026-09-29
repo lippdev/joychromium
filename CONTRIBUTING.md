@@ -1,33 +1,31 @@
 # Contribuindo
 
 ## Fluxo de branches (GitHub Flow)
-- `main` está sempre estável; o CI precisa passar. Sem push direto.
-- Crie branches curtas a partir da `main`: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `refactor/…`, `test/…`.
+- `main` está sempre estável e é protegida: exige os checks `electron (windows-latest)` e `electron (ubuntu-latest)`. Sem push direto.
+- Crie branches curtas a partir da `main`: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `refactor/…`, `test/…`, `ci/…`.
 - Abra PR para a `main`; merge com **squash**. O título do PR vira o commit, então siga Conventional Commits.
-- Apague a branch depois do merge.
+- Branches são apagadas automaticamente após o merge.
 
 ## Commits (Conventional Commits)
 `tipo(escopo): descrição no imperativo`
 
 Tipos: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`.
 Mudança incompatível: `feat(scope)!: ...` com `BREAKING CHANGE:` no corpo.
-Escopos sugeridos: `controller`, `keyboard`, `tv-identity`, `shell`, `ci`, `deps`.
+Escopos sugeridos: `electron`, `shell`, `controller`, `security`, `adblock`, `policy`, `release`, `ci`, `deps`.
 
 ## Código
-- C# com `Nullable` ligado. Warnings são erros (`Directory.Build.props`).
-- Estilo definido em `.editorconfig`; rode `dotnet format` antes do PR.
-- Lógica nova vai em classes testáveis, não em `MainWindow.xaml.cs`.
-- Toda lógica pura nova precisa de cobertura no projeto de testes.
+- TypeScript estrito (`app/tsconfig.json`). Lógica pura em `src/shared/` com teste unitário (vitest); o que toca o Electron é coberto pelo e2e (Playwright).
+- Preloads são sandboxed e não podem importar módulos.
+- Páginas internas conversam com o processo principal só por `{type, ...}` via `window.joy`.
 
-## Checks locais
-```powershell
-dotnet build .\JoyChromium.csproj --configuration Release
-dotnet test .\tests\JoyChromium.Tests --configuration Release
-dotnet format JoyChromium.csproj --verify-no-changes
+## Checks locais (em `app/`)
+```bash
+npm run typecheck
+npm test
+npm run test:e2e
 ```
 
-## Releases
-SemVer com tags `vMAJOR.MINOR.PATCH`; mudanças notáveis em `CHANGELOG.md`.
-
-## Proteção da `main` (configuração do repositório)
-`main` exige os checks `electron (windows-latest)` e `electron (ubuntu-latest)` verdes; auto-merge está habilitado e branches são apagadas após o merge. O `auto-merge.yml` depende disso: sem checks obrigatórios, `gh pr merge --auto` mergearia na hora. O `release.yml` nunca faz commit na `main` — só cria a tag `vX.Y.Z` (derivada da última tag) e publica.
+## Releases e atualizações automáticas
+- Dependabot propõe cada Electron novo diariamente; `auto-merge.yml` mergeia quando o CI passa; `release.yml` cria a tag `vX.Y.Z` (derivada da última tag — nunca faz commit na `main`), gera os instaladores e publica na GitHub Release. Apps instalados atualizam sozinhos.
+- Release manual: Actions → Release → *Run workflow* com o nível do bump.
+- Rollback: adicione a versão a `blockedAppVersions` em `policy/policy.json`, assine e faça merge; o updater pula a versão.
