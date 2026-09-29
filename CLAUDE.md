@@ -13,6 +13,7 @@ Navegador Windows controller-first (WPF + WebView2) com marcador de user-agent d
 - Commits em Conventional Commits.
 - Nunca commitar direto na `main`; criar branch antes.
 - Warnings são erros; não suprimir sem justificativa em comentário.
-- Lógica nova em classes separadas e testáveis, não em `MainWindow.xaml.cs`.
+- Lógica nova em classes separadas e testáveis (ex.: `Settings.cs`, `SecurityPolicy.cs`, `History.cs`, `ControllerInput.cs`), cobertas em `tests/Program.cs`.
+- `MainWindow` é uma classe parcial dividida por responsabilidade: `MainWindow.xaml.cs` (ctor, start, chrome da janela), `.Tabs`, `.Navigation`, `.Keyboard`, `.PageTools`, `.Security`, `.Bridge` (mensagens das páginas internas), `.Controller`, `.Maintenance`. Código novo vai no arquivo do tema certo; P/Invoke fica em `NativeInput.cs`.
 - Antes de concluir uma tarefa: build + smoke test + format passando.
 - Não subir `bin/`, `obj/`, `.vs/`.
