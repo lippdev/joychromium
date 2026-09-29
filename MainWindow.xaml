@@ -155,7 +155,7 @@
             </Grid.RowDefinitions>
 
             <!-- Title bar: tab strip + window controls -->
-            <Grid Grid.Row="0" Background="{DynamicResource SurfaceBrush}">
+            <Grid x:Name="TitleBar" Grid.Row="0" Background="{DynamicResource SurfaceBrush}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -176,6 +176,7 @@
                                 <Button Style="{StaticResource TabButton}" Click="Tab_Click" Tag="{Binding}" ToolTip="{Binding Url}">
                                     <DockPanel LastChildFill="True">
                                         <Button DockPanel.Dock="Right" AutomationProperties.Name="Close tab" Style="{StaticResource TabCloseButton}" Content="&#xE8BB;" Click="CloseTab_Click" Tag="{Binding}" ToolTip="Close tab" />
+                                        <Image DockPanel.Dock="Left" Source="{Binding Favicon}" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,6,0" />
                                     </DockPanel>
                                 </Button>
@@ -193,7 +194,7 @@
             </Grid>
 
             <!-- Toolbar -->
-            <Border Grid.Row="1" Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+            <Border x:Name="Toolbar" Grid.Row="1" Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -201,6 +202,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
@@ -213,13 +215,31 @@
                              VerticalContentAlignment="Center" FontSize="14" Foreground="{DynamicResource TextBrush}" Background="{DynamicResource InputBrush}"
                              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CaretBrush="{DynamicResource AccentBrush}"
                              SelectionBrush="{DynamicResource AccentDimBrush}" ToolTip="URL or search · Y opens controller keyboard"
-                             KeyDown="AddressBox_KeyDown" />
+                             KeyDown="AddressBox_KeyDown" TextChanged="AddressBox_TextChanged" />
+                    <Popup x:Name="SuggestionsPopup" PlacementTarget="{Binding ElementName=AddressBox}" Placement="Bottom" StaysOpen="True" AllowsTransparency="True"
+                           Width="{Binding ActualWidth, ElementName=AddressBox}">
+                        <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="0,0,10,10" Padding="4">
+                            <ListBox x:Name="SuggestionsList" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}"
+                                     MaxHeight="280" MouseLeftButtonUp="Suggestion_Click" KeyDown="Suggestions_KeyDown">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type local:Suggestion}">
+                                        <StackPanel Margin="6,4">
+                                            <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Url}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+                    </Popup>
                     <Button Grid.Column="5" Style="{StaticResource ToolbarButton}" Width="64" Content="GO" FontSize="13" FontWeight="Bold"
                             Foreground="{DynamicResource AccentTextBrush}" Background="{DynamicResource AccentBrush}" BorderBrush="{DynamicResource AccentBrush}" Click="Go_Click" />
-                    <Border Grid.Column="6" Margin="10,0,0,0" Padding="10,5" CornerRadius="8" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Background="{DynamicResource AccentBgBrush}" VerticalAlignment="Center">
+                    <Button Grid.Column="6" x:Name="FavoriteButton" Style="{StaticResource ToolbarButton}" Margin="6,0,0,0" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                            AutomationProperties.Name="Favorite" Content="&#xE734;" ToolTip="Add to favorites · Ctrl+D · LB+Y" Click="Favorite_Click" />
+                    <Border Grid.Column="7" Margin="10,0,0,0" Padding="10,5" CornerRadius="8" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Background="{DynamicResource AccentBgBrush}" VerticalAlignment="Center">
                         <TextBlock Text="TV ON" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="Bold" />
                     </Border>
-                    <Button Grid.Column="7" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                    <Button Grid.Column="8" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0" FontFamily="Segoe MDL2 Assets" FontSize="14"
                             AutomationProperties.Name="Settings" Content="&#xE713;" ToolTip="Settings · Ctrl+," Click="Settings_Click" />
                 </Grid>
             </Border>
@@ -227,6 +247,16 @@
             <!-- Content: one WebView2 per tab, only the active one visible -->
             <Grid Grid.Row="2" Background="{DynamicResource BackgroundBrush}">
                 <Grid x:Name="BrowserHost" />
+                <Border x:Name="FindPanel" Panel.ZIndex="15" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16,8" Padding="10" CornerRadius="10"
+                        Background="{DynamicResource KeyboardBgBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="FindBox" Width="260" Height="32" Padding="10,0" VerticalContentAlignment="Center" FontSize="13" Foreground="{DynamicResource TextBrush}"
+                                 Background="{DynamicResource InputBrush}" BorderBrush="{DynamicResource BorderBrush}" CaretBrush="{DynamicResource AccentBrush}" KeyDown="FindBox_KeyDown" TextChanged="FindBox_TextChanged" />
+                        <Button Style="{StaticResource ToolbarButton}" Width="34" Height="32" Content="▲" FontSize="11" ToolTip="Previous (Shift+Enter)" Click="FindPrev_Click" />
+                        <Button Style="{StaticResource ToolbarButton}" Width="34" Height="32" Content="▼" FontSize="11" ToolTip="Next (Enter)" Click="FindNext_Click" />
+                        <Button Style="{StaticResource ToolbarButton}" Width="34" Height="32" FontFamily="Segoe MDL2 Assets" Content="&#xE8BB;" FontSize="10" ToolTip="Close (Esc)" Click="FindClose_Click" />
+                    </StackPanel>
+                </Border>
                 <Border x:Name="PermissionPanel" Panel.ZIndex="20" Visibility="Collapsed" HorizontalAlignment="Center"
                         VerticalAlignment="Top" Margin="24" Padding="20" CornerRadius="14"
                         Background="{DynamicResource KeyboardBgBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" MaxWidth="760">
@@ -261,7 +291,7 @@
                 </Border>
             </Grid>
 
-            <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">
+            <Border x:Name="StatusBar" Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">
                 <DockPanel LastChildFill="True">
                     <TextBlock x:Name="ControllerText" DockPanel.Dock="Left" Text="XINPUT · SEARCHING" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
                     <TextBlock x:Name="AdBlockText" DockPanel.Dock="Left" Margin="16,0,0,0" Text="ADBLOCK …" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />

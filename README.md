@@ -39,6 +39,10 @@ HTTPS-only (http is upgraded; a failed upgrade shows an internal page that can f
 - **Policy**: `policy/policy.json` (signed with `tools/PolicySigner`, public key embedded in `PolicyService`) can raise the minimum runtime, block hosts and add risky download extensions. It is fetched from `main`, verified, cached, and can only tighten the embedded defaults. To change it: edit the JSON, run `dotnet run --project tools/PolicySigner -- sign <keyfile> policy/policy.json`, commit both files.
 - **App**: installed builds self-update through Velopack from GitHub Releases (`.github/workflows/release.yml` packs and publishes on a `v*` tag). Updates download in the background and install when the app closes.
 
+## Favorites, history and page tools
+
+★ (or `Ctrl+D`, or hold `LB` and press `Y`) toggles the current page in favorites, listed at `joychromium://favorites` (`Ctrl+B`) and as tiles on the new tab page. Visits in normal tabs are logged to `history.jsonl` (`joychromium://history`, `Ctrl+H`, searchable, removable, 5000 entries); private tabs and internal pages are never recorded. Typing in the address bar suggests favorites and history (↓ to pick). `Ctrl+F` finds in page, `Ctrl` `+`/`-`/`0` zooms, `F11` or a fullscreen video hides the chrome (Esc/B leaves), `Ctrl+Shift+T` reopens the last closed tab. Tabs show the site favicon.
+
 ## Robustness
 
 A renderer crash reloads the tab; an engine crash rebuilds every tab from its URL. Background tabs are suspended after 10 minutes unless they play audio, and resume when activated. The session is saved every 30 seconds and on close. Logs live in `%LocalAppData%\JoyChromium\logs` (7 days); Settings → About → *Export* zips them with sanitized settings. `JOYCHROMIUM_DATA` overrides the data folder (used by `tests/UiSmoke`, a FlaUI script that drives the real shell in CI).

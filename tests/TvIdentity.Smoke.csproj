@@ -12,6 +12,9 @@
     <Compile Include="../Settings.cs" Link="Settings.cs" />
     <Compile Include="../SecurityPolicy.cs" Link="SecurityPolicy.cs" />
     <Compile Include="../Policy.cs" Link="Policy.cs" />
+    <Compile Include="../History.cs" Link="History.cs" />
+    <Compile Include="../Suggestion.cs" Link="Suggestion.cs" />
+    <Compile Include="../Log.cs" Link="Log.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../policy/policy.json" Link="policy.json" CopyToOutputDirectory="PreserveNewest" />

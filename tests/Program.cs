@@ -73,3 +73,30 @@ if (strict.EffectiveMinimumRuntime != "999.0.0.0" || !strict.BlocksHost("cdn.evi
     new RemotePolicy { MinimumRuntimeVersion = "1.0.0.0" }.EffectiveMinimumRuntime != SecurityPolicy.MinimumRuntimeVersion)
     throw new InvalidOperationException("Remote policy merge rules are wrong.");
 Console.WriteLine("Remote policy signing and merge rules are consistent.");
+
+var historyPath = Path.Combine(Path.GetTempPath(), "joychromium-test-" + Guid.NewGuid().ToString("N"), "history.jsonl");
+var history = new History(historyPath);
+var t1 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+history.Record("https://a.example/one", "One", t1);
+history.Record("https://a.example/one", "One (updated)", t1.AddSeconds(1));
+history.Record("https://b.example/two", "Two", t1.AddSeconds(2));
+history.Record("joychromium://settings", "Settings", t1.AddSeconds(3));
+history.Record("https://settings.joychromium/settings.html", "Settings", t1.AddSeconds(4));
+if (history.Count != 2 || history.Recent()[0].Url != "https://b.example/two" || history.Recent()[1].Title != "One (updated)")
+    throw new InvalidOperationException("History recording/dedupe is wrong.");
+if (history.Search("ONE").Count != 1 || history.Search("nothing").Count != 0)
+    throw new InvalidOperationException("History search is wrong.");
+if (new History(historyPath).Count != 2)
+    throw new InvalidOperationException("History does not round-trip through its file.");
+history.Remove("https://a.example/one");
+if (history.Count != 1 || new History(historyPath).Count != 1)
+    throw new InvalidOperationException("History removal is wrong.");
+var favs = new AppSettings().ToggleFavorite("https://b.example/two", "Two");
+if (!favs.IsFavorite || favs.Settings.Favorites.Count != 1 || favs.Settings.ToggleFavorite("https://b.example/two", "Two").Settings.Favorites.Count != 0)
+    throw new InvalidOperationException("Favorite toggling is wrong.");
+var suggestions = Suggestion.Build("two", favs.Settings.Favorites, history.Recent());
+if (suggestions.Count != 1 || suggestions[0].Kind != "favorite" || Suggestion.Build("", favs.Settings.Favorites, history.Recent()).Count != 0 ||
+    Suggestion.Build("joychromium://settings", favs.Settings.Favorites, history.Recent()).Count != 0)
+    throw new InvalidOperationException("Suggestion building is wrong.");
+Directory.Delete(Path.GetDirectoryName(historyPath)!, recursive: true);
+Console.WriteLine("History, favorites and suggestions are consistent.");

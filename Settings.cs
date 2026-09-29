@@ -69,7 +69,19 @@ public sealed record AppSettings
     public string NewTabUrl { get; init; } = DefaultHomeUrl;
     public string HomeUrl { get; init; } = DefaultHomeUrl;
     public IReadOnlyList<Shortcut> Shortcuts { get; init; } = Shortcut.Default;
+    public IReadOnlyList<Shortcut> Favorites { get; init; } = [];
     public bool HttpsOnly { get; init; } = true;
+
+    public bool IsFavorite(string url) => Favorites.Any(f => f.Url == url);
+
+    /// <summary>Adds or removes a favorite; returns the new settings and whether the URL is now a favorite.</summary>
+    public (AppSettings Settings, bool IsFavorite) ToggleFavorite(string url, string name)
+    {
+        if (IsFavorite(url))
+            return (this with { Favorites = Favorites.Where(f => f.Url != url).ToList() }, false);
+        var shortcut = Shortcut.TryParse(name, url) ?? Shortcut.TryParse(url, url);
+        return shortcut is null ? (this, false) : (this with { Favorites = [.. Favorites, shortcut] }, true);
+    }
     public TrackingLevel TrackingPrevention { get; init; } = TrackingLevel.Balanced;
     public DohProvider DnsOverHttps { get; init; } = DohProvider.Off;
     public bool PasswordAutosave { get; init; }
@@ -121,6 +133,10 @@ public static class Pages
     public const string OnboardingPage = $"https://{Host}/onboarding.html";
     public const string NewTabPage = $"https://{Host}/newtab.html";
     public const string ErrorPage = $"https://{Host}/error.html";
+    public const string FavoritesScheme = "joychromium://favorites";
+    public const string HistoryScheme = "joychromium://history";
+    public const string FavoritesPage = $"https://{Host}/favorites.html";
+    public const string HistoryPage = $"https://{Host}/history.html";
 
     public static string ErrorPageFor(string url, string reason, bool upgraded) =>
         $"{ErrorPage}?url={Uri.EscapeDataString(url)}&reason={Uri.EscapeDataString(reason)}&upgraded={(upgraded ? 1 : 0)}";
@@ -131,6 +147,8 @@ public static class Pages
         SettingsScheme => SettingsPage,
         WelcomeScheme => OnboardingPage,
         NewTabScheme => NewTabPage,
+        FavoritesScheme => FavoritesPage,
+        HistoryScheme => HistoryPage,
         _ => url,
     };
 
@@ -140,11 +158,13 @@ public static class Pages
         SettingsPage => SettingsScheme,
         OnboardingPage => WelcomeScheme,
         NewTabPage => NewTabScheme,
+        FavoritesPage => FavoritesScheme,
+        HistoryPage => HistoryScheme,
         _ => url,
     };
 
     public static bool IsInternal(string url) =>
-        url is SettingsPage or OnboardingPage or NewTabPage || url.StartsWith(ErrorPage, StringComparison.Ordinal);
+        url is SettingsPage or OnboardingPage or NewTabPage or FavoritesPage or HistoryPage || url.StartsWith(ErrorPage, StringComparison.Ordinal);
 
     public static bool IsWebUrl(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
@@ -197,6 +217,7 @@ public static class SettingsStore
             NewTabUrl = settings.NewTabUrl,
             HomeUrl = settings.HomeUrl,
             Shortcuts = settings.Shortcuts.Select(s => new RawShortcut(s.Name, s.Url)).ToList(),
+            Favorites = settings.Favorites.Select(s => new RawShortcut(s.Name, s.Url)).ToList(),
             HttpsOnly = settings.HttpsOnly,
             TrackingPrevention = settings.TrackingPrevention.ToString(),
             DnsOverHttps = settings.DnsOverHttps.ToString(),
@@ -259,6 +280,7 @@ public static class SettingsStore
                 Shortcuts = raw.Shortcuts is null
                     ? Shortcut.Default
                     : raw.Shortcuts.Select(s => Shortcut.TryParse(s.Name, s.Url)).OfType<Shortcut>().ToList(),
+                Favorites = (raw.Favorites ?? []).Select(s => Shortcut.TryParse(s.Name, s.Url)).OfType<Shortcut>().ToList(),
                 HttpsOnly = raw.HttpsOnly ?? true,
                 TrackingPrevention = Enum.TryParse<TrackingLevel>(raw.TrackingPrevention, true, out var tracking) ? tracking : TrackingLevel.Balanced,
                 DnsOverHttps = Enum.TryParse<DohProvider>(raw.DnsOverHttps, true, out var doh) ? doh : DohProvider.Off,
@@ -289,6 +311,7 @@ public static class SettingsStore
         public string? NewTabUrl { get; set; }
         public string? HomeUrl { get; set; }
         public List<RawShortcut>? Shortcuts { get; set; }
+        public List<RawShortcut>? Favorites { get; set; }
         public bool? HttpsOnly { get; set; }
         public string? TrackingPrevention { get; set; }
         public string? DnsOverHttps { get; set; }
