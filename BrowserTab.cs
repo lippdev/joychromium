@@ -19,6 +19,11 @@ public sealed class BrowserTab : INotifyPropertyChanged
     /// <summary>Frame that owns the focused text field, when the page keyboard was opened from an iframe.</summary>
     public CoreWebView2Frame? InputFrame { get; set; }
 
+    public bool IsPrivate { get; init; }
+
+    /// <summary>Original http URL while an automatic https upgrade is in flight, so a failure can offer the fallback.</summary>
+    public string? PendingHttpsUpgrade { get; set; }
+
     public string Title
     {
         get => _title;

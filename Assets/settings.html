@@ -44,6 +44,8 @@
   .radios label { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
   .radios input[type=radio] { accent-color: var(--accent); width: 18px; height: 18px; }
   .radios input[type=text] { width: 300px; margin-left: auto; }
+  select { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  select:focus-visible { outline: 2px solid var(--accent); }
   textarea { font: 14px/1.5 Consolas, monospace; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); resize: vertical; }
   textarea:focus-visible { outline: 2px solid var(--accent); }
   .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
@@ -135,12 +137,43 @@
       <div class="status" id="searchStatus"></div>
     </section>
 
-    <h2 id="privacy">Privacy</h2>
-    <p class="lead">uBlock Origin ships built in and runs inside the browser engine.</p>
+    <h2 id="privacy">Privacy &amp; security</h2>
+    <p class="lead">The browser engine (WebView2 <span id="runtime"></span>) updates itself through Windows; these are the shell's own protections.</p>
     <section>
       <div class="row"><div>Block ads and trackers<small id="adblockNote">Powered by uBlock Origin</small></div>
         <label class="switch"><input type="checkbox" id="adblock"><span></span></label>
       </div>
+      <div class="row"><div>HTTPS only<small>Try the secure version of every site first; ask before falling back to http</small></div>
+        <label class="switch"><input type="checkbox" id="httpsOnly" data-privacy><span></span></label>
+      </div>
+      <div class="row"><div>Block risky downloads<small>Installers and scripts (.exe, .msi, .bat, .ps1…) are refused</small></div>
+        <label class="switch"><input type="checkbox" id="blockDangerousDownloads" data-privacy><span></span></label>
+      </div>
+      <div class="row"><div>Tracking prevention<small>Built into the engine</small></div>
+        <select id="trackingPrevention" data-privacy><option>Basic</option><option>Balanced</option><option>Strict</option></select>
+      </div>
+      <div class="row"><div>DNS over HTTPS<small>Applies after restart</small></div>
+        <select id="dnsOverHttps" data-privacy><option>Off</option><option>Cloudflare</option><option>Quad9</option><option>Google</option></select>
+      </div>
+      <div class="row"><div>Save passwords<small>Off by default: this browser is often shared on a TV</small></div>
+        <label class="switch"><input type="checkbox" id="passwordAutosave" data-privacy><span></span></label>
+      </div>
+      <div class="row"><div>Autofill forms<small>Addresses and other form data</small></div>
+        <label class="switch"><input type="checkbox" id="autofill" data-privacy><span></span></label>
+      </div>
+      <div class="status" id="privacyStatus"></div>
+    </section>
+    <section>
+      <h3>Site permissions</h3>
+      <p class="lead" style="margin-bottom:10px">Camera, microphone, location and similar are denied unless you allowed them. Decisions you asked to remember:</p>
+      <div id="permissions"></div>
+    </section>
+    <section>
+      <h3>Browsing data</h3>
+      <div class="row"><div>Clear cookies, cache, history and site data<small>Signs you out of every site</small></div>
+        <button class="ghost" id="clearData">Clear now</button>
+      </div>
+      <div class="status" id="clearStatus"></div>
     </section>
 
     <section id="about">
@@ -211,7 +244,33 @@
     adblock.checked = msg.adBlockEnabled;
     adblock.disabled = !msg.adBlockAvailable;
     if (!msg.adBlockAvailable) document.getElementById('adblockNote').textContent = 'uBlock Origin is not bundled in this build.';
+    document.getElementById('runtime').textContent = msg.runtimeVersion || '';
+    for (const k of ['httpsOnly', 'blockDangerousDownloads', 'passwordAutosave', 'autofill']) document.getElementById(k).checked = !!msg[k];
+    document.getElementById('trackingPrevention').value = msg.trackingPrevention;
+    document.getElementById('dnsOverHttps').value = msg.dnsOverHttps;
+    renderPermissions(msg.sitePermissions || {});
   });
+
+  function renderPermissions(perms) {
+    const box = document.getElementById('permissions');
+    const hosts = Object.keys(perms);
+    if (!hosts.length) { box.innerHTML = '<p class="lead" style="margin:0">None yet.</p>'; return; }
+    box.replaceChildren(...hosts.map(host => {
+      const row = document.createElement('div'); row.className = 'row';
+      const desc = Object.entries(perms[host]).map(([k, v]) => `${k}: ${v ? 'allowed' : 'denied'}`).join(' · ');
+      row.innerHTML = `<div>${host}<small>${desc}</small></div>`;
+      const b = document.createElement('button'); b.className = 'ghost'; b.textContent = 'Forget';
+      b.addEventListener('click', () => { post('permission-forget', { host }); delete perms[host]; renderPermissions(perms); });
+      row.appendChild(b); return row;
+    }));
+  }
+  for (const el of document.querySelectorAll('[data-privacy]')) el.addEventListener('change', () => {
+    const v = id => { const e = document.getElementById(id); return e.type === 'checkbox' ? e.checked : e.value; };
+    post('privacy-save', { httpsOnly: v('httpsOnly'), blockDangerousDownloads: v('blockDangerousDownloads'), trackingPrevention: v('trackingPrevention'),
+      dnsOverHttps: v('dnsOverHttps'), passwordAutosave: v('passwordAutosave'), autofill: v('autofill') });
+    flash('privacyStatus', el.id === 'dnsOverHttps' ? 'Saved. DNS over HTTPS applies after you restart JoyChromium.' : 'Saved.');
+  });
+  document.getElementById('clearData').addEventListener('click', () => { post('clear-data', {}); flash('clearStatus', 'Browsing data cleared.'); });
 
   function renderEngines(engines, current) {
     const box = document.getElementById('engines');

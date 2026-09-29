@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Can't reach this page</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --accent: #64DDB5; --bg: #0C0E13; --surface: #14171E; --text: #F3F5F9; --accent-text: #07120F;
+    --muted: color-mix(in srgb, var(--text) 70%, var(--surface)); --border: color-mix(in srgb, var(--surface) 86%, var(--text)); }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 16px/1.5 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; }
+  .card { width: min(680px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 36px 40px; }
+  h1 { margin: 0 0 8px; font-size: 26px; }
+  p { margin: 0 0 12px; color: var(--muted); }
+  code { color: var(--text); word-break: break-all; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  button { font: inherit; font-weight: 600; padding: 12px 22px; border-radius: 10px; cursor: pointer; outline: none; }
+  .primary { background: var(--accent); color: var(--accent-text); border: 0; }
+  .ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .warn { background: transparent; color: #FFB4A0; border: 1px solid #FFB4A0; }
+  button:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1 id="title">Can't reach this page</h1>
+  <p><code id="url"></code></p>
+  <p id="reason"></p>
+  <p id="httpsNote" hidden>JoyChromium tried the secure (https) version first and it did not answer. Opening it over plain http is not private: anyone on the network can read or change what you see.</p>
+  <div class="actions">
+    <button class="primary" id="retry" autofocus>Try again</button>
+    <button class="ghost" id="home">Go home</button>
+    <button class="warn" id="http" hidden>Open over http anyway</button>
+  </div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const url = q.get('url') || '', reason = q.get('reason') || '', upgraded = q.get('upgraded') === '1';
+  const $ = id => document.getElementById(id);
+  const post = (type, payload) => { try { window.chrome.webview.postMessage(JSON.stringify({ type, ...payload })); } catch (_) {} };
+  $('url').textContent = url;
+  $('reason').textContent = reason ? `Reason: ${reason}` : '';
+  if (upgraded) { $('title').textContent = 'No secure connection'; $('httpsNote').hidden = false; $('http').hidden = false; }
+  $('retry').addEventListener('click', () => post('navigate', { url: upgraded ? url.replace(/^http:/, 'https:') : url }));
+  $('home').addEventListener('click', () => post('navigate', { url: 'joychromium://newtab' }));
+  $('http').addEventListener('click', () => post('navigate', { url, allowHttp: true }));
+  window.chrome.webview.addEventListener('message', event => {
+    const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (msg.type !== 'init') return;
+    const t = msg.theme, r = document.documentElement.style;
+    r.setProperty('--accent', t.accent); r.setProperty('--bg', t.background); r.setProperty('--surface', t.surface); r.setProperty('--text', t.text);
+  });
+  post('ready', {});
+</script>
+</body>
+</html>

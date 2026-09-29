@@ -36,7 +36,8 @@ public partial class MainWindow : Window
         BuildKeyboard();
         _gamepadTimer.Tick += PollGamepad;
         _gamepadTimer.Start();
-        Closing += (_, _) => SettingsStore.SaveSession(Tabs.Select(t => t.Url).Where(u => u != Pages.WelcomeScheme && u != Pages.SettingsScheme));
+        Closing += (_, _) => SettingsStore.SaveSession(Tabs.Where(t => !t.IsPrivate).Select(t => t.Url)
+            .Where(u => u != Pages.WelcomeScheme && u != Pages.SettingsScheme && !u.StartsWith(Pages.ErrorPage, StringComparison.Ordinal)));
         Closed += (_, _) => _gamepadTimer.Stop();
     }
 
@@ -47,9 +48,21 @@ public partial class MainWindow : Window
         try
         {
             var dataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JoyChromium", "WebView2");
-            var options = new CoreWebView2EnvironmentOptions { AreBrowserExtensionsEnabled = true };
-            _environment = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder, options: options);
             var settings = SettingsStore.Current;
+            var runtime = CoreWebView2Environment.GetAvailableBrowserVersionString();
+            if (!SecurityPolicy.RuntimeIsSupported(runtime))
+            {
+                MessageBox.Show(this,
+                    $"The installed WebView2 runtime ({runtime}) is older than {SecurityPolicy.MinimumRuntimeVersion}. " +
+                    "Update it from Windows Update or https://developer.microsoft.com/microsoft-edge/webview2/ to stay protected.",
+                    "Browser engine out of date", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            var options = new CoreWebView2EnvironmentOptions
+            {
+                AreBrowserExtensionsEnabled = true,
+                AdditionalBrowserArguments = SecurityPolicy.BrowserArguments(settings.DnsOverHttps),
+            };
+            _environment = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder, options: options);
             var targets = settings.OnboardingCompleted
                 ? settings.StartupTargets(SettingsStore.LoadSession())
                 : [Pages.OnboardingPage];
@@ -67,22 +80,24 @@ public partial class MainWindow : Window
 
     // ---- Tabs ----
 
-    private async Task<BrowserTab> OpenTabAsync(string url, bool activate = true)
+    private async Task<BrowserTab> OpenTabAsync(string url, bool activate = true, bool isPrivate = false)
     {
         var view = new WebView2CompositionControl { Visibility = Visibility.Collapsed };
-        var tab = new BrowserTab(view) { Url = url };
+        var tab = new BrowserTab(view) { Url = url, IsPrivate = isPrivate };
         BrowserHost.Children.Add(view);
         Tabs.Add(tab);
         if (activate)
             ActivateTab(tab);
 
-        await view.EnsureCoreWebView2Async(_environment);
+        var controllerOptions = _environment!.CreateCoreWebView2ControllerOptions();
+        controllerOptions.IsInPrivateModeEnabled = isPrivate;
+        await view.EnsureCoreWebView2Async(_environment, controllerOptions);
         var core = view.CoreWebView2;
         core.Settings.UserAgent = TvIdentity.Ensure(core.Settings.UserAgent);
         if (!TvIdentity.IsActive(core.Settings.UserAgent))
             throw new InvalidOperationException("The mandatory TV user-agent marker was not applied.");
 
-        core.Settings.IsStatusBarEnabled = false;
+        HardenCore(core);
         core.SetVirtualHostNameToFolderMapping(Pages.Host, Path.Combine(AppContext.BaseDirectory, "Assets"), CoreWebView2HostResourceAccessKind.Allow);
         core.WebMessageReceived += (_, args) => HandleWebMessage(tab, args, null);
         core.FrameCreated += (_, args) =>
@@ -90,18 +105,37 @@ public partial class MainWindow : Window
         core.NewWindowRequested += async (_, args) =>
         {
             args.Handled = true;
-            if (Uri.TryCreate(args.Uri, UriKind.Absolute, out var uri))
-                await OpenTabAsync(uri.ToString());
+            if (!SecurityPolicy.AllowPopup(_recentPopups, DateTime.UtcNow))
+            {
+                StatusText.Text = "POPUP BLOCKED";
+                return;
+            }
+            if (SecurityPolicy.IsNavigationAllowed(args.Uri))
+                await OpenTabAsync(args.Uri, isPrivate: tab.IsPrivate);
         };
         core.DocumentTitleChanged += (_, _) =>
         {
-            tab.Title = core.DocumentTitle;
+            tab.Title = (tab.IsPrivate ? "🕶 " : "") + core.DocumentTitle;
             if (tab == _active)
                 Title = $"{tab.Title} - JoyChromium";
         };
         core.NavigationStarting += (_, args) =>
         {
             tab.InputFrame = null;
+            if (!SecurityPolicy.IsNavigationAllowed(args.Uri) && !Pages.IsInternal(args.Uri))
+            {
+                args.Cancel = true;
+                StatusText.Text = "BLOCKED · UNSUPPORTED ADDRESS";
+                return;
+            }
+            var host = SecurityPolicy.HostOf(args.Uri);
+            if (SettingsStore.Current.HttpsOnly && SecurityPolicy.IsHttp(args.Uri) && host is not null && !_httpAllowedHosts.Contains(host))
+            {
+                args.Cancel = true;
+                tab.PendingHttpsUpgrade = args.Uri;
+                core.Navigate(SecurityPolicy.UpgradeToHttps(args.Uri)!);
+                return;
+            }
             tab.Url = Pages.Alias(args.Uri);
             if (tab != _active)
                 return;
@@ -111,9 +145,25 @@ public partial class MainWindow : Window
         };
         core.NavigationCompleted += (_, args) =>
         {
+            var pendingHttp = tab.PendingHttpsUpgrade;
+            tab.PendingHttpsUpgrade = null;
+            if (!args.IsSuccess && args.WebErrorStatus != CoreWebView2WebErrorStatus.OperationCanceled && !Pages.IsInternal(core.Source))
+            {
+                core.Navigate(Pages.ErrorPageFor(pendingHttp ?? core.Source, args.WebErrorStatus.ToString(), pendingHttp is not null));
+                return;
+            }
             if (tab == _active)
                 StatusText.Text = args.IsSuccess ? "READY · TV IDENTITY ON" : $"LOAD ISSUE · {args.WebErrorStatus}";
         };
+        core.ServerCertificateErrorDetected += (_, args) =>
+        {
+            // Never offer a bypass: a TV-room browser should not teach anyone to click through certificate warnings.
+            args.Action = CoreWebView2ServerCertificateErrorAction.Cancel;
+            StatusText.Text = "BLOCKED · CERTIFICATE ERROR";
+        };
+        core.PermissionRequested += (_, args) => HandlePermissionRequest(tab, args);
+        core.DownloadStarting += (_, args) => HandleDownload(args);
+        core.ProcessFailed += (_, args) => StatusText.Text = $"PAGE CRASHED · {args.ProcessFailedKind}";
         await core.AddScriptToExecuteOnDocumentCreatedAsync("""
             (() => {
               document.addEventListener('focusin', event => {
@@ -128,6 +178,129 @@ public partial class MainWindow : Window
 
         core.Navigate(Pages.Resolve(url));
         return tab;
+    }
+
+    /// <summary>Settings every tab gets, on top of what the user chose.</summary>
+    private static void HardenCore(CoreWebView2 core)
+    {
+        var settings = SettingsStore.Current;
+        core.Settings.IsStatusBarEnabled = false;
+        core.Settings.IsReputationCheckingRequired = true;
+        core.Settings.IsPasswordAutosaveEnabled = settings.PasswordAutosave;
+        core.Settings.IsGeneralAutofillEnabled = settings.Autofill;
+#if !DEBUG
+        core.Settings.AreDevToolsEnabled = false;
+        core.Settings.AreDefaultContextMenusEnabled = false;
+#endif
+        core.Profile.PreferredTrackingPreventionLevel = settings.TrackingPrevention switch
+        {
+            TrackingLevel.Basic => CoreWebView2TrackingPreventionLevel.Basic,
+            TrackingLevel.Strict => CoreWebView2TrackingPreventionLevel.Strict,
+            _ => CoreWebView2TrackingPreventionLevel.Balanced,
+        };
+    }
+
+    // ---- Permissions, downloads ----
+
+    private readonly List<DateTime> _recentPopups = [];
+    private readonly HashSet<string> _httpAllowedHosts = new(StringComparer.OrdinalIgnoreCase);
+    private CoreWebView2Deferral? _permissionDeferral;
+    private CoreWebView2PermissionRequestedEventArgs? _permissionArgs;
+    private string? _permissionHost;
+
+    private void HandlePermissionRequest(BrowserTab tab, CoreWebView2PermissionRequestedEventArgs args)
+    {
+        var host = SecurityPolicy.HostOf(args.Uri);
+        var kind = args.PermissionKind.ToString();
+        if (host is null || Pages.IsInternal(args.Uri))
+        {
+            args.State = CoreWebView2PermissionState.Deny;
+            return;
+        }
+        if (SettingsStore.Current.SitePermissions.TryGetValue(host, out var site) && site.TryGetValue(kind, out var allowed))
+        {
+            args.State = allowed ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
+            return;
+        }
+        // Only one prompt at a time; anything that piles up behind it is denied for this request.
+        if (_permissionDeferral is not null || tab != _active)
+        {
+            args.State = CoreWebView2PermissionState.Deny;
+            return;
+        }
+        _permissionDeferral = args.GetDeferral();
+        _permissionArgs = args;
+        _permissionHost = host;
+        PermissionText.Text = $"{host} wants to use: {Describe(args.PermissionKind)}";
+        PermissionPanel.Visibility = Visibility.Visible;
+        PermissionDeny.Focus();
+    }
+
+    private static string Describe(CoreWebView2PermissionKind kind) => kind switch
+    {
+        CoreWebView2PermissionKind.Microphone => "your microphone",
+        CoreWebView2PermissionKind.Camera => "your camera",
+        CoreWebView2PermissionKind.Geolocation => "your location",
+        CoreWebView2PermissionKind.Notifications => "notifications",
+        CoreWebView2PermissionKind.ClipboardRead => "reading the clipboard",
+        CoreWebView2PermissionKind.Autoplay => "autoplay with sound",
+        CoreWebView2PermissionKind.LocalFonts => "your installed fonts",
+        CoreWebView2PermissionKind.MidiSystemExclusiveMessages => "MIDI devices",
+        CoreWebView2PermissionKind.OtherSensors => "device sensors",
+        _ => kind.ToString(),
+    };
+
+    private void ResolvePermission(bool allow, bool remember)
+    {
+        if (_permissionArgs is null || _permissionDeferral is null || _permissionHost is null)
+            return;
+        _permissionArgs.State = allow ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
+        if (remember)
+            SettingsStore.Save(SettingsStore.Current.WithPermission(_permissionHost, _permissionArgs.PermissionKind.ToString(), allow));
+        _permissionDeferral.Complete();
+        _permissionDeferral = null;
+        _permissionArgs = null;
+        _permissionHost = null;
+        PermissionPanel.Visibility = Visibility.Collapsed;
+        _active?.View.Focus();
+    }
+
+    private void PermissionAllow_Click(object sender, RoutedEventArgs e) => ResolvePermission(true, false);
+    private void PermissionAllowAlways_Click(object sender, RoutedEventArgs e) => ResolvePermission(true, true);
+    private void PermissionDeny_Click(object sender, RoutedEventArgs e) => ResolvePermission(false, false);
+    private void PermissionDenyAlways_Click(object sender, RoutedEventArgs e) => ResolvePermission(false, true);
+
+    private void HandleDownload(CoreWebView2DownloadStartingEventArgs args)
+    {
+        var name = SecurityPolicy.SafeFileName(Path.GetFileName(args.ResultFilePath));
+        if (SettingsStore.Current.BlockDangerousDownloads && SecurityPolicy.IsDangerousDownload(name))
+        {
+            args.Cancel = true;
+            args.Handled = true;
+            StatusText.Text = $"DOWNLOAD BLOCKED · {name}";
+            return;
+        }
+        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "JoyChromium");
+        Directory.CreateDirectory(folder);
+        var target = Path.Combine(folder, name);
+        for (var i = 1; File.Exists(target); i++)
+            target = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(name)} ({i}){Path.GetExtension(name)}");
+        args.ResultFilePath = target;
+        args.Handled = true;
+        var download = args.DownloadOperation;
+        download.BytesReceivedChanged += (_, _) =>
+        {
+            var total = download.TotalBytesToReceive;
+            StatusText.Text = total is > 0
+                ? $"DOWNLOADING · {name} · {(ulong)download.BytesReceived * 100 / total.Value}%"
+                : $"DOWNLOADING · {name}";
+        };
+        download.StateChanged += (_, _) => StatusText.Text = download.State switch
+        {
+            CoreWebView2DownloadState.Completed => $"DOWNLOADED · {name}",
+            CoreWebView2DownloadState.Interrupted => $"DOWNLOAD FAILED · {download.InterruptReason}",
+            _ => StatusText.Text,
+        };
     }
 
     private void ActivateTab(BrowserTab tab)
@@ -319,6 +492,14 @@ public partial class MainWindow : Window
                     homeUrl = current.HomeUrl,
                     shortcuts = current.Shortcuts,
                     defaultShortcuts = Shortcut.Default,
+                    httpsOnly = current.HttpsOnly,
+                    trackingPrevention = current.TrackingPrevention.ToString(),
+                    dnsOverHttps = current.DnsOverHttps.ToString(),
+                    passwordAutosave = current.PasswordAutosave,
+                    autofill = current.Autofill,
+                    blockDangerousDownloads = current.BlockDangerousDownloads,
+                    sitePermissions = current.SitePermissions,
+                    runtimeVersion = CoreWebView2Environment.GetAvailableBrowserVersionString(),
                 }, JsonOptions));
                 break;
             case "theme-preview" when ParseTheme(parsed.Theme) is { } theme:
@@ -349,8 +530,32 @@ public partial class MainWindow : Window
                 });
                 break;
             case "navigate" when !string.IsNullOrWhiteSpace(parsed.Url):
+                if (parsed.AllowHttp == true && SecurityPolicy.HostOf(parsed.Url) is { } httpHost)
+                    _httpAllowedHosts.Add(httpHost);
                 AddressBox.Text = parsed.Url;
                 NavigateFromAddress();
+                break;
+            case "privacy-save":
+                SettingsStore.Save(current with
+                {
+                    HttpsOnly = parsed.HttpsOnly ?? current.HttpsOnly,
+                    TrackingPrevention = Enum.TryParse<TrackingLevel>(parsed.TrackingPrevention, true, out var tracking) ? tracking : current.TrackingPrevention,
+                    DnsOverHttps = Enum.TryParse<DohProvider>(parsed.DnsOverHttps, true, out var doh) ? doh : current.DnsOverHttps,
+                    PasswordAutosave = parsed.PasswordAutosave ?? current.PasswordAutosave,
+                    Autofill = parsed.Autofill ?? current.Autofill,
+                    BlockDangerousDownloads = parsed.BlockDangerousDownloads ?? current.BlockDangerousDownloads,
+                });
+                foreach (var t in Tabs)
+                    if (t.View.CoreWebView2 is { } c)
+                        HardenCore(c);
+                break;
+            case "permission-forget" when !string.IsNullOrWhiteSpace(parsed.Host):
+                SettingsStore.Save(current.WithoutPermissions(parsed.Host.ToLowerInvariant()));
+                break;
+            case "clear-data":
+                await core.Profile.ClearBrowsingDataAsync();
+                _httpAllowedHosts.Clear();
+                StatusText.Text = "BROWSING DATA CLEARED";
                 break;
         }
     }
@@ -376,7 +581,9 @@ public partial class MainWindow : Window
     private sealed record SettingsMessage(
         string? Type, SettingsTheme? Theme, SettingsSearch? SearchEngine, bool? AdBlockEnabled,
         string? Startup, string? StartupUrl, string? NewTab, string? NewTabUrl, string? HomeUrl,
-        List<SettingsShortcut>? Shortcuts, string? Url);
+        List<SettingsShortcut>? Shortcuts, string? Url, bool? AllowHttp,
+        bool? HttpsOnly, string? TrackingPrevention, string? DnsOverHttps, bool? PasswordAutosave, bool? Autofill,
+        bool? BlockDangerousDownloads, string? Host);
     private sealed record SettingsShortcut(string? Name, string? Url);
     private sealed record SettingsTheme(string? Accent, string? Background, string? Surface, string? Text);
     private sealed record SettingsSearch(string? Name, string? Template);
@@ -488,10 +695,8 @@ public partial class MainWindow : Window
             Core.Navigate(resolved);
             return;
         }
-        var uri = Uri.TryCreate(text, UriKind.Absolute, out var parsed) &&
-                  (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)
-            ? parsed
-            : SettingsStore.Current.SearchEngine.BuildQuery(text);
+        // Anything that is not a plain web address (javascript:, file:, edge:, ...) is treated as a search.
+        var uri = Pages.IsWebUrl(text) ? new Uri(text) : SettingsStore.Current.SearchEngine.BuildQuery(text);
         Core.Navigate(uri.ToString());
     }
 
@@ -534,6 +739,7 @@ public partial class MainWindow : Window
             case Key.L: OpenAddressKeyboard(); break;
             case Key.R: Core?.Reload(); break;
             case Key.T: NewTab_Click(this, new RoutedEventArgs()); break;
+            case Key.N when (Keyboard.Modifiers & ModifierKeys.Shift) != 0: await OpenTabAsync(Pages.NewTabScheme, isPrivate: true); break;
             case Key.W: if (_active is not null) await CloseTabAsync(_active); break;
             case Key.Tab: SwitchTab((Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : 1); break;
             case Key.OemComma: Core?.Navigate(Pages.SettingsPage); break;
@@ -597,7 +803,8 @@ public partial class MainWindow : Window
         if ((pressed & 0x0020) != 0 && _active is not null) await CloseTabAsync(_active); // Back (view)
         if ((pressed & 0x2000) != 0)                                               // B
         {
-            if (KeyboardPanel.Visibility == Visibility.Visible) HideKeyboard();
+            if (PermissionPanel.Visibility == Visibility.Visible) ResolvePermission(false, false);
+            else if (KeyboardPanel.Visibility == Visibility.Visible) HideKeyboard();
             else Back_Click(this, new RoutedEventArgs());
         }
         if ((pressed & 0x1000) != 0) await ActivateFocusedAsync();                  // A
@@ -628,6 +835,12 @@ public partial class MainWindow : Window
 
     private void MoveOrScroll(FocusNavigationDirection direction)
     {
+        if (PermissionPanel.Visibility == Visibility.Visible)
+        {
+            var focused = Keyboard.FocusedElement as UIElement ?? PermissionDeny;
+            focused.MoveFocus(new TraversalRequest(direction));
+            return;
+        }
         if (KeyboardPanel.Visibility == Visibility.Visible)
         {
             var focused = Keyboard.FocusedElement as UIElement ?? KeyboardKeys.Children[0] as UIElement;

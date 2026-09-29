@@ -40,3 +40,23 @@ if (Pages.Resolve("JoyChromium://NewTab") != Pages.NewTabPage || Pages.Alias(Pag
 if (Shortcut.TryParse("Bad", "ftp://x") is not null || Shortcut.TryParse(" ", "https://x.example") is not null || Shortcut.TryParse("Ok", "https://x.example") is null)
     throw new InvalidOperationException("Shortcut validation is wrong.");
 Console.WriteLine("Startup, new tab and shortcut rules are consistent.");
+
+if (!SecurityPolicy.IsNavigationAllowed("https://x.example") || SecurityPolicy.IsNavigationAllowed("file:///C:/x") ||
+    SecurityPolicy.IsNavigationAllowed("javascript:alert(1)") || SecurityPolicy.IsNavigationAllowed("edge://settings"))
+    throw new InvalidOperationException("Navigation allow-list is wrong.");
+if (SecurityPolicy.UpgradeToHttps("http://x.example:80/a?b=1") != "https://x.example/a?b=1" || SecurityPolicy.UpgradeToHttps("https://x.example") is not null)
+    throw new InvalidOperationException("HTTPS upgrade is wrong.");
+if (!SecurityPolicy.IsDangerousDownload("setup.EXE") || SecurityPolicy.IsDangerousDownload("photo.jpg") || SecurityPolicy.SafeFileName("../../evil.txt") != "evil.txt")
+    throw new InvalidOperationException("Download rules are wrong.");
+if (!SecurityPolicy.RuntimeIsSupported("154.0.4258.37") || SecurityPolicy.RuntimeIsSupported("99.0.1.1") || SecurityPolicy.RuntimeIsSupported(null))
+    throw new InvalidOperationException("Runtime version check is wrong.");
+if (SecurityPolicy.BrowserArguments(DohProvider.Off) != "" || !SecurityPolicy.BrowserArguments(DohProvider.Quad9).Contains("dns.quad9.net"))
+    throw new InvalidOperationException("DoH arguments are wrong.");
+var popups = new List<DateTime>(); var t0 = DateTime.UtcNow;
+if (!SecurityPolicy.AllowPopup(popups, t0) || !SecurityPolicy.AllowPopup(popups, t0) || !SecurityPolicy.AllowPopup(popups, t0) ||
+    SecurityPolicy.AllowPopup(popups, t0) || !SecurityPolicy.AllowPopup(popups, t0.AddSeconds(2)))
+    throw new InvalidOperationException("Popup limiter is wrong.");
+var perms = new AppSettings().WithPermission("A.example", "Camera", false).WithPermission("a.example", "Microphone", true);
+if (perms.SitePermissions.Count != 2 || perms.WithoutPermissions("a.example").SitePermissions.Count != 1)
+    throw new InvalidOperationException("Permission bookkeeping is wrong.");
+Console.WriteLine("Security policy rules are consistent.");

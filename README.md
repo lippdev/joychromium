@@ -28,6 +28,10 @@ New tabs open an internal page (`joychromium://newtab`) with a search box and ed
 
 uBlock Origin is downloaded from its official GitHub release during the build (`FetchUBlock` target, version pinned in the csproj) and installed into the WebView2 profile as an unpacked extension; it can be toggled in Settings. Address-bar text that is not a URL is searched with the chosen engine (Google by default; DuckDuckGo, Bing, Brave, Startpage or a custom `%s` template). On first launch a `joychromium://welcome` onboarding walks through theme, search engine and ad blocking.
 
+## Security defaults
+
+HTTPS-only (http is upgraded; a failed upgrade shows an internal page that can fall back for that host in this session), certificate errors are always blocked, only `http(s)` and `joychromium://` addresses navigate, camera/microphone/location/notifications prompt every time unless remembered, downloads go to `DownloadsJoyChromium` with risky extensions refused and SmartScreen checks on, tracking prevention is Balanced, password saving and autofill are off, DevTools and context menus are off in Release, popups are rate-limited, `Ctrl+Shift+N` opens a private tab. Optional DNS-over-HTTPS (Cloudflare/Quad9/Google). Everything is in Settings → Privacy & security; the app warns if the WebView2 runtime is older than `SecurityPolicy.MinimumRuntimeVersion`.
+
 ## TV identity
 
 Before the first navigation, the app appends `JoyChromiumTV/0.1 (TV; SmartTV)` to WebView2's user-agent. WebView2 applies it to site navigations and subresources; it cannot be toggled off in this prototype. Overriding the user-agent can clear User-Agent Client Hints, and a TV token does not guarantee every site— including YouTube—will serve its TV interface. The app bridges controller directions as keyboard arrows; page-level Gamepad API support still depends on WebView2/runtime behavior.
