@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="UiSmoke/**" />
     <Compile Include="../TvIdentity.cs" Link="TvIdentity.cs" />
     <Compile Include="../Theme.cs" Link="Theme.cs" />
     <Compile Include="../Settings.cs" Link="Settings.cs" />

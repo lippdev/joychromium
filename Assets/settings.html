@@ -183,6 +183,8 @@
       <div class="row"><div>Browser engine (WebView2) <span id="runtime2"></span><small>Updated by Windows automatically</small></div></div>
       <div class="row"><div>uBlock Origin <span id="adBlockVersion"></span><small id="adBlockUpdate"></small></div></div>
       <div class="row"><div>Security policy<small id="policy"></small></div></div>
+      <div class="row"><div>Diagnostics<small>Zips the last 7 days of logs and your settings (site permissions excluded) into Downloads\JoyChromium</small></div><button class="ghost" id="exportDiag">Export</button></div>
+      <div class="status" id="diagStatus"></div>
     </section>
   </main>
 </div>
@@ -266,7 +268,9 @@
   window.chrome.webview.addEventListener('message', event => {
     const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
     if (msg.type === 'update-status') showUpdate(msg);
+    if (msg.type === 'diagnostics') flash('diagStatus', msg.error ? `Export failed: ${msg.error}` : `Saved ${msg.path}`);
   });
+  document.getElementById('exportDiag').addEventListener('click', () => post('export-diagnostics', {}));
   document.getElementById('updateCheck').addEventListener('click', () => { document.getElementById('appUpdate').textContent = 'Checking…'; post('update-check', {}); });
 
   function renderPermissions(perms) {

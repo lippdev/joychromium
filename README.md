@@ -39,6 +39,10 @@ HTTPS-only (http is upgraded; a failed upgrade shows an internal page that can f
 - **Policy**: `policy/policy.json` (signed with `tools/PolicySigner`, public key embedded in `PolicyService`) can raise the minimum runtime, block hosts and add risky download extensions. It is fetched from `main`, verified, cached, and can only tighten the embedded defaults. To change it: edit the JSON, run `dotnet run --project tools/PolicySigner -- sign <keyfile> policy/policy.json`, commit both files.
 - **App**: installed builds self-update through Velopack from GitHub Releases (`.github/workflows/release.yml` packs and publishes on a `v*` tag). Updates download in the background and install when the app closes.
 
+## Robustness
+
+A renderer crash reloads the tab; an engine crash rebuilds every tab from its URL. Background tabs are suspended after 10 minutes unless they play audio, and resume when activated. The session is saved every 30 seconds and on close. Logs live in `%LocalAppData%JoyChromiumogs` (7 days); Settings → About → *Export* zips them with sanitized settings. `JOYCHROMIUM_DATA` overrides the data folder (used by `tests/UiSmoke`, a FlaUI script that drives the real shell in CI).
+
 ## TV identity
 
 Before the first navigation, the app appends `JoyChromiumTV/0.1 (TV; SmartTV)` to WebView2's user-agent. WebView2 applies it to site navigations and subresources; it cannot be toggled off in this prototype. Overriding the user-agent can clear User-Agent Client Hints, and a TV token does not guarantee every site— including YouTube—will serve its TV interface. The app bridges controller directions as keyboard arrows; page-level Gamepad API support still depends on WebView2/runtime behavior.
