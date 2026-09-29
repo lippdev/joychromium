@@ -14,7 +14,7 @@ It opens YouTube's TV route. The address bar accepts URLs or search text; the in
 
 ## Controller
 
-An Xbox/XInput-compatible controller is supported. D-pad and left stick move the on-screen keyboard or send arrow keys into the page; A selects/activates, B goes back or closes the keyboard, LB/RB go back/forward, X reloads, Y opens the controller keyboard, Start opens a new tab, Back (view) closes the current tab, and LT/RT switch tabs. `Ctrl+L`, `Ctrl+R`, `Ctrl+T`, `Ctrl+W` and `Ctrl+Tab` are available too.
+An Xbox/XInput-compatible controller is supported. D-pad and left stick move (see *Controller input modes*); A selects/activates, B goes back or closes the keyboard, LB/RB go back/forward, X reloads, Y opens the controller keyboard (LB+Y toggles favorite), Start opens a new tab, Back (view) closes the current tab, LT/RT switch tabs, right-stick click cycles input mode. `Ctrl+L`, `Ctrl+R`, `Ctrl+T`, `Ctrl+W` and `Ctrl+Tab` are available too.
 
 ## Themes
 
@@ -38,6 +38,10 @@ HTTPS-only (http is upgraded; a failed upgrade shows an internal page that can f
 - **uBlock Origin**: once a day the app checks the official GitHub releases, downloads a newer `chromium.zip` into `%LocalAppData%\JoyChromium\extensions`, validates its manifest and switches to it on the next start (the two newest copies are kept for rollback).
 - **Policy**: `policy/policy.json` (signed with `tools/PolicySigner`, public key embedded in `PolicyService`) can raise the minimum runtime, block hosts and add risky download extensions. It is fetched from `main`, verified, cached, and can only tighten the embedded defaults. To change it: edit the JSON, run `dotnet run --project tools/PolicySigner -- sign <keyfile> policy/policy.json`, commit both files.
 - **App**: installed builds self-update through Velopack from GitHub Releases (`.github/workflows/release.yml` packs and publishes on a `v*` tag). Updates download in the background and install when the app closes.
+
+## Controller input modes
+
+Each site runs in one of three modes, remembered per host and configurable in Settings → Controller. **Spatial** (default): D-pad/left stick jump between links, buttons and fields using `Assets/spatial.js` (nearest element in that direction, scrolls when nothing is ahead); A activates or focuses a field. **Cursor**: the left stick moves a real mouse pointer (drawn as an overlay), D-pad nudges it, A clicks, right stick scrolls. **Arrows** (default for youtube.com and twitch.tv): D-pad/stick send arrow keys and A sends Enter, for sites with their own 10-foot UI. Click the right stick to cycle modes.
 
 ## Favorites, history and page tools
 

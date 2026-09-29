@@ -289,6 +289,7 @@ public partial class MainWindow : Window
                 return;
             KeyboardPanel.Visibility = Visibility.Collapsed;
             AddressBox.Text = tab.Url;
+            RefreshInputMode();
             StatusText.Text = "LOADING · TV IDENTITY ON";
         };
         core.NavigationCompleted += (_, args) =>
@@ -306,6 +307,14 @@ public partial class MainWindow : Window
             }
             if (args.IsSuccess && !tab.IsPrivate)
                 History.Default.Record(core.Source, core.DocumentTitle, DateTime.UtcNow);
+            if (args.IsSuccess && !_spatialChecked)
+            {
+                // One-time self-check that the injected navigation script parsed; a syntax error would otherwise fail silently.
+                _spatialChecked = true;
+                _ = core.ExecuteScriptAsync("typeof window.__joy").ContinueWith(t =>
+                    Log.Info(t.IsCompletedSuccessfully ? $"Spatial script present: {t.Result}" : $"Spatial script check failed: {t.Exception?.GetBaseException().Message}"),
+                    TaskScheduler.FromCurrentSynchronizationContext());
+            }
             if (tab == _active)
             {
                 StatusText.Text = args.IsSuccess ? "READY · TV IDENTITY ON" : $"LOAD ISSUE · {args.WebErrorStatus}";
@@ -321,6 +330,7 @@ public partial class MainWindow : Window
         core.PermissionRequested += (_, args) => HandlePermissionRequest(tab, args);
         core.DownloadStarting += (_, args) => HandleDownload(args);
         core.ProcessFailed += (_, args) => HandleProcessFailed(tab, args);
+        await core.AddScriptToExecuteOnDocumentCreatedAsync(SpatialScript);
         await core.AddScriptToExecuteOnDocumentCreatedAsync("""
             (() => {
               document.addEventListener('focusin', event => {
@@ -482,6 +492,7 @@ public partial class MainWindow : Window
         SuggestionsPopup.IsOpen = false;
         UpdateFavoriteButton();
         SetChromeVisible(tab.View.CoreWebView2?.ContainsFullScreenElement != true);
+        RefreshInputMode();
         Title = $"{tab.Title} - JoyChromium";
         KeyboardPanel.Visibility = Visibility.Collapsed;
         tab.View.Focus();
@@ -801,6 +812,8 @@ public partial class MainWindow : Window
                     autofill = current.Autofill,
                     blockDangerousDownloads = current.BlockDangerousDownloads,
                     sitePermissions = current.SitePermissions,
+                    defaultInputMode = current.DefaultInputMode.ToString(),
+                    siteInputModes = current.SiteInputModes.ToDictionary(p => p.Key, p => p.Value.ToString()),
                     runtimeVersion = CoreWebView2Environment.GetAvailableBrowserVersionString(),
                     appVersion = AppUpdater.Version,
                     appUpdate = AppUpdater.Status,
@@ -869,6 +882,14 @@ public partial class MainWindow : Window
                     if (t.View.CoreWebView2 is { } c)
                         HardenCore(c);
                 break;
+            case "inputmode-default" when Enum.TryParse<InputMode>(parsed.InputMode, true, out var defaultMode):
+                SettingsStore.Save(current with { DefaultInputMode = defaultMode });
+                RefreshInputMode();
+                break;
+            case "inputmode-forget" when !string.IsNullOrWhiteSpace(parsed.Host):
+                SettingsStore.Save(current.WithoutInputMode(parsed.Host.ToLowerInvariant()));
+                RefreshInputMode();
+                break;
             case "permission-forget" when !string.IsNullOrWhiteSpace(parsed.Host):
                 SettingsStore.Save(current.WithoutPermissions(parsed.Host.ToLowerInvariant()));
                 break;
@@ -933,7 +954,7 @@ public partial class MainWindow : Window
         string? Startup, string? StartupUrl, string? NewTab, string? NewTabUrl, string? HomeUrl,
         List<SettingsShortcut>? Shortcuts, string? Url, bool? AllowHttp,
         bool? HttpsOnly, string? TrackingPrevention, string? DnsOverHttps, bool? PasswordAutosave, bool? Autofill,
-        bool? BlockDangerousDownloads, string? Host, string? Query);
+        bool? BlockDangerousDownloads, string? Host, string? Query, string? InputMode);
     private sealed record SettingsShortcut(string? Name, string? Url);
     private sealed record SettingsTheme(string? Accent, string? Background, string? Surface, string? Text);
     private sealed record SettingsSearch(string? Name, string? Template);
@@ -1199,6 +1220,11 @@ public partial class MainWindow : Window
             else Back_Click(this, new RoutedEventArgs());
         }
         if ((pressed & 0x1000) != 0) await ActivateFocusedAsync();                  // A
+        if ((pressed & 0x0080) != 0) CycleInputMode();                              // Right stick click
+
+        var overlayOpen = PermissionPanel.Visibility == Visibility.Visible || KeyboardPanel.Visibility == Visibility.Visible;
+        if (_inputMode == InputMode.Cursor && !overlayOpen)
+            CursorTick(state.Gamepad);
 
         var left = state.Gamepad.LeftTrigger > TriggerThreshold;
         var right = state.Gamepad.RightTrigger > TriggerThreshold;
@@ -1207,7 +1233,10 @@ public partial class MainWindow : Window
         _leftTriggerHeld = left;
         _rightTriggerHeld = right;
 
-        var direction = GetDirection(buttons, state.Gamepad);
+        // In Cursor mode the stick is continuous movement, so only the D-pad produces discrete steps.
+        var direction = _inputMode == InputMode.Cursor && !overlayOpen
+            ? GetDirection(buttons, default)
+            : GetDirection(buttons, state.Gamepad);
         if (direction != FocusNavigationDirection.Next && DateTime.UtcNow - _lastDirection >= TimeSpan.FromMilliseconds(180))
         {
             MoveOrScroll(direction);
@@ -1224,6 +1253,96 @@ public partial class MainWindow : Window
         return FocusNavigationDirection.Next;
     }
 
+    // ---- Input modes: spatial focus, virtual cursor, raw arrows ----
+
+    private static readonly string SpatialScript = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Assets", "spatial.js"));
+    private InputMode _inputMode = InputMode.Spatial;
+    private Point _cursor = new(200, 200);
+    private bool _cursorPlaced;
+    private bool _spatialChecked;
+
+    private string? ActiveHost => _active is null ? null : SecurityPolicy.HostOf(Pages.Resolve(_active.Url));
+
+    /// <summary>Called whenever the active tab or its URL changes: picks the remembered/default mode for the host.</summary>
+    private void RefreshInputMode()
+    {
+        var host = ActiveHost;
+        var mode = _active is null || Pages.IsInternal(Pages.Resolve(_active.Url)) ? InputMode.Spatial : SettingsStore.Current.InputModeFor(host);
+        ApplyInputMode(mode, announce: false);
+    }
+
+    private void ApplyInputMode(InputMode mode, bool announce)
+    {
+        _inputMode = mode;
+        CursorLayer.Visibility = mode == InputMode.Cursor ? Visibility.Visible : Visibility.Collapsed;
+        if (mode == InputMode.Cursor)
+            PlaceCursor(_cursorPlaced ? _cursor : new Point(BrowserHost.ActualWidth / 2, BrowserHost.ActualHeight / 2));
+        if (announce)
+            StatusText.Text = $"INPUT · {mode.ToString().ToUpperInvariant()}";
+    }
+
+    private void CycleInputMode()
+    {
+        var next = ControllerInput.Next(_inputMode);
+        if (ActiveHost is { } host && !Pages.IsInternal(Pages.Resolve(_active!.Url)))
+            SettingsStore.Save(SettingsStore.Current.WithInputMode(host, next));
+        ApplyInputMode(next, announce: true);
+    }
+
+    private void PlaceCursor(Point p)
+    {
+        _cursor = new Point(Math.Clamp(p.X, 0, Math.Max(0, BrowserHost.ActualWidth - 1)), Math.Clamp(p.Y, 0, Math.Max(0, BrowserHost.ActualHeight - 1)));
+        _cursorPlaced = true;
+        Canvas.SetLeft(VirtualCursor, _cursor.X);
+        Canvas.SetTop(VirtualCursor, _cursor.Y);
+    }
+
+    /// <summary>Moves the real mouse to the virtual cursor so hover states and the click land where the overlay shows.</summary>
+    private void SyncRealMouse()
+    {
+        var screen = BrowserHost.PointToScreen(_cursor);
+        var source = PresentationSource.FromVisual(this);
+        var scale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+        // PointToScreen already returns device pixels; SendInput wants 0..65535 across the virtual screen.
+        var vx = (int)(screen.X * 65535 / SystemParameters.PrimaryScreenWidth / scale);
+        var vy = (int)(screen.Y * 65535 / SystemParameters.PrimaryScreenHeight / scale);
+        SendMouse(0x8001, vx, vy, 0); // MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE
+    }
+
+    private void CursorTick(XInputGamepad pad)
+    {
+        var (dx, dy) = ControllerInput.StickToVelocity(pad.ThumbLX, pad.ThumbLY);
+        if (dx != 0 || dy != 0)
+        {
+            PlaceCursor(new Point(_cursor.X + dx, _cursor.Y + dy));
+            SyncRealMouse();
+        }
+        var notches = ControllerInput.StickToScroll(pad.ThumbRY);
+        if (notches != 0)
+            SendMouse(0x0800, 0, 0, notches * 120); // MOUSEEVENTF_WHEEL
+    }
+
+    private void CursorClick()
+    {
+        SyncRealMouse();
+        SendMouse(0x0002, 0, 0, 0); // LEFTDOWN
+        SendMouse(0x0004, 0, 0, 0); // LEFTUP
+    }
+
+    private async Task SpatialMoveAsync(FocusNavigationDirection direction)
+    {
+        if (Core is null)
+            return;
+        var dir = direction switch
+        {
+            FocusNavigationDirection.Up => "up",
+            FocusNavigationDirection.Down => "down",
+            FocusNavigationDirection.Left => "left",
+            _ => "right",
+        };
+        await Core.ExecuteScriptAsync($"window.__joy && window.__joy.move('{dir}')");
+    }
+
     private void MoveOrScroll(FocusNavigationDirection direction)
     {
         if (PermissionPanel.Visibility == Visibility.Visible)
@@ -1236,6 +1355,25 @@ public partial class MainWindow : Window
         {
             var focused = Keyboard.FocusedElement as UIElement ?? KeyboardKeys.Children[0] as UIElement;
             focused?.MoveFocus(new TraversalRequest(direction));
+            return;
+        }
+        if (_inputMode == InputMode.Spatial)
+        {
+            _ = SpatialMoveAsync(direction);
+            return;
+        }
+        if (_inputMode == InputMode.Cursor)
+        {
+            // D-pad nudges the cursor by a fixed step; the stick handles continuous movement in CursorTick.
+            var step = 24;
+            PlaceCursor(direction switch
+            {
+                FocusNavigationDirection.Up => new Point(_cursor.X, _cursor.Y - step),
+                FocusNavigationDirection.Down => new Point(_cursor.X, _cursor.Y + step),
+                FocusNavigationDirection.Left => new Point(_cursor.X - step, _cursor.Y),
+                _ => new Point(_cursor.X + step, _cursor.Y),
+            });
+            SyncRealMouse();
             return;
         }
 
@@ -1264,8 +1402,38 @@ public partial class MainWindow : Window
             return;
         }
         _active?.View.Focus();
-        SendVirtualKey(0x0D);
-        await Task.CompletedTask;
+        switch (_inputMode)
+        {
+            case InputMode.Cursor:
+                CursorClick();
+                break;
+            case InputMode.Spatial when Core is not null:
+                await Core.ExecuteScriptAsync("window.__joy && window.__joy.activate()");
+                break;
+            default:
+                SendVirtualKey(0x0D);
+                break;
+        }
+    }
+
+    private static void SendMouse(uint flags, int x, int y, int data)
+    {
+        var input = new[]
+        {
+            new Input { Type = 0, Union = new InputUnion { Mouse = new MouseInput { X = x, Y = y, Data = (uint)data, Flags = flags } } },
+        };
+        _ = SendInput(1, input, Marshal.SizeOf<Input>());
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MouseInput
+    {
+        public int X;
+        public int Y;
+        public uint Data;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
     }
 
     private static bool SendVirtualKey(ushort key)
@@ -1311,6 +1479,7 @@ public partial class MainWindow : Window
     private struct InputUnion
     {
         [FieldOffset(0)] public KeyboardInput Keyboard;
+        [FieldOffset(0)] public MouseInput Mouse;
     }
 
     [StructLayout(LayoutKind.Sequential)]

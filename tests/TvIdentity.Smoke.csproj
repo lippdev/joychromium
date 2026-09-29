@@ -14,6 +14,7 @@
     <Compile Include="../Policy.cs" Link="Policy.cs" />
     <Compile Include="../History.cs" Link="History.cs" />
     <Compile Include="../Suggestion.cs" Link="Suggestion.cs" />
+    <Compile Include="../ControllerInput.cs" Link="ControllerInput.cs" />
     <Compile Include="../Log.cs" Link="Log.cs" />
   </ItemGroup>
   <ItemGroup>

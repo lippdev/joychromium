@@ -70,6 +70,23 @@ public sealed record AppSettings
     public string HomeUrl { get; init; } = DefaultHomeUrl;
     public IReadOnlyList<Shortcut> Shortcuts { get; init; } = Shortcut.Default;
     public IReadOnlyList<Shortcut> Favorites { get; init; } = [];
+    public InputMode DefaultInputMode { get; init; } = InputMode.Spatial;
+
+    /// <summary>Remembered controller mode per host; hosts absent here use <see cref="ControllerInput.DefaultModeFor"/>.</summary>
+    public IReadOnlyDictionary<string, InputMode> SiteInputModes { get; init; } = new Dictionary<string, InputMode>();
+
+    public InputMode InputModeFor(string? host) =>
+        host is not null && SiteInputModes.TryGetValue(host, out var mode) ? mode : ControllerInput.DefaultModeFor(host, DefaultInputMode);
+
+    public AppSettings WithInputMode(string host, InputMode mode)
+    {
+        var all = new Dictionary<string, InputMode>(SiteInputModes) { [host] = mode };
+        return this with { SiteInputModes = all };
+    }
+
+    public AppSettings WithoutInputMode(string host) =>
+        this with { SiteInputModes = SiteInputModes.Where(p => p.Key != host).ToDictionary(p => p.Key, p => p.Value) };
+
     public bool HttpsOnly { get; init; } = true;
 
     public bool IsFavorite(string url) => Favorites.Any(f => f.Url == url);
@@ -218,6 +235,8 @@ public static class SettingsStore
             HomeUrl = settings.HomeUrl,
             Shortcuts = settings.Shortcuts.Select(s => new RawShortcut(s.Name, s.Url)).ToList(),
             Favorites = settings.Favorites.Select(s => new RawShortcut(s.Name, s.Url)).ToList(),
+            DefaultInputMode = settings.DefaultInputMode.ToString(),
+            SiteInputModes = settings.SiteInputModes.ToDictionary(p => p.Key, p => p.Value.ToString()),
             HttpsOnly = settings.HttpsOnly,
             TrackingPrevention = settings.TrackingPrevention.ToString(),
             DnsOverHttps = settings.DnsOverHttps.ToString(),
@@ -281,6 +300,10 @@ public static class SettingsStore
                     ? Shortcut.Default
                     : raw.Shortcuts.Select(s => Shortcut.TryParse(s.Name, s.Url)).OfType<Shortcut>().ToList(),
                 Favorites = (raw.Favorites ?? []).Select(s => Shortcut.TryParse(s.Name, s.Url)).OfType<Shortcut>().ToList(),
+                DefaultInputMode = Enum.TryParse<InputMode>(raw.DefaultInputMode, true, out var defaultMode) ? defaultMode : InputMode.Spatial,
+                SiteInputModes = (raw.SiteInputModes ?? [])
+                    .Where(p => !string.IsNullOrWhiteSpace(p.Key) && Enum.TryParse<InputMode>(p.Value, true, out _))
+                    .ToDictionary(p => p.Key.ToLowerInvariant(), p => Enum.Parse<InputMode>(p.Value, true)),
                 HttpsOnly = raw.HttpsOnly ?? true,
                 TrackingPrevention = Enum.TryParse<TrackingLevel>(raw.TrackingPrevention, true, out var tracking) ? tracking : TrackingLevel.Balanced,
                 DnsOverHttps = Enum.TryParse<DohProvider>(raw.DnsOverHttps, true, out var doh) ? doh : DohProvider.Off,
@@ -312,6 +335,8 @@ public static class SettingsStore
         public string? HomeUrl { get; set; }
         public List<RawShortcut>? Shortcuts { get; set; }
         public List<RawShortcut>? Favorites { get; set; }
+        public string? DefaultInputMode { get; set; }
+        public Dictionary<string, string>? SiteInputModes { get; set; }
         public bool? HttpsOnly { get; set; }
         public string? TrackingPrevention { get; set; }
         public string? DnsOverHttps { get; set; }

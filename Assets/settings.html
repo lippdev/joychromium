@@ -64,6 +64,7 @@
     <h1>Settings</h1>
     <a href="#general" aria-current="page">🏠 Start &amp; new tab</a>
     <a href="#appearance">🎨 Appearance</a>
+    <a href="#controller">🎮 Controller</a>
     <a href="#search">🔎 Search</a>
     <a href="#privacy">🛡️ Privacy</a>
     <a href="#about">ℹ️ About</a>
@@ -120,6 +121,20 @@
         <button class="ghost" id="reset">Reset to default</button>
       </div>
       <div class="status" id="status"></div>
+    </section>
+
+    <h2 id="controller">Controller</h2>
+    <p class="lead">How the gamepad drives pages. Click the right stick at any time to cycle modes; the choice is remembered per site.</p>
+    <section>
+      <div class="row"><div>Default mode<small><b>Spatial</b> jumps between links and buttons · <b>Cursor</b> moves a mouse pointer with the left stick · <b>Arrows</b> sends arrow keys (TV sites)</small></div>
+        <select id="defaultInputMode"><option>Spatial</option><option>Cursor</option><option>Arrows</option></select>
+      </div>
+      <div class="status" id="controllerStatus"></div>
+    </section>
+    <section>
+      <h3>Per-site modes</h3>
+      <p class="lead" style="margin-bottom:10px">YouTube and Twitch default to Arrows because their TV interfaces handle the D-pad themselves.</p>
+      <div id="inputModes"></div>
     </section>
 
     <h2 id="search">Search</h2>
@@ -255,6 +270,8 @@
     document.getElementById('trackingPrevention').value = msg.trackingPrevention;
     document.getElementById('dnsOverHttps').value = msg.dnsOverHttps;
     renderPermissions(msg.sitePermissions || {});
+    document.getElementById('defaultInputMode').value = msg.defaultInputMode;
+    renderInputModes(msg.siteInputModes || {});
     document.getElementById('runtime2').textContent = msg.runtimeVersion || '';
     document.getElementById('appVersion').textContent = 'v' + msg.appVersion;
     document.getElementById('adBlockVersion').textContent = msg.adBlockVersion ? 'v' + msg.adBlockVersion : 'not installed';
@@ -273,6 +290,21 @@
   document.getElementById('exportDiag').addEventListener('click', () => post('export-diagnostics', {}));
   document.getElementById('updateCheck').addEventListener('click', () => { document.getElementById('appUpdate').textContent = 'Checking…'; post('update-check', {}); });
 
+  function renderInputModes(modes) {
+    const box = document.getElementById('inputModes');
+    const hosts = Object.keys(modes);
+    if (!hosts.length) { box.innerHTML = '<p class="lead" style="margin:0">No per-site overrides yet.</p>'; return; }
+    box.replaceChildren(...hosts.map(host => {
+      const row = document.createElement('div'); row.className = 'row';
+      const label = document.createElement('div'); label.textContent = host;
+      const mode = document.createElement('small'); mode.textContent = modes[host]; label.appendChild(mode);
+      row.appendChild(label);
+      const b = document.createElement('button'); b.className = 'ghost'; b.textContent = 'Forget';
+      b.addEventListener('click', () => { post('inputmode-forget', { host }); delete modes[host]; renderInputModes(modes); });
+      row.appendChild(b); return row;
+    }));
+  }
+  document.getElementById('defaultInputMode').addEventListener('change', e => { post('inputmode-default', { inputMode: e.target.value }); flash('controllerStatus', 'Saved.'); });
   function renderPermissions(perms) {
     const box = document.getElementById('permissions');
     const hosts = Object.keys(perms);
@@ -280,7 +312,8 @@
     box.replaceChildren(...hosts.map(host => {
       const row = document.createElement('div'); row.className = 'row';
       const desc = Object.entries(perms[host]).map(([k, v]) => `${k}: ${v ? 'allowed' : 'denied'}`).join(' · ');
-      row.innerHTML = `<div>${host}<small>${desc}</small></div>`;
+      const label = document.createElement("div"); label.textContent = host;
+      const small = document.createElement("small"); small.textContent = desc; label.appendChild(small); row.appendChild(label);
       const b = document.createElement('button'); b.className = 'ghost'; b.textContent = 'Forget';
       b.addEventListener('click', () => { post('permission-forget', { host }); delete perms[host]; renderPermissions(perms); });
       row.appendChild(b); return row;

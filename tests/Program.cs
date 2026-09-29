@@ -100,3 +100,17 @@ if (suggestions.Count != 1 || suggestions[0].Kind != "favorite" || Suggestion.Bu
     throw new InvalidOperationException("Suggestion building is wrong.");
 Directory.Delete(Path.GetDirectoryName(historyPath)!, recursive: true);
 Console.WriteLine("History, favorites and suggestions are consistent.");
+
+if (ControllerInput.DefaultModeFor("www.youtube.com") != InputMode.Arrows || ControllerInput.DefaultModeFor("notyoutube.com") != InputMode.Spatial ||
+    ControllerInput.DefaultModeFor(null, InputMode.Cursor) != InputMode.Cursor || ControllerInput.Next(InputMode.Arrows) != InputMode.Spatial)
+    throw new InvalidOperationException("Input mode rules are wrong.");
+if (ControllerInput.StickToVelocity(1000, -1000) != (0, 0) || ControllerInput.StickToVelocity(32767, 0).Dx is not > 21.9 or > 22.1 ||
+    ControllerInput.StickToVelocity(0, 32767).Dy is not < 0 || ControllerInput.StickToVelocity(16000, 0).Dx >= ControllerInput.StickToVelocity(32767, 0).Dx)
+    throw new InvalidOperationException("Stick velocity curve is wrong.");
+if (ControllerInput.StickToScroll(500) != 0 || ControllerInput.StickToScroll(-30000) != -1 || ControllerInput.StickToScroll(30000) != 1)
+    throw new InvalidOperationException("Stick scroll mapping is wrong.");
+var modes = new AppSettings().WithInputMode("a.example", InputMode.Cursor);
+if (modes.InputModeFor("a.example") != InputMode.Cursor || modes.InputModeFor("www.youtube.com") != InputMode.Arrows || modes.InputModeFor("b.example") != InputMode.Spatial ||
+    modes.WithoutInputMode("a.example").SiteInputModes.Count != 0)
+    throw new InvalidOperationException("Per-site input mode bookkeeping is wrong.");
+Console.WriteLine("Controller input rules are consistent.");
