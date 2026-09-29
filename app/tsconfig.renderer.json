@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "outDir": "dist/esm",
+    "rootDir": "src",
+    "types": [],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "exclude": [],
+  "include": ["src/renderer/**/*.ts", "src/shared/controllerInput.ts", "src/shared/ipc.ts", "src/shared/settings.ts", "src/shared/pages.ts"]
+}

@@ -17,3 +17,4 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e SemVer.
 - Ícone do app, mute por aba com indicador de áudio (Ctrl+M), menu de contexto da aba (duplicar, fechar outras, reabrir), clique do meio fecha, tela não apaga durante mídia.
 - Testes migrados para xUnit (`tests/JoyChromium.Tests`); cache de NuGet e do uBO no CI.
 - Migração para Electron, fase 0: app/ com Electron 44 (Chromium 152), UA de TV, bloqueio via motor Ghostery, testes vitest + Playwright.
+- Migração para Electron, fase 1: shell completo em `app/` — abas, titlebar, teclado do controle, páginas internas, segurança (https-only, permissões, downloads, popups), histórico/favoritos/sugestões, modos de controle (Spatial/Cursor/Arrows via Gamepad API + sendInputEvent), policy assinada, logs/diagnóstico, updater; e2e Playwright.

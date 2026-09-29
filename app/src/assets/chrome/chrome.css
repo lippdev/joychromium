@@ -1,0 +1,77 @@
+:root {
+  --accent: #64DDB5; --bg: #0C0E13; --surface: #14171E; --text: #F3F5F9; --accent-text: #07120F;
+  --surface2: color-mix(in srgb, var(--surface) 94%, var(--text));
+  --hover: color-mix(in srgb, var(--surface) 88%, var(--text));
+  --border: color-mix(in srgb, var(--surface) 86%, var(--text));
+  --muted: color-mix(in srgb, var(--text) 70%, var(--surface));
+  --faint: color-mix(in srgb, var(--text) 50%, var(--surface));
+  --input: color-mix(in srgb, var(--bg) 98%, var(--text));
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: transparent; color: var(--text); font: 13px "Segoe UI", system-ui, sans-serif; overflow: hidden; user-select: none; }
+body { display: flex; flex-direction: column; }
+#top { flex: none; }
+#bottom { flex: none; margin-top: auto; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+/* Title bar with tabs; the empty area drags the window. */
+#titlebar { height: 42px; display: flex; align-items: flex-end; background: var(--surface); -webkit-app-region: drag; }
+#titlebar button, #tabs { -webkit-app-region: no-drag; }
+.logo { align-self: center; margin: 0 8px 0 10px; }
+.logo b { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: var(--accent-text); font-size: 16px; font-weight: 900; }
+#tabs { display: flex; align-items: flex-end; max-width: calc(100% - 260px); overflow: hidden; }
+.tab { display: flex; align-items: center; gap: 8px; width: 220px; height: 36px; padding: 0 4px 0 12px; margin-top: 6px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--muted); }
+.tab:hover { background: var(--hover); }
+.tab.active { background: var(--surface2); color: var(--text); }
+.tab:focus-visible { outline: none; border-color: var(--accent); }
+.tab img { width: 16px; height: 16px; flex: none; }
+.tab .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; text-align: left; }
+.tab .x, .tab .snd { width: 24px; height: 24px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; }
+.tab .x:hover { background: var(--border); }
+.tab .snd.muted { color: var(--accent); }
+.caption { width: 46px; height: 42px; border: 0; background: transparent; color: var(--muted); font-family: "Segoe MDL2 Assets", "Segoe UI Symbol"; font-size: 10px; }
+#newtab { width: 34px; height: 34px; margin: 0 0 2px 2px; font-family: inherit; font-size: 14px; }
+.caption:hover { background: var(--hover); }
+.caption.close:hover { background: #C42B1C; color: #fff; }
+.spacer { flex: 1; }
+#wincontrols { display: flex; }
+
+#toolbar { height: 48px; display: flex; align-items: center; gap: 4px; padding: 0 8px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+.tool { width: 40px; height: 36px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface2); font-size: 18px; }
+.tool:hover { background: var(--hover); border-color: var(--accent); }
+.tool:focus-visible { outline: none; border: 2px solid var(--accent); }
+.tool.primary { width: 64px; font-size: 13px; font-weight: 700; background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+#favorite.on { color: var(--accent); }
+#addresswrap { flex: 1; position: relative; margin: 0 6px 0 8px; }
+#address { width: 100%; height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--input); color: var(--text); font: 14px "Segoe UI", system-ui, sans-serif; outline: none; }
+#address:focus { border-color: var(--accent); }
+#suggestions { position: absolute; left: 0; right: 0; top: 38px; z-index: 5; background: var(--surface); border: 1px solid var(--border); border-radius: 0 0 10px 10px; padding: 4px; max-height: 280px; overflow: auto; }
+.sug { display: block; width: 100%; text-align: left; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; }
+.sug:hover, .sug.sel { background: var(--hover); }
+.sug .u { display: block; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { padding: 5px 10px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--bg)); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); color: var(--accent); font-size: 11px; font-weight: 700; margin-left: 10px; }
+
+.panel { background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--border); padding: 14px 18px; }
+.panel-title { color: var(--accent); font-size: 11px; font-weight: 700; }
+.panel-head { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.hint { color: var(--muted); font-size: 10px; }
+#permission { border-color: var(--accent); }
+#permission-text { margin: 6px 0 12px; font-size: 15px; }
+.row { display: flex; justify-content: center; gap: 6px; }
+.key { min-width: 44px; height: 46px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface2); font-size: 18px; font-weight: 600; }
+.key:hover { background: var(--hover); }
+.key:focus-visible, .key.focus { outline: none; background: color-mix(in srgb, var(--accent) 45%, var(--surface)); border: 2px solid var(--accent); }
+.key.wide { min-width: 96px; font-size: 14px; }
+.key.wider { min-width: 200px; font-size: 14px; }
+#keys { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; max-width: 920px; margin: 0 auto 8px; }
+#findbar { display: flex; gap: 6px; padding: 8px 12px; justify-content: flex-end; }
+#findtext { width: 260px; height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--input); color: var(--text); font: inherit; }
+#findbar .key { height: 32px; min-width: 34px; font-size: 11px; }
+
+#statusbar { height: 26px; display: flex; align-items: center; gap: 16px; padding: 0 14px; background: var(--surface); border-top: 1px solid var(--border); font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; }
+#status { flex: 1; text-align: center; font-weight: 400; color: var(--muted); }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); font-weight: 400; }
+#adblock.on, #controller.on { color: var(--accent); }
+body.hidden-chrome #top, body.hidden-chrome #bottom { display: none; }

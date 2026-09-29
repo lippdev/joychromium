@@ -23,3 +23,5 @@ Navegador Windows controller-first (WPF + WebView2) com marcador de user-agent d
 - O shell novo vive em `app/` (Electron + TypeScript). O C# na raiz é o app legado até a migração terminar.
 - Comandos em `app/`: `npm run build`, `npm test` (vitest), `npm run test:e2e` (Playwright abre o Electron de verdade), `npm run typecheck`.
 - Lógica pura fica em módulos sem dependência do Electron (ex.: `src/main/tvIdentity.ts`) e ganha teste unitário; o que toca o Electron é coberto pelo e2e.
+- Arquitetura do app Electron: `src/shared/` (regras puras, testadas com vitest), `src/main/` (processo principal: `shell.ts` janela+comandos, `tabs.ts` abas, `pageBridge.ts` mensagens das páginas internas, `protocol.ts` esquema `joychromium://`), `src/preload/` (bridges sandboxed — não podem importar módulos; constantes inline), `src/renderer/chrome.ts` (UI do shell + Gamepad API), `src/assets/` (HTML das páginas internas + `spatial.js`).
+- Testes e2e leem o estado por `globalThis.joy` (`tabs()`, `command()`, `pageEval()`), porque as views das abas não são alcançáveis pelo Playwright.

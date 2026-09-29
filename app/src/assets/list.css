@@ -1,0 +1,21 @@
+:root { --accent: #64DDB5; --bg: #0C0E13; --surface: #14171E; --text: #F3F5F9; --accent-text: #07120F;
+  --muted: color-mix(in srgb, var(--text) 70%, var(--surface)); --border: color-mix(in srgb, var(--surface) 86%, var(--text)); }
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+main { max-width: 960px; margin: 0 auto; padding: 36px 24px; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+p.lead { color: var(--muted); margin: 0 0 18px; }
+p.empty { color: var(--muted); padding: 24px; text-align: center; border: 1px dashed var(--border); border-radius: 12px; }
+.bar { display: flex; gap: 10px; margin-bottom: 18px; }
+.bar input { flex: 1; font: inherit; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); outline: none; }
+.bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
+.bar button, .del { font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; outline: none; }
+.bar button:focus-visible, .del:focus-visible, .open:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.item { display: flex; gap: 8px; margin-bottom: 8px; }
+.open { flex: 1; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 0 12px; text-align: left; font: inherit; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; outline: none; }
+.open:hover { border-color: var(--accent); }
+.open .t { font-weight: 600; grid-column: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.open .u { color: var(--muted); font-size: 13px; grid-column: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.open .w { color: var(--muted); font-size: 12px; grid-column: 2; grid-row: 1 / span 2; align-self: center; white-space: nowrap; }
+.del { width: 44px; padding: 0; }
+.del:hover { border-color: #C42B1C; color: #FFB4A0; }
