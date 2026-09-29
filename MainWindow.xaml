@@ -3,16 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:JoyChromium"
         Title="JoyChromium" Width="1440" Height="900" MinWidth="900" MinHeight="600"
-        Background="#0C0E13" Foreground="#F3F5F9" Loaded="Window_Loaded"
+        Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown" StateChanged="Window_StateChanged">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="42" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
     <Window.Resources>
         <Style x:Key="ToolbarButton" TargetType="Button">
-            <Setter Property="Background" Value="#20242D" />
-            <Setter Property="Foreground" Value="#F3F5F9" />
-            <Setter Property="BorderBrush" Value="#343A46" />
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="FontSize" Value="18" />
             <Setter Property="Width" Value="40" />
@@ -22,18 +22,18 @@
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#303744" />
-                    <Setter Property="BorderBrush" Value="#64DDB5" />
+                    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                 </Trigger>
                 <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="#64DDB5" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                     <Setter Property="BorderThickness" Value="2" />
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="CaptionButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#C9D0DB" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
             <Setter Property="FontSize" Value="10" />
@@ -49,7 +49,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#2A303C" />
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -74,7 +74,7 @@
         </Style>
         <Style x:Key="TabButton" TargetType="Button">
             <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
-            <Setter Property="Foreground" Value="#C9D0DB" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -85,14 +85,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#20242D" />
-                                <Setter Property="Foreground" Value="#F3F5F9" />
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Surface2Brush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                             </DataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#262B35" />
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Bg" Property="BorderBrush" Value="#64DDB5" />
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -101,7 +101,7 @@
         </Style>
         <Style x:Key="TabCloseButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#AAB2C0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
             <Setter Property="FontSize" Value="9" />
@@ -116,7 +116,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#3B4351" />
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BorderBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -124,9 +124,9 @@
             </Setter>
         </Style>
         <Style x:Key="KeyButton" TargetType="Button">
-            <Setter Property="Background" Value="#272C36" />
-            <Setter Property="Foreground" Value="#F3F5F9" />
-            <Setter Property="BorderBrush" Value="#3B4351" />
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="FontSize" Value="18" />
             <Setter Property="Height" Value="48" />
@@ -134,12 +134,12 @@
             <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter Property="Background" Value="#176C57" />
-                    <Setter Property="BorderBrush" Value="#64DDB5" />
+                    <Setter Property="Background" Value="{DynamicResource AccentDimBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                     <Setter Property="BorderThickness" Value="2" />
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#343C4B" />
+                    <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -155,14 +155,14 @@
             </Grid.RowDefinitions>
 
             <!-- Title bar: tab strip + window controls -->
-            <Grid Grid.Row="0" Background="#14171E">
+            <Grid Grid.Row="0" Background="{DynamicResource SurfaceBrush}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="26" Height="26" CornerRadius="8" Background="#64DDB5" Margin="10,0,8,0" VerticalAlignment="Center">
-                    <TextBlock Text="J" Foreground="#07120F" FontWeight="Black" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Grid.Column="0" Width="26" Height="26" CornerRadius="8" Background="{DynamicResource AccentBrush}" Margin="10,0,8,0" VerticalAlignment="Center">
+                    <TextBlock Text="J" Foreground="{DynamicResource AccentTextBrush}" FontWeight="Black" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
                     <ItemsControl x:Name="TabStrip" ItemsSource="{Binding Tabs, RelativeSource={RelativeSource AncestorType=Window}}">
@@ -193,7 +193,7 @@
             </Grid>
 
             <!-- Toolbar -->
-            <Border Grid.Row="1" Background="#20242D" BorderBrush="#282D37" BorderThickness="0,0,0,1" Padding="8,6">
+            <Border Grid.Row="1" Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -203,34 +203,37 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Button Grid.Column="0" Style="{StaticResource ToolbarButton}" Content="‹" ToolTip="Back · LB / B" Click="Back_Click" />
                     <Button Grid.Column="1" Style="{StaticResource ToolbarButton}" Content="›" ToolTip="Forward · RB" Click="Forward_Click" />
                     <Button Grid.Column="2" Style="{StaticResource ToolbarButton}" Content="⟳" ToolTip="Reload · X" Click="Reload_Click" />
                     <Button Grid.Column="3" Style="{StaticResource ToolbarButton}" Content="⌂" ToolTip="YouTube TV · Home" Click="Home_Click" />
                     <TextBox Grid.Column="4" x:Name="AddressBox" Height="36" Margin="8,0,6,0" Padding="14,0"
-                             VerticalContentAlignment="Center" FontSize="14" Foreground="#F3F5F9" Background="#0D1016"
-                             BorderBrush="#343A46" BorderThickness="1" CaretBrush="#64DDB5"
-                             SelectionBrush="#176C57" ToolTip="URL or search · Y opens controller keyboard"
+                             VerticalContentAlignment="Center" FontSize="14" Foreground="{DynamicResource TextBrush}" Background="{DynamicResource InputBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CaretBrush="{DynamicResource AccentBrush}"
+                             SelectionBrush="{DynamicResource AccentDimBrush}" ToolTip="URL or search · Y opens controller keyboard"
                              KeyDown="AddressBox_KeyDown" />
                     <Button Grid.Column="5" Style="{StaticResource ToolbarButton}" Width="64" Content="GO" FontSize="13" FontWeight="Bold"
-                            Foreground="#07120F" Background="#64DDB5" BorderBrush="#64DDB5" Click="Go_Click" />
-                    <Border Grid.Column="6" Margin="10,0,0,0" Padding="10,5" CornerRadius="8" BorderBrush="#315548" BorderThickness="1" Background="#12231D" VerticalAlignment="Center">
-                        <TextBlock Text="TV ON" Foreground="#64DDB5" FontSize="11" FontWeight="Bold" />
+                            Foreground="{DynamicResource AccentTextBrush}" Background="{DynamicResource AccentBrush}" BorderBrush="{DynamicResource AccentBrush}" Click="Go_Click" />
+                    <Border Grid.Column="6" Margin="10,0,0,0" Padding="10,5" CornerRadius="8" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" Background="{DynamicResource AccentBgBrush}" VerticalAlignment="Center">
+                        <TextBlock Text="TV ON" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="Bold" />
                     </Border>
+                    <Button Grid.Column="7" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                            Content="&#xE713;" ToolTip="Settings · Ctrl+," Click="Settings_Click" />
                 </Grid>
             </Border>
 
             <!-- Content: one WebView2 per tab, only the active one visible -->
-            <Grid Grid.Row="2" Background="#0C0E13">
+            <Grid Grid.Row="2" Background="{DynamicResource BackgroundBrush}">
                 <Grid x:Name="BrowserHost" />
                 <Border x:Name="KeyboardPanel" Panel.ZIndex="10" Visibility="Collapsed" HorizontalAlignment="Center"
                         VerticalAlignment="Bottom" Margin="24" Padding="18" CornerRadius="16"
-                        Background="#F0161A22" BorderBrush="#46505E" BorderThickness="1" MaxWidth="920">
+                        Background="{DynamicResource KeyboardBgBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" MaxWidth="920">
                     <StackPanel>
                         <DockPanel Margin="4,0,4,10">
-                            <TextBlock x:Name="KeyboardTitle" Text="CONTROLLER KEYBOARD" Foreground="#64DDB5" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
-                            <TextBlock DockPanel.Dock="Right" Text="D-PAD MOVE  ·  A SELECT  ·  B CLOSE" Foreground="#AAB2C0" FontSize="10" VerticalAlignment="Center" />
+                            <TextBlock x:Name="KeyboardTitle" Text="CONTROLLER KEYBOARD" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                            <TextBlock DockPanel.Dock="Right" Text="D-PAD MOVE  ·  A SELECT  ·  B CLOSE" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" VerticalAlignment="Center" />
                         </DockPanel>
                         <UniformGrid x:Name="KeyboardKeys" Rows="4" Columns="10" KeyboardNavigation.DirectionalNavigation="Cycle" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
@@ -244,11 +247,11 @@
                 </Border>
             </Grid>
 
-            <Border Grid.Row="3" Background="#14171E" BorderBrush="#282D37" BorderThickness="0,1,0,0" Padding="14,0">
+            <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">
                 <DockPanel LastChildFill="True">
-                    <TextBlock x:Name="ControllerText" DockPanel.Dock="Left" Text="XINPUT · SEARCHING" Foreground="#AAB2C0" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
-                    <TextBlock x:Name="StatusText" Text="STARTING · TV IDENTITY ON" Foreground="#AAB2C0" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    <TextBlock DockPanel.Dock="Right" Text="Y KEYBOARD · START NEW TAB · BACK CLOSE TAB · LT/RT SWITCH TAB · LB/RB HISTORY · X RELOAD" Foreground="#778190" FontSize="10" VerticalAlignment="Center" />
+                    <TextBlock x:Name="ControllerText" DockPanel.Dock="Left" Text="XINPUT · SEARCHING" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
+                    <TextBlock x:Name="StatusText" Text="STARTING · TV IDENTITY ON" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                    <TextBlock DockPanel.Dock="Right" Text="Y KEYBOARD · START NEW TAB · BACK CLOSE TAB · LT/RT SWITCH TAB · LB/RB HISTORY · X RELOAD" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" VerticalAlignment="Center" />
                 </DockPanel>
             </Border>
         </Grid>

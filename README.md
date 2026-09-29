@@ -16,6 +16,10 @@ It opens YouTube's TV route. The address bar accepts URLs or search text; the in
 
 An Xbox/XInput-compatible controller is supported. D-pad and left stick move the on-screen keyboard or send arrow keys into the page; A selects/activates, B goes back or closes the keyboard, LB/RB go back/forward, X reloads, Y opens the controller keyboard, Start opens a new tab, Back (view) closes the current tab, and LT/RT switch tabs. `Ctrl+L`, `Ctrl+R`, `Ctrl+T`, `Ctrl+W` and `Ctrl+Tab` are available too.
 
+## Themes
+
+The gear button, `Ctrl+,` or typing `joychromium://settings` opens an internal settings page with color presets and custom accent/background/surface/text colors. The choice is saved to `%LocalAppData%JoyChromiumsettings.json` and applied at startup.
+
 ## TV identity
 
 Before the first navigation, the app appends `JoyChromiumTV/0.1 (TV; SmartTV)` to WebView2's user-agent. WebView2 applies it to site navigations and subresources; it cannot be toggled off in this prototype. Overriding the user-agent can clear User-Agent Client Hints, and a TV token does not guarantee every site— including YouTube—will serve its TV interface. The app bridges controller directions as keyboard arrows; page-level Gamepad API support still depends on WebView2/runtime behavior.

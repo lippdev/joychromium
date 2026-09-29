@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../TvIdentity.cs" Link="TvIdentity.cs" />
+    <Compile Include="../Theme.cs" Link="Theme.cs" />
   </ItemGroup>
 </Project>

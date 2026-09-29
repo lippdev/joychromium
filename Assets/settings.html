@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --accent: #64DDB5; --bg: #0C0E13; --surface: #14171E; --text: #F3F5F9;
+    --muted: color-mix(in srgb, var(--text) 70%, var(--surface));
+    --border: color-mix(in srgb, var(--surface) 86%, var(--text));
+    --accent-text: #07120F;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  nav { background: var(--surface); padding: 28px 18px; border-right: 1px solid var(--border); }
+  nav h1 { font-size: 22px; margin: 0 0 20px 10px; }
+  nav a { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; color: var(--text); text-decoration: none; outline: none; }
+  nav a[aria-current], nav a:focus-visible { background: color-mix(in srgb, var(--surface) 80%, var(--text)); box-shadow: inset 0 0 0 2px var(--accent); }
+  main { padding: 36px 48px; max-width: 900px; }
+  h2 { font-size: 20px; margin: 0 0 6px; }
+  p.lead { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; }
+  section h3 { margin: 0 0 12px; font-size: 15px; }
+  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .preset { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; color: var(--text); font: inherit; outline: none; text-align: left; }
+  .preset:focus-visible, .preset:hover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .preset.active { border-color: var(--accent); }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid; flex: none; }
+  .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--border); }
+  .row:first-of-type { border-top: 0; }
+  .row small { display: block; color: var(--muted); }
+  input[type=color] { width: 56px; height: 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); padding: 2px; cursor: pointer; }
+  input[type=color]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .actions { display: flex; gap: 10px; margin-top: 8px; }
+  button.primary, button.ghost { font: inherit; font-weight: 600; padding: 10px 20px; border-radius: 8px; cursor: pointer; outline: none; }
+  button.primary { background: var(--accent); color: var(--accent-text); border: 0; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+  .status { color: var(--muted); font-size: 13px; margin-top: 10px; min-height: 1.5em; }
+  kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav>
+    <h1>Settings</h1>
+    <a href="#appearance" aria-current="page">🎨 Appearance</a>
+    <a href="#about">ℹ️ About</a>
+  </nav>
+  <main>
+    <h2 id="appearance">Appearance</h2>
+    <p class="lead">Pick a preset or set your own colors. Changes apply live and are saved to <code id="path"></code>.</p>
+
+    <section>
+      <h3>Presets</h3>
+      <div class="presets" id="presets"></div>
+    </section>
+
+    <section>
+      <h3>Custom colors</h3>
+      <div class="row"><div>Accent<small>Buttons, focus ring, highlights</small></div><input type="color" id="accent"></div>
+      <div class="row"><div>Background<small>Behind pages and the window</small></div><input type="color" id="background"></div>
+      <div class="row"><div>Surface<small>Title bar, toolbar, panels</small></div><input type="color" id="surface"></div>
+      <div class="row"><div>Text<small>Labels and addresses</small></div><input type="color" id="text"></div>
+      <div class="actions">
+        <button class="primary" id="save">Save</button>
+        <button class="ghost" id="reset">Reset to default</button>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+
+    <section id="about">
+      <h3>About</h3>
+      <p style="margin:0">JoyChromium — controller-first browser. Move with the <kbd>D-pad</kbd>, choose with <kbd>A</kbd>, go back with <kbd>B</kbd>.</p>
+    </section>
+  </main>
+</div>
+<script>
+  const fields = ['accent', 'background', 'surface', 'text'];
+  const input = Object.fromEntries(fields.map(k => [k, document.getElementById(k)]));
+  let presets = {};
+  let current = null;
+
+  function post(type, payload) {
+    try { window.chrome.webview.postMessage(JSON.stringify({ type, ...payload })); } catch (_) {}
+  }
+  function paint(theme) {
+    const root = document.documentElement.style;
+    root.setProperty('--accent', theme.accent);
+    root.setProperty('--bg', theme.background);
+    root.setProperty('--surface', theme.surface);
+    root.setProperty('--text', theme.text);
+    root.setProperty('--accent-text', luminance(theme.accent) > 0.45 ? '#07120F' : '#FFFFFF');
+    for (const k of fields) input[k].value = theme[k];
+    for (const el of document.querySelectorAll('.preset'))
+      el.classList.toggle('active', JSON.stringify(presets[el.dataset.name]) === JSON.stringify(theme));
+  }
+  function luminance(hex) {
+    const v = parseInt(hex.slice(1), 16);
+    return (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255;
+  }
+  function read() { return Object.fromEntries(fields.map(k => [k, input[k].value.toUpperCase()])); }
+  function preview() { current = read(); paint(current); post('theme-preview', { theme: current }); }
+  function save(theme) {
+    current = theme; paint(theme); post('theme-save', { theme });
+    document.getElementById('status').textContent = 'Saved.';
+    setTimeout(() => document.getElementById('status').textContent = '', 2000);
+  }
+
+  for (const k of fields) input[k].addEventListener('input', preview);
+  document.getElementById('save').addEventListener('click', () => save(read()));
+  document.getElementById('reset').addEventListener('click', () => save(presets.Mint));
+
+  window.chrome.webview.addEventListener('message', event => {
+    const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (msg.type !== 'init') return;
+    presets = msg.presets;
+    document.getElementById('path').textContent = msg.path;
+    const box = document.getElementById('presets');
+    box.replaceChildren(...Object.entries(presets).map(([name, t]) => {
+      const b = document.createElement('button');
+      b.className = 'preset'; b.dataset.name = name;
+      b.innerHTML = `<span class="swatch" style="background:${t.surface};border-color:${t.accent}"></span><span>${name}</span>`;
+      b.addEventListener('click', () => save(t));
+      return b;
+    }));
+    paint(msg.theme);
+  });
+  post('ready', {});
+</script>
+</body>
+</html>

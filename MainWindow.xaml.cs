@@ -17,6 +17,9 @@ public partial class MainWindow : Window
     private const string KeyboardMessage = "joychromium:show-keyboard";
     private const string StartPage = "https://www.youtube.com/tv";
     private const int TriggerThreshold = 128;
+    private const string SettingsHost = "settings.joychromium";
+    private const string SettingsPage = $"https://{SettingsHost}/settings.html";
+    private const string SettingsScheme = "joychromium://settings";
 
     private readonly DispatcherTimer _gamepadTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private CoreWebView2Environment? _environment;
@@ -31,6 +34,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        ThemeService.Apply(ThemeStore.Load());
         InitializeComponent();
         BuildKeyboard();
         _gamepadTimer.Tick += PollGamepad;
@@ -73,6 +77,7 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("The mandatory TV user-agent marker was not applied.");
 
         core.Settings.IsStatusBarEnabled = false;
+        core.SetVirtualHostNameToFolderMapping(SettingsHost, Path.Combine(AppContext.BaseDirectory, "Assets"), CoreWebView2HostResourceAccessKind.Allow);
         core.WebMessageReceived += (_, args) => HandleWebMessage(tab, args, null);
         core.FrameCreated += (_, args) =>
             args.Frame.WebMessageReceived += (_, message) => HandleWebMessage(tab, message, args.Frame);
@@ -91,11 +96,11 @@ public partial class MainWindow : Window
         core.NavigationStarting += (_, args) =>
         {
             tab.InputFrame = null;
-            tab.Url = args.Uri;
+            tab.Url = args.Uri == SettingsPage ? SettingsScheme : args.Uri;
             if (tab != _active)
                 return;
             KeyboardPanel.Visibility = Visibility.Collapsed;
-            AddressBox.Text = args.Uri;
+            AddressBox.Text = tab.Url;
             StatusText.Text = "LOADING · TV IDENTITY ON";
         };
         core.NavigationCompleted += (_, args) =>
@@ -230,7 +235,13 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (args.TryGetWebMessageAsString() != KeyboardMessage || tab != _active)
+            var message = args.TryGetWebMessageAsString();
+            if (frame is null && args.Source == SettingsPage)
+            {
+                HandleSettingsMessage(tab, message);
+                return;
+            }
+            if (message != KeyboardMessage || tab != _active)
                 return;
             tab.InputFrame = frame;
             _addressEntry = false;
@@ -243,6 +254,49 @@ public partial class MainWindow : Window
             // Ignore non-string page messages; the host bridge accepts only the fixed focus signal.
         }
     }
+
+    // ---- Settings page ----
+
+    private void Settings_Click(object sender, RoutedEventArgs e) => Core?.Navigate(SettingsPage);
+
+    private static void HandleSettingsMessage(BrowserTab tab, string message)
+    {
+        var core = tab.View.CoreWebView2;
+        if (core is null)
+            return;
+        SettingsMessage? parsed;
+        try
+        {
+            parsed = JsonSerializer.Deserialize<SettingsMessage>(message, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return;
+        }
+        switch (parsed?.Type)
+        {
+            case "ready":
+                core.PostWebMessageAsString(JsonSerializer.Serialize(new
+                {
+                    type = "init",
+                    theme = ThemeService.Current,
+                    presets = Theme.Presets,
+                    path = ThemeStore.SettingsPath,
+                }, JsonOptions));
+                break;
+            case "theme-preview" or "theme-save" when parsed.Theme is { } t &&
+                Theme.TryParse(t.Accent, t.Background, t.Surface, t.Text) is { } theme:
+                ThemeService.Apply(theme);
+                if (parsed.Type == "theme-save")
+                    ThemeStore.Save(theme);
+                break;
+        }
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true };
+
+    private sealed record SettingsMessage(string? Type, SettingsTheme? Theme);
+    private sealed record SettingsTheme(string? Accent, string? Background, string? Surface, string? Text);
 
     private void OpenAddressKeyboard()
     {
@@ -345,6 +399,11 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(text) || Core is null)
             return;
         HideKeyboard();
+        if (text.Equals(SettingsScheme, StringComparison.OrdinalIgnoreCase))
+        {
+            Core.Navigate(SettingsPage);
+            return;
+        }
         var uri = Uri.TryCreate(text, UriKind.Absolute, out var parsed) &&
                   (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)
             ? parsed
@@ -393,6 +452,7 @@ public partial class MainWindow : Window
             case Key.T: await OpenTabAsync(StartPage); OpenAddressKeyboard(); break;
             case Key.W: if (_active is not null) await CloseTabAsync(_active); break;
             case Key.Tab: SwitchTab((Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : 1); break;
+            case Key.OemComma: Core?.Navigate(SettingsPage); break;
             default: e.Handled = false; break;
         }
     }
