@@ -176,9 +176,13 @@
       <div class="status" id="clearStatus"></div>
     </section>
 
-    <section id="about">
-      <h3>About</h3>
-      <p style="margin:0">JoyChromium — controller-first browser. Move with the <kbd>D-pad</kbd>, choose with <kbd>A</kbd>, go back with <kbd>B</kbd>.</p>
+    <h2 id="about">About &amp; updates</h2>
+    <p class="lead">Move with the <kbd>D-pad</kbd>, choose with <kbd>A</kbd>, go back with <kbd>B</kbd>.</p>
+    <section>
+      <div class="row"><div>JoyChromium <span id="appVersion"></span><small id="appUpdate"></small></div><button class="ghost" id="updateCheck">Check now</button></div>
+      <div class="row"><div>Browser engine (WebView2) <span id="runtime2"></span><small>Updated by Windows automatically</small></div></div>
+      <div class="row"><div>uBlock Origin <span id="adBlockVersion"></span><small id="adBlockUpdate"></small></div></div>
+      <div class="row"><div>Security policy<small id="policy"></small></div></div>
     </section>
   </main>
 </div>
@@ -249,7 +253,21 @@
     document.getElementById('trackingPrevention').value = msg.trackingPrevention;
     document.getElementById('dnsOverHttps').value = msg.dnsOverHttps;
     renderPermissions(msg.sitePermissions || {});
+    document.getElementById('runtime2').textContent = msg.runtimeVersion || '';
+    document.getElementById('appVersion').textContent = 'v' + msg.appVersion;
+    document.getElementById('adBlockVersion').textContent = msg.adBlockVersion ? 'v' + msg.adBlockVersion : 'not installed';
+    showUpdate(msg);
   });
+  function showUpdate(msg) {
+    document.getElementById('appUpdate').textContent = msg.appUpdate || '';
+    document.getElementById('adBlockUpdate').textContent = msg.adBlockUpdate || '';
+    document.getElementById('policy').textContent = msg.policy || '';
+  }
+  window.chrome.webview.addEventListener('message', event => {
+    const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (msg.type === 'update-status') showUpdate(msg);
+  });
+  document.getElementById('updateCheck').addEventListener('click', () => { document.getElementById('appUpdate').textContent = 'Checking…'; post('update-check', {}); });
 
   function renderPermissions(perms) {
     const box = document.getElementById('permissions');

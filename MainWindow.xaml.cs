@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
@@ -38,7 +39,11 @@ public partial class MainWindow : Window
         _gamepadTimer.Start();
         Closing += (_, _) => SettingsStore.SaveSession(Tabs.Where(t => !t.IsPrivate).Select(t => t.Url)
             .Where(u => u != Pages.WelcomeScheme && u != Pages.SettingsScheme && !u.StartsWith(Pages.ErrorPage, StringComparison.Ordinal)));
-        Closed += (_, _) => _gamepadTimer.Stop();
+        Closed += (_, _) =>
+        {
+            _gamepadTimer.Stop();
+            AppUpdater.ApplyOnExit();
+        };
     }
 
     public ObservableCollection<BrowserTab> Tabs { get; } = [];
@@ -49,11 +54,12 @@ public partial class MainWindow : Window
         {
             var dataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JoyChromium", "WebView2");
             var settings = SettingsStore.Current;
+            PolicyService.LoadCached();
             var runtime = CoreWebView2Environment.GetAvailableBrowserVersionString();
-            if (!SecurityPolicy.RuntimeIsSupported(runtime))
+            if (!SecurityPolicy.RuntimeIsSupported(runtime, PolicyService.Current.EffectiveMinimumRuntime))
             {
                 MessageBox.Show(this,
-                    $"The installed WebView2 runtime ({runtime}) is older than {SecurityPolicy.MinimumRuntimeVersion}. " +
+                    $"The installed WebView2 runtime ({runtime}) is older than {PolicyService.Current.EffectiveMinimumRuntime}. " +
                     "Update it from Windows Update or https://developer.microsoft.com/microsoft-edge/webview2/ to stay protected.",
                     "Browser engine out of date", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -70,12 +76,33 @@ public partial class MainWindow : Window
             foreach (var url in targets.Skip(1))
                 await OpenTabAsync(url, activate: false);
             await ApplyAdBlockAsync(tab, settings.AdBlockEnabled);
+            _ = RunMaintenanceAsync();
         }
         catch (Exception ex)
         {
             StatusText.Text = "BROWSER START FAILED";
             MessageBox.Show(this, ex.Message, "JoyChromium could not start", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    // ---- Background maintenance: remote policy, uBO releases, app updates ----
+
+    private static readonly HttpClient Http = CreateHttp();
+
+    private static HttpClient CreateHttp()
+    {
+        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"JoyChromium/{AppUpdater.Version} (+{AppUpdater.RepoUrl})");
+        return http;
+    }
+
+    private async Task RunMaintenanceAsync()
+    {
+        await PolicyService.RefreshAsync(Http);
+        await AdBlock.CheckForUpdateAsync(Http, DateTime.UtcNow);
+        await AppUpdater.CheckAndDownloadAsync();
+        if (!string.IsNullOrWhiteSpace(PolicyService.Current.Message))
+            StatusText.Text = PolicyService.Current.Message!.ToUpperInvariant();
     }
 
     // ---- Tabs ----
@@ -129,6 +156,12 @@ public partial class MainWindow : Window
                 return;
             }
             var host = SecurityPolicy.HostOf(args.Uri);
+            if (PolicyService.Current.BlocksHost(host))
+            {
+                args.Cancel = true;
+                StatusText.Text = $"BLOCKED BY POLICY · {host}";
+                return;
+            }
             if (SettingsStore.Current.HttpsOnly && SecurityPolicy.IsHttp(args.Uri) && host is not null && !_httpAllowedHosts.Contains(host))
             {
                 args.Cancel = true;
@@ -276,7 +309,8 @@ public partial class MainWindow : Window
     private void HandleDownload(CoreWebView2DownloadStartingEventArgs args)
     {
         var name = SecurityPolicy.SafeFileName(Path.GetFileName(args.ResultFilePath));
-        if (SettingsStore.Current.BlockDangerousDownloads && SecurityPolicy.IsDangerousDownload(name))
+        if (SettingsStore.Current.BlockDangerousDownloads &&
+            (SecurityPolicy.IsDangerousDownload(name) || PolicyService.Current.ExtraDangerousExtensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase)))
         {
             args.Cancel = true;
             args.Handled = true;
@@ -503,6 +537,11 @@ public partial class MainWindow : Window
                     blockDangerousDownloads = current.BlockDangerousDownloads,
                     sitePermissions = current.SitePermissions,
                     runtimeVersion = CoreWebView2Environment.GetAvailableBrowserVersionString(),
+                    appVersion = AppUpdater.Version,
+                    appUpdate = AppUpdater.Status,
+                    adBlockVersion = AdBlock.ActiveVersion,
+                    adBlockUpdate = AdBlock.Status,
+                    policy = PolicyService.Status,
                 }, JsonOptions));
                 break;
             case "theme-preview" when ParseTheme(parsed.Theme) is { } theme:
@@ -554,6 +593,17 @@ public partial class MainWindow : Window
                 break;
             case "permission-forget" when !string.IsNullOrWhiteSpace(parsed.Host):
                 SettingsStore.Save(current.WithoutPermissions(parsed.Host.ToLowerInvariant()));
+                break;
+            case "update-check":
+                await PolicyService.RefreshAsync(Http);
+                await AppUpdater.CheckAndDownloadAsync();
+                core.PostWebMessageAsString(JsonSerializer.Serialize(new
+                {
+                    type = "update-status",
+                    appUpdate = AppUpdater.Status,
+                    adBlockUpdate = AdBlock.Status,
+                    policy = PolicyService.Status,
+                }, JsonOptions));
                 break;
             case "clear-data":
                 await core.Profile.ClearBrowsingDataAsync();

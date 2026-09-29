@@ -6,15 +6,18 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <StartupObject>JoyChromium.Program</StartupObject>
+    <Version>0.2.0</Version>
     <UBlockVersion>1.75.0</UBlockVersion>
     <UBlockDir>$(MSBuildProjectDirectory)/Assets/extensions/uBlock0.chromium</UBlockDir>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="tests/**/*.cs" />
+    <Compile Remove="tests/**/*.cs;tools/**/*.cs" />
     <Content Include="Assets/**" Exclude="Assets/extensions/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3595.46" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
   <!-- uBlock Origin is fetched from its official release at build time and bundled as an unpacked extension. -->
