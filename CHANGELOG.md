@@ -12,3 +12,4 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e SemVer.
 - Auto-update: app via Velopack/GitHub Releases, uBlock Origin via releases oficiais, e `policy.json` remoto assinado (ECDSA P-256) que só aperta regras.
 - Robustez: recuperação de crash de renderer/engine, abas dormindo após 10 min, sessão salva a cada 30 s, logs com rotação e exportação de diagnóstico, teste de UI (FlaUI) no CI.
 - Favoritos (★, Ctrl+D, LB+Y), histórico (`joychromium://history`), sugestões na barra de endereço, favicon nas abas, find in page (Ctrl+F), zoom (Ctrl +/-/0), fullscreen de vídeo esconde o chrome, reabrir aba fechada (Ctrl+Shift+T).
+- Modos de controle por site: Spatial (foco entre elementos via script), Cursor (mouse virtual no stick esquerdo, scroll no direito) e Arrows (setas); clique no stick direito alterna e lembra por host.
