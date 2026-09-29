@@ -1,0 +1,24 @@
+name: Auto-merge dependency updates
+
+# Dependabot opens the PR; the normal CI (unit + real-app e2e) must pass; then this merges it without a human.
+# This relies on branch protection on main requiring the "electron (windows-latest)" and "electron (ubuntu-latest)"
+# checks (repository settings, see CONTRIBUTING.md); without required checks, --auto would merge immediately.
+# Anything the CI rejects stays open and shows up as a red PR for someone to look at.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge (squash) once required checks pass
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

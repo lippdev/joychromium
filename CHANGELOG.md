@@ -18,3 +18,4 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e SemVer.
 - Testes migrados para xUnit (`tests/JoyChromium.Tests`); cache de NuGet e do uBO no CI.
 - Migração para Electron, fase 0: app/ com Electron 44 (Chromium 152), UA de TV, bloqueio via motor Ghostery, testes vitest + Playwright.
 - Migração para Electron, fase 1: shell completo em `app/` — abas, titlebar, teclado do controle, páginas internas, segurança (https-only, permissões, downloads, popups), histórico/favoritos/sugestões, modos de controle (Spatial/Cursor/Arrows via Gamepad API + sendInputEvent), policy assinada, logs/diagnóstico, updater; e2e Playwright.
+- Migração para Electron, fase 2: robô de atualização — Dependabot diário para o Electron, auto-merge quando o CI (Windows+Linux, e2e real) passa, release automática com instaladores Windows/Linux em GitHub Releases e auto-update via electron-updater; `policy-sign.mjs` substitui o signer .NET.

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  electron:
+    name: electron (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: End-to-end (real Electron, Windows)
+        if: runner.os == 'Windows'
+        run: npm run test:e2e
+      - name: End-to-end (real Electron, Linux under Xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" npm run test:e2e
+      - name: Package (no publish) to prove the installer builds
+        run: npm run build && npx electron-builder --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}
+          path: |
+            app/release/*.exe
+            app/release/*.AppImage
+            app/release/*.deb
+          if-no-files-found: ignore

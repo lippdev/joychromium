@@ -1,27 +1,105 @@
 name: Release
 
+# Two ways in:
+#   1. A push to main whose commit bumped Electron (Dependabot's "chore(deps): bump electron ...") — the engine
+#      changed, so users get a new build automatically (patch bump).
+#   2. A manual dispatch with a bump level, for feature releases.
+# The version is derived from the latest v* tag (main is protected, so nothing is committed back to it); only the new
+# tag is pushed. Both OSes build with that version injected, then installers + update metadata go to a GitHub Release
+# and installed apps pick it up through electron-updater.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  release:
-    runs-on: windows-latest
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: decide
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"; echo "bump=${{ inputs.bump }}" >> "$GITHUB_OUTPUT"
+          elif printf '%s' "$MESSAGE" | grep -qiE '^chore\(deps\): bump electron '; then
+            echo "release=true" >> "$GITHUB_OUTPUT"; echo "bump=patch" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.decide.outputs.release == 'true'
+        with:
+          fetch-depth: 0
+      - id: version
+        if: steps.decide.outputs.release == 'true'
+        env:
+          BUMP: ${{ steps.decide.outputs.bump }}
+        run: |
+          LATEST=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n1)
+          LATEST=${LATEST#v}; LATEST=${LATEST:-0.0.0}
+          IFS=. read -r MA MI PA <<< "$LATEST"
+          case "$BUMP" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            *) PA=$((PA+1)) ;;
+          esac
+          echo "version=$MA.$MI.$PA" >> "$GITHUB_OUTPUT"
+          echo "Next version: $MA.$MI.$PA (from v$LATEST, $BUMP)"
+
+  tag:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - name: Tag the release commit
+        run: |
+          git config user.name "joychromium-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git tag -a "v${{ needs.decide.outputs.version }}" -m "JoyChromium ${{ needs.decide.outputs.version }}"
+          git push origin "v${{ needs.decide.outputs.version }}"
+
+  build:
+    needs: [decide, tag]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
         with:
-          dotnet-version: 8.0.x
-      - name: Version from tag
-        shell: bash
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - run: dotnet tool install -g vpk
-      - run: dotnet publish JoyChromium.csproj -c Release -r win-x64 --self-contained -o publish -p:Version=${{ env.VERSION }}
-      - run: dotnet test tests/JoyChromium.Tests -c Release
-      - name: Pack
-        run: vpk pack -u JoyChromium -v ${{ env.VERSION }} -p publish -e JoyChromium.exe --packTitle JoyChromium --packAuthors lippdev
-      - name: Publish to GitHub Releases
-        run: vpk upload github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }} --publish --releaseName "JoyChromium ${{ env.VERSION }}" --tag ${{ github.ref_name }}
+          ref: v${{ needs.decide.outputs.version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Stamp the version into the package (not committed; the tag is the source of truth)
+        run: npm version ${{ needs.decide.outputs.version }} --no-git-tag-version --allow-same-version
+      - name: Build and publish installers
+        run: npm run build && npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

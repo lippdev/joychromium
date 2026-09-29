@@ -1,11 +1,18 @@
 version: 2
 updates:
-  - package-ecosystem: nuget
-    directory: /
+  # The Electron shell. Chromium security fixes arrive as Electron patch releases; checking daily keeps the lag to hours.
+  - package-ecosystem: npm
+    directory: /app
     schedule:
-      interval: weekly
+      interval: daily
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      # Everything except Electron is grouped so the queue stays readable; Electron gets its own PR (it triggers a release).
+      npm-minor-patch:
+        patterns: ["*"]
+        exclude-patterns: ["electron"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

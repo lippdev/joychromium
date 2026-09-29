@@ -28,3 +28,6 @@ dotnet format JoyChromium.csproj --verify-no-changes
 
 ## Releases
 SemVer com tags `vMAJOR.MINOR.PATCH`; mudanças notáveis em `CHANGELOG.md`.
+
+## Proteção da `main` (configuração do repositório)
+`main` exige os checks `electron (windows-latest)` e `electron (ubuntu-latest)` verdes; auto-merge está habilitado e branches são apagadas após o merge. O `auto-merge.yml` depende disso: sem checks obrigatórios, `gh pr merge --auto` mergearia na hora. O `release.yml` nunca faz commit na `main` — só cria a tag `vX.Y.Z` (derivada da última tag) e publica.
