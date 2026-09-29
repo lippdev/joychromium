@@ -250,8 +250,9 @@
             <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,0">
                 <DockPanel LastChildFill="True">
                     <TextBlock x:Name="ControllerText" DockPanel.Dock="Left" Text="XINPUT · SEARCHING" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
-                    <TextBlock x:Name="StatusText" Text="STARTING · TV IDENTITY ON" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="AdBlockText" DockPanel.Dock="Left" Margin="16,0,0,0" Text="ADBLOCK …" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
                     <TextBlock DockPanel.Dock="Right" Text="Y KEYBOARD · START NEW TAB · BACK CLOSE TAB · LT/RT SWITCH TAB · LB/RB HISTORY · X RELOAD" Foreground="{DynamicResource TextFaintBrush}" FontSize="10" VerticalAlignment="Center" />
+                    <TextBlock x:Name="StatusText" Text="STARTING · TV IDENTITY ON" Foreground="{DynamicResource TextMutedBrush}" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </DockPanel>
             </Border>
         </Grid>

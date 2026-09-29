@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --accent: #64DDB5; --bg: #0C0E13; --surface: #14171E; --text: #F3F5F9; --accent-text: #07120F;
+    --muted: color-mix(in srgb, var(--text) 70%, var(--surface)); --border: color-mix(in srgb, var(--surface) 86%, var(--text)); }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 16px/1.5 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  .card { width: min(860px, 92vw); background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 40px 48px; }
+  .steps { display: flex; gap: 8px; margin-bottom: 28px; }
+  .steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
+  .steps span.done { background: var(--accent); }
+  h1 { margin: 0 0 6px; font-size: 30px; }
+  p.lead { color: var(--muted); margin: 0 0 26px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .opt { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; cursor: pointer; outline: none; text-align: left; }
+  .opt:hover, .opt:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .opt.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+  .swatch { width: 32px; height: 32px; border-radius: 50%; border: 3px solid; flex: none; }
+  .toggle { display: flex; align-items: center; justify-content: space-between; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+  .toggle small { display: block; color: var(--muted); }
+  .switch { position: relative; width: 52px; height: 30px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; border-radius: 30px; background: var(--border); transition: .15s; }
+  .switch span::before { content: ""; position: absolute; width: 24px; height: 24px; left: 3px; top: 3px; border-radius: 50%; background: var(--text); transition: .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::before { transform: translateX(22px); background: var(--accent-text); }
+  .switch input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent); }
+  .nav { display: flex; justify-content: space-between; margin-top: 32px; }
+  button.primary, button.ghost { font: inherit; font-weight: 600; padding: 12px 26px; border-radius: 10px; cursor: pointer; outline: none; }
+  button.primary { background: var(--accent); color: var(--accent-text); border: 0; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; font-size: 12px; }
+  .step { display: none; } .step.show { display: block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="steps"><span class="done"></span><span></span><span></span><span></span></div>
+
+  <div class="step show" data-step="0">
+    <h1>Welcome to JoyChromium</h1>
+    <p class="lead">A browser built for the couch. Let's set it up in three quick steps.</p>
+    <p class="hint">Move with the <kbd>D-pad</kbd>, choose with <kbd>A</kbd>, go back with <kbd>B</kbd>. Mouse and keyboard work too.</p>
+  </div>
+
+  <div class="step" data-step="1">
+    <h1>Pick a look</h1>
+    <p class="lead">You can fine-tune colors later in Settings.</p>
+    <div class="grid" id="themes"></div>
+  </div>
+
+  <div class="step" data-step="2">
+    <h1>Search engine</h1>
+    <p class="lead">Used when you type something that isn't a web address.</p>
+    <div class="grid" id="engines"></div>
+  </div>
+
+  <div class="step" data-step="3">
+    <h1>Block ads and trackers</h1>
+    <p class="lead">uBlock Origin is built in. Keep it on for cleaner, faster pages.</p>
+    <label class="toggle"><div>Block ads and trackers<small id="adblockNote">Powered by uBlock Origin</small></div>
+      <span class="switch"><input type="checkbox" id="adblock" checked><span></span></span></label>
+  </div>
+
+  <div class="nav">
+    <button class="ghost" id="back" style="visibility:hidden">Back</button>
+    <button class="primary" id="next" autofocus>Get started</button>
+  </div>
+</div>
+<script>
+  let step = 0, presets = {}, engines = [], theme = null, engine = null;
+  const $ = id => document.getElementById(id);
+  const post = (type, payload) => { try { window.chrome.webview.postMessage(JSON.stringify({ type, ...payload })); } catch (_) {} };
+
+  function paint(t) {
+    const r = document.documentElement.style;
+    r.setProperty('--accent', t.accent); r.setProperty('--bg', t.background); r.setProperty('--surface', t.surface); r.setProperty('--text', t.text);
+    const v = parseInt(t.accent.slice(1), 16);
+    r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#07120F' : '#FFFFFF');
+  }
+  function show(n) {
+    step = n;
+    document.querySelectorAll('.step').forEach(el => el.classList.toggle('show', +el.dataset.step === n));
+    document.querySelectorAll('.steps span').forEach((el, i) => el.classList.toggle('done', i <= n));
+    $('back').style.visibility = n === 0 ? 'hidden' : 'visible';
+    $('next').textContent = n === 0 ? 'Get started' : n === 3 ? 'Finish' : 'Next';
+    const first = document.querySelector('.step.show .opt.active, .step.show .opt, .step.show input');
+    (first || $('next')).focus();
+  }
+  function options(box, items, label, isActive, onPick) {
+    box.replaceChildren(...items.map(item => {
+      const b = document.createElement('button');
+      b.className = 'opt' + (isActive(item) ? ' active' : '');
+      b.innerHTML = label(item);
+      b.addEventListener('click', () => { onPick(item); [...box.children].forEach(c => c.classList.toggle('active', c === b)); });
+      return b;
+    }));
+  }
+
+  $('next').addEventListener('click', () => {
+    if (step === 3) {
+      post('adblock-save', { adBlockEnabled: $('adblock').checked });
+      post('onboarding-done', {});
+      return;
+    }
+    show(step + 1);
+  });
+  $('back').addEventListener('click', () => show(step - 1));
+
+  window.chrome.webview.addEventListener('message', event => {
+    const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    if (msg.type !== 'init') return;
+    presets = msg.presets; engines = msg.searchEngines; theme = msg.theme; engine = msg.searchEngine;
+    paint(theme);
+    options($('themes'), Object.entries(presets), ([name, t]) => `<span class="swatch" style="background:${t.surface};border-color:${t.accent}"></span><span>${name}</span>`,
+      ([, t]) => JSON.stringify(t) === JSON.stringify(theme),
+      ([, t]) => { theme = t; paint(t); post('theme-save', { theme: t }); });
+    options($('engines'), engines, e => `<span>${e.name}</span>`, e => e.template === engine.template,
+      e => { engine = e; post('search-save', { searchEngine: e }); });
+    $('adblock').checked = msg.adBlockEnabled;
+    if (!msg.adBlockAvailable) { $('adblock').disabled = true; $('adblockNote').textContent = 'uBlock Origin is not bundled in this build.'; }
+  });
+  post('ready', {});
+</script>
+</body>
+</html>

@@ -20,6 +20,9 @@ public partial class MainWindow : Window
     private const string SettingsHost = "settings.joychromium";
     private const string SettingsPage = $"https://{SettingsHost}/settings.html";
     private const string SettingsScheme = "joychromium://settings";
+    private const string WelcomeScheme = "joychromium://welcome";
+    private const string OnboardingPage = $"https://{SettingsHost}/onboarding.html";
+    private bool _adBlockActive;
 
     private readonly DispatcherTimer _gamepadTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private CoreWebView2Environment? _environment;
@@ -34,7 +37,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        ThemeService.Apply(ThemeStore.Load());
+        ThemeService.Apply(SettingsStore.Load().Theme);
         InitializeComponent();
         BuildKeyboard();
         _gamepadTimer.Tick += PollGamepad;
@@ -49,8 +52,11 @@ public partial class MainWindow : Window
         try
         {
             var dataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JoyChromium", "WebView2");
-            _environment = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder);
-            await OpenTabAsync(StartPage);
+            var options = new CoreWebView2EnvironmentOptions { AreBrowserExtensionsEnabled = true };
+            _environment = await CoreWebView2Environment.CreateAsync(userDataFolder: dataFolder, options: options);
+            var settings = SettingsStore.Current;
+            var tab = await OpenTabAsync(settings.OnboardingCompleted ? StartPage : OnboardingPage);
+            await ApplyAdBlockAsync(tab, settings.AdBlockEnabled);
         }
         catch (Exception ex)
         {
@@ -96,7 +102,7 @@ public partial class MainWindow : Window
         core.NavigationStarting += (_, args) =>
         {
             tab.InputFrame = null;
-            tab.Url = args.Uri == SettingsPage ? SettingsScheme : args.Uri;
+            tab.Url = args.Uri switch { SettingsPage => SettingsScheme, OnboardingPage => WelcomeScheme, _ => args.Uri };
             if (tab != _active)
                 return;
             KeyboardPanel.Visibility = Visibility.Collapsed;
@@ -236,7 +242,7 @@ public partial class MainWindow : Window
         try
         {
             var message = args.TryGetWebMessageAsString();
-            if (frame is null && args.Source == SettingsPage)
+            if (frame is null && args.Source is SettingsPage or OnboardingPage)
             {
                 HandleSettingsMessage(tab, message);
                 return;
@@ -259,7 +265,23 @@ public partial class MainWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e) => Core?.Navigate(SettingsPage);
 
-    private static void HandleSettingsMessage(BrowserTab tab, string message)
+    private async Task ApplyAdBlockAsync(BrowserTab tab, bool enabled)
+    {
+        try
+        {
+            if (tab.View.CoreWebView2 is { } core)
+                _adBlockActive = await AdBlock.ApplyAsync(core.Profile, enabled);
+        }
+        catch (Exception ex) when (ex is COMException or InvalidOperationException or IOException)
+        {
+            _adBlockActive = false;
+            StatusText.Text = $"ADBLOCK FAILED · {ex.Message}";
+        }
+        AdBlockText.Text = _adBlockActive ? "ADBLOCK ON" : "ADBLOCK OFF";
+        AdBlockText.Foreground = (System.Windows.Media.Brush)FindResource(_adBlockActive ? "AccentBrush" : "TextFaintBrush");
+    }
+
+    private async void HandleSettingsMessage(BrowserTab tab, string message)
     {
         var core = tab.View.CoreWebView2;
         if (core is null)
@@ -273,6 +295,7 @@ public partial class MainWindow : Window
         {
             return;
         }
+        var current = SettingsStore.Current;
         switch (parsed?.Type)
         {
             case "ready":
@@ -281,22 +304,42 @@ public partial class MainWindow : Window
                     type = "init",
                     theme = ThemeService.Current,
                     presets = Theme.Presets,
-                    path = ThemeStore.SettingsPath,
+                    searchEngine = current.SearchEngine,
+                    searchEngines = SearchEngine.Builtin,
+                    adBlockEnabled = current.AdBlockEnabled,
+                    adBlockAvailable = AdBlock.IsBundled,
+                    path = SettingsStore.SettingsPath,
                 }, JsonOptions));
                 break;
-            case "theme-preview" or "theme-save" when parsed.Theme is { } t &&
-                Theme.TryParse(t.Accent, t.Background, t.Surface, t.Text) is { } theme:
+            case "theme-preview" when ParseTheme(parsed.Theme) is { } theme:
                 ThemeService.Apply(theme);
-                if (parsed.Type == "theme-save")
-                    ThemeStore.Save(theme);
+                break;
+            case "theme-save" when ParseTheme(parsed.Theme) is { } theme:
+                ThemeService.Apply(theme);
+                SettingsStore.Save(current with { Theme = theme });
+                break;
+            case "search-save" when SearchEngine.TryParse(parsed.SearchEngine?.Name, parsed.SearchEngine?.Template) is { } engine:
+                SettingsStore.Save(current with { SearchEngine = engine });
+                break;
+            case "adblock-save" when parsed.AdBlockEnabled is { } enabled:
+                SettingsStore.Save(current with { AdBlockEnabled = enabled });
+                await ApplyAdBlockAsync(tab, enabled);
+                break;
+            case "onboarding-done":
+                SettingsStore.Save(SettingsStore.Current with { OnboardingCompleted = true });
+                core.Navigate(StartPage);
                 break;
         }
     }
 
+    private static Theme? ParseTheme(SettingsTheme? t) =>
+        t is null ? null : Theme.TryParse(t.Accent, t.Background, t.Surface, t.Text);
+
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true };
 
-    private sealed record SettingsMessage(string? Type, SettingsTheme? Theme);
+    private sealed record SettingsMessage(string? Type, SettingsTheme? Theme, SettingsSearch? SearchEngine, bool? AdBlockEnabled);
     private sealed record SettingsTheme(string? Accent, string? Background, string? Surface, string? Text);
+    private sealed record SettingsSearch(string? Name, string? Template);
 
     private void OpenAddressKeyboard()
     {
@@ -407,7 +450,7 @@ public partial class MainWindow : Window
         var uri = Uri.TryCreate(text, UriKind.Absolute, out var parsed) &&
                   (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps)
             ? parsed
-            : new Uri("https://duckduckgo.com/?q=" + Uri.EscapeDataString(text));
+            : SettingsStore.Current.SearchEngine.BuildQuery(text);
         Core.Navigate(uri.ToString());
     }
 
