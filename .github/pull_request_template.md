@@ -6,6 +6,6 @@
 
 ## Checklist
 - [ ] Título segue Conventional Commits (`feat(scope): ...`)
-- [ ] `dotnet build` e `dotnet test` passam localmente
+- [ ] `npm run typecheck`, `npm test` e `npm run test:e2e` passam em `app/`
 - [ ] README/CLAUDE.md atualizados, se necessário
 - [ ] Testado com controle, quando mexe em entrada/navegação

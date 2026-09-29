@@ -1,65 +1,68 @@
 # JoyChromium
 
-A Windows browser prototype with a controller-first shell and an always-on TV user-agent marker. The first build uses WPF and Microsoft WebView2 (the Chromium engine shipped as the Edge WebView2 Runtime); it is **not** a fork or checkout of `chromium/chromium`.
+A controller-first browser for the TV, built on Electron (Chromium). Windows and Linux, one code base. Every page announces itself as a TV (`JoyChromiumTV/1.0 (TV; SmartTV)`), ads and trackers are blocked out of the box, and a gamepad is a first-class way to browse.
 
-## Run
+## Run from source
 
-Requirements: Windows 10/11, .NET 8 SDK, and the Microsoft Edge WebView2 Evergreen Runtime.
+Requirements: Node.js 24+.
 
-```powershell
-dotnet run --project .\JoyChromium.csproj
+```bash
+cd app
+npm ci
+npm start
 ```
 
-It opens YouTube's TV route. The address bar accepts URLs or search text; the in-app keyboard also opens when a page text field receives focus.
+`npm start` compiles TypeScript and launches Electron. Useful environment variables: `JOYCHROMIUM_DATA` (data folder, defaults to the OS user-data dir) and `JOYCHROMIUM_START` (first URL, skips onboarding).
+
+## Install
+
+Installers are published on [GitHub Releases](https://github.com/lippdev/joychromium/releases): `.exe` (Windows, one-click), `.AppImage` and `.deb` (Linux). Installed builds update themselves in the background and apply the update when the app closes.
 
 ## Controller
 
-An Xbox/XInput-compatible controller is supported. D-pad and left stick move (see *Controller input modes*); A selects/activates, B goes back or closes the keyboard, LB/RB go back/forward, X reloads, Y opens the controller keyboard (LB+Y toggles favorite), Start opens a new tab, Back (view) closes the current tab, LT/RT switch tabs, right-stick click cycles input mode. `Ctrl+L`, `Ctrl+R`, `Ctrl+T`, `Ctrl+W` and `Ctrl+Tab` are available too.
+Standard gamepads (Xbox, PlayStation, Switch Pro and anything the Gamepad API maps) work on both platforms.
 
-## Themes
+| Input | Action |
+|---|---|
+| D-pad / left stick | move (see *input modes*) |
+| A | select / activate |
+| B | back, or close the keyboard / prompt |
+| X | reload |
+| Y | controller keyboard (hold LB: toggle favorite) |
+| LB / RB | history back / forward |
+| LT / RT | previous / next tab |
+| Start | new tab |
+| Back / View | close tab |
+| Right stick click | cycle input mode |
 
-The gear button, `Ctrl+,` or typing `joychromium://settings` opens an internal settings page with color presets and custom accent/background/surface/text colors. The choice is saved to `%LocalAppData%\JoyChromium\settings.json` and applied at startup.
+Keyboard: `Ctrl+L` address, `Ctrl+T` new tab, `Ctrl+Shift+T` reopen closed, `Ctrl+Shift+N` private tab, `Ctrl+W` close, `Ctrl+Tab` switch, `Ctrl+D` favorite, `Ctrl+F` find, `Ctrl+H` history, `Ctrl+B` favorites, `Ctrl+M` mute, `Ctrl` `+`/`-`/`0` zoom, `F11` full screen, `Ctrl+,` settings.
 
-## Start page, new tabs and session
+### Input modes
 
-New tabs open an internal page (`joychromium://newtab`) with a search box and editable shortcuts. Settings → *Start & new tab* chooses what opens at startup (new tab page, home, a custom URL or the tabs from the last session), what new tabs show, and the home (⌂) URL. Open tabs are saved to `%LocalAppData%\JoyChromium\session.json` on exit.
-
-## Ad blocking, search and onboarding
-
-uBlock Origin is downloaded from its official GitHub release during the build (`FetchUBlock` target, version pinned in the csproj) and installed into the WebView2 profile as an unpacked extension; it can be toggled in Settings. Address-bar text that is not a URL is searched with the chosen engine (Google by default; DuckDuckGo, Bing, Brave, Startpage or a custom `%s` template). On first launch a `joychromium://welcome` onboarding walks through theme, search engine and ad blocking.
+Each site runs in one of three modes, remembered per host (Settings → Controller). **Spatial** (default): the D-pad jumps between links, buttons and fields using `spatial.js` (nearest element in that direction; scrolls when nothing is ahead). **Cursor**: the left stick moves a pointer, D-pad nudges, A clicks, right stick scrolls. **Arrows** (default for youtube.com and twitch.tv): D-pad and A are sent as arrow keys and Enter, for sites with their own 10-foot UI.
 
 ## Security defaults
 
-HTTPS-only (http is upgraded; a failed upgrade shows an internal page that can fall back for that host in this session), certificate errors are always blocked, only `http(s)` and `joychromium://` addresses navigate, camera/microphone/location/notifications prompt every time unless remembered, downloads go to `DownloadsJoyChromium` with risky extensions refused and SmartScreen checks on, tracking prevention is Balanced, password saving and autofill are off, DevTools and context menus are off in Release, popups are rate-limited, `Ctrl+Shift+N` opens a private tab. Optional DNS-over-HTTPS (Cloudflare/Quad9/Google). Everything is in Settings → Privacy & security; the app warns if the WebView2 runtime is older than `SecurityPolicy.MinimumRuntimeVersion`.
+Ad and tracker blocking (Ghostery engine with the EasyList/EasyPrivacy/uBlock lists, refreshed daily), HTTPS-only with a per-host fallback prompt, certificate errors always blocked, only `http(s)` and `joychromium://` addresses navigate, camera/microphone/location prompt every time unless remembered, downloads go to `Downloads/JoyChromium` with risky extensions refused, popups rate-limited, private tabs, password saving and autofill off. Optional DNS-over-HTTPS (Cloudflare/Quad9/Google). Everything is in Settings → Privacy & security.
 
-## Staying up to date without releases
+## Staying up to date without waiting for a release
 
-- **Engine**: WebView2 Evergreen updates itself through Windows; the app only warns when it is older than the minimum.
-- **uBlock Origin**: once a day the app checks the official GitHub releases, downloads a newer `chromium.zip` into `%LocalAppData%\JoyChromium\extensions`, validates its manifest and switches to it on the next start (the two newest copies are kept for rollback).
-- **Policy**: `policy/policy.json` (signed with `tools/PolicySigner`, public key embedded in `PolicyService`) can raise the minimum runtime, block hosts and add risky download extensions. It is fetched from `main`, verified, cached, and can only tighten the embedded defaults. To change it: edit the JSON, run `dotnet run --project tools/PolicySigner -- sign <keyfile> policy/policy.json`, commit both files.
-- **App**: installed builds self-update through Velopack from GitHub Releases (`.github/workflows/release.yml` packs and publishes on a `v*` tag). Updates download in the background and install when the app closes.
+- **Engine**: Electron bundles Chromium. Dependabot proposes each Electron release daily; CI (Windows + Linux, unit tests, an end-to-end run of the real app, and a packaging build) gates it; a green run merges automatically and `release.yml` publishes a new version. Installed apps update themselves.
+- **Block lists**: the engine re-downloads the lists every 24 hours from the official CDN.
+- **Policy**: `policy/policy.json` (signed with `app/scripts/policy-sign.mjs`; public key embedded in `src/shared/policy.ts`) can raise the minimum Chromium, block hosts, add risky download extensions, mark broken app versions so the updater skips them, and show a message. It is fetched from `main`, verified, cached and can only tighten the defaults.
 
-## Controller input modes
+## Development
 
-Each site runs in one of three modes, remembered per host and configurable in Settings → Controller. **Spatial** (default): D-pad/left stick jump between links, buttons and fields using `Assets/spatial.js` (nearest element in that direction, scrolls when nothing is ahead); A activates or focuses a field. **Cursor**: the left stick moves a real mouse pointer (drawn as an overlay), D-pad nudges it, A clicks, right stick scrolls. **Arrows** (default for youtube.com and twitch.tv): D-pad/stick send arrow keys and A sends Enter, for sites with their own 10-foot UI. Click the right stick to cycle modes.
-
-## Favorites, history and page tools
-
-★ (or `Ctrl+D`, or hold `LB` and press `Y`) toggles the current page in favorites, listed at `joychromium://favorites` (`Ctrl+B`) and as tiles on the new tab page. Visits in normal tabs are logged to `history.jsonl` (`joychromium://history`, `Ctrl+H`, searchable, removable, 5000 entries); private tabs and internal pages are never recorded. Typing in the address bar suggests favorites and history (↓ to pick). `Ctrl+F` finds in page, `Ctrl` `+`/`-`/`0` zooms, `F11` or a fullscreen video hides the chrome (Esc/B leaves), `Ctrl+Shift+T` reopens the last closed tab. Tabs show the site favicon and a speaker while playing; `Ctrl+M` or the speaker mutes a tab; right-click a tab for duplicate / close others / reopen; middle-click closes. The display stays on while an unmuted tab plays media.
-
-## Robustness
-
-A renderer crash reloads the tab; an engine crash rebuilds every tab from its URL. Background tabs are suspended after 10 minutes unless they play audio, and resume when activated. The session is saved every 30 seconds and on close. Logs live in `%LocalAppData%\JoyChromium\logs` (7 days); Settings → About → *Export* zips them with sanitized settings. `JOYCHROMIUM_DATA` overrides the data folder (used by `tests/UiSmoke`, a FlaUI script that drives the real shell in CI).
-
-## TV identity
-
-Before the first navigation, the app appends `JoyChromiumTV/0.1 (TV; SmartTV)` to WebView2's user-agent. WebView2 applies it to site navigations and subresources; it cannot be toggled off in this prototype. Overriding the user-agent can clear User-Agent Client Hints, and a TV token does not guarantee every site— including YouTube—will serve its TV interface. The app bridges controller directions as keyboard arrows; page-level Gamepad API support still depends on WebView2/runtime behavior.
-
-## Build and checks
-
-```powershell
-dotnet build .\JoyChromium.csproj --configuration Release
-dotnet test .\tests\JoyChromium.Tests --configuration Release
+```bash
+cd app
+npm run typecheck
+npm test          # vitest: the pure modules in src/shared and src/main
+npm run test:e2e  # Playwright launches the real app with a throwaway profile
+npm run dist      # local installer in app/release (no publish)
 ```
 
-GitHub Actions runs these checks on Windows. This is an early prototype: it has no extension support, or independent Chromium update pipeline.
+Layout: `src/shared` (pure rules), `src/main` (Electron main process), `src/preload` (sandboxed bridges), `src/renderer` (shell UI), `src/assets` (internal pages). See `CONTRIBUTING.md` for the branch and commit conventions and `docs/CHECKLIST.md` for what is done and what is planned.
+
+## History
+
+The first prototype was a WPF + WebView2 app (see the git history before the Electron migration). It was replaced because the WebView2 engine is Windows-only and the maintained C# bridges to a bundled Chromium lag years behind upstream; Electron keeps the engine current on every platform.

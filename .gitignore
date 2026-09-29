@@ -1,4 +1,6 @@
-**/bin/
-**/obj/
+app/node_modules/
+app/dist/
+app/release/
+app/test-results/
+app/playwright-report/
 .vs/
-Assets/extensions/
