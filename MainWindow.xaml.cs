@@ -145,9 +145,12 @@ public partial class MainWindow : Window
         };
         core.NavigationCompleted += (_, args) =>
         {
+            // The cancelled http navigation completes first (OperationCanceled); keep the pending URL for the https attempt.
+            if (args.WebErrorStatus == CoreWebView2WebErrorStatus.OperationCanceled)
+                return;
             var pendingHttp = tab.PendingHttpsUpgrade;
             tab.PendingHttpsUpgrade = null;
-            if (!args.IsSuccess && args.WebErrorStatus != CoreWebView2WebErrorStatus.OperationCanceled && !Pages.IsInternal(core.Source))
+            if (!args.IsSuccess && !Pages.IsInternal(core.Source))
             {
                 core.Navigate(Pages.ErrorPageFor(pendingHttp ?? core.Source, args.WebErrorStatus.ToString(), pendingHttp is not null));
                 return;
