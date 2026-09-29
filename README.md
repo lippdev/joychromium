@@ -59,7 +59,7 @@ Before the first navigation, the app appends `JoyChromiumTV/0.1 (TV; SmartTV)` t
 
 ```powershell
 dotnet build .\JoyChromium.csproj --configuration Release
-dotnet run --project .\tests\TvIdentity.Smoke.csproj --configuration Release
+dotnet test .\tests\JoyChromium.Tests --configuration Release
 ```
 
 GitHub Actions runs these checks on Windows. This is an early prototype: it has no extension support, or independent Chromium update pipeline.
