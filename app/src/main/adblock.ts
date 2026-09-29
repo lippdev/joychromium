@@ -13,7 +13,10 @@ export class AdBlock {
   private blocker: ElectronBlocker | undefined;
   private enabledOn = new Set<Session>();
 
-  constructor(private readonly cacheDir: string) {}
+  status = "Not loaded";
+  listsVersion: string | undefined;
+
+  constructor(private readonly cacheDir: string, private readonly log: (message: string) => void = () => {}) {}
 
   get isReady(): boolean {
     return this.blocker !== undefined;
@@ -28,6 +31,22 @@ export class AdBlock {
       read: fs.readFile,
       write: fs.writeFile,
     });
+    this.status = "engine loaded";
+  }
+
+  /** Re-downloads the lists and swaps the engine in place; blocking stays current without an app release. */
+  async refreshLists(): Promise<void> {
+    try {
+      const fresh = await ElectronBlocker.fromPrebuiltAdsAndTracking(fetch);
+      await fs.writeFile(join(this.cacheDir, "adblock-engine.bin"), fresh.serialize());
+      for (const ses of this.enabledOn) this.blocker?.disableBlockingInSession(ses);
+      this.blocker = fresh;
+      for (const ses of this.enabledOn) fresh.enableBlockingInSession(ses);
+      this.status = `lists refreshed ${new Date().toISOString().slice(0, 16)}Z`;
+      this.log(`Ad-block ${this.status}`);
+    } catch (error) {
+      this.status = `list refresh failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
 
   enable(session: Session): void {
