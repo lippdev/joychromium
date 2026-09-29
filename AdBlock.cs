@@ -85,10 +85,10 @@ public static class AdBlock
     }
 
     /// <summary>Checks GitHub at most once a day and downloads a newer release for the next start.</summary>
-    public static async Task CheckForUpdateAsync(HttpClient http, DateTime nowUtc)
+    public static async Task CheckForUpdateAsync(HttpClient http, DateTime nowUtc, bool force = false)
     {
         var state = LoadState();
-        if (state.LastCheckUtc is { } last && nowUtc - last < CheckInterval)
+        if (!force && state.LastCheckUtc is { } last && nowUtc - last < CheckInterval)
         {
             Status = $"v{ActiveVersion} · checked {last:yyyy-MM-dd HH:mm} UTC";
             return;
@@ -102,9 +102,9 @@ public static class AdBlock
                 Status = $"Unexpected release tag '{tag}'";
                 return;
             }
-            SaveState(state with { LastCheckUtc = nowUtc });
             if (ReadVersion(ActiveFolder) is { } active && latest <= active)
             {
+                SaveState(LoadState() with { LastCheckUtc = nowUtc });
                 Status = $"v{active} is current";
                 return;
             }
@@ -118,6 +118,8 @@ public static class AdBlock
                 return;
             }
             await DownloadAsync(http, asset, latest);
+            // Only a completed check counts toward the daily throttle, so a failed download retries next start.
+            SaveState(LoadState() with { LastCheckUtc = nowUtc });
             Status = $"v{latest} downloaded; active after restart";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or IOException or InvalidDataException or UnauthorizedAccessException)

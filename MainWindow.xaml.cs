@@ -596,6 +596,7 @@ public partial class MainWindow : Window
                 break;
             case "update-check":
                 await PolicyService.RefreshAsync(Http);
+                await AdBlock.CheckForUpdateAsync(Http, DateTime.UtcNow, force: true);
                 await AppUpdater.CheckAndDownloadAsync();
                 core.PostWebMessageAsString(JsonSerializer.Serialize(new
                 {
