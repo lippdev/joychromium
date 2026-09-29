@@ -48,6 +48,5 @@ export function errorPageFor(url: string, reason: string, upgraded: boolean): st
 export function displayUrl(url: string): string {
   const file = internalPageFile(url);
   if (!file) return url;
-  const parsed = new URL(url);
-  return `${SCHEME}://${parsed.hostname}${parsed.search && parsed.hostname === "error" ? "" : ""}`;
+  return `${SCHEME}://${new URL(url).hostname}`;
 }

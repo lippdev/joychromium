@@ -52,6 +52,7 @@ export class VirtualCursor {
     wc.sendInputEvent({ type: "mouseUp", x, y, button: "left", clickCount: 1 });
   }
 
+  /** Positive notches scroll down (Gamepad API stick Y grows downward); wheel deltaY is negative for down. */
   scroll(wc: WebContents, notches: number): void {
     wc.sendInputEvent({ type: "mouseWheel", x: Math.round(this.x), y: Math.round(this.y), deltaX: 0, deltaY: -notches * 120 });
   }

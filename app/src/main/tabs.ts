@@ -61,7 +61,6 @@ export interface TabEvents {
   changed: [];
   status: [text: string];
   fullscreen: [tab: Tab, on: boolean];
-  focusin: [tab: Tab];
   visited: [url: string, title: string];
   popup: [url: string, from: Tab];
 }

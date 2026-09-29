@@ -127,7 +127,8 @@ export class Shell {
     });
     ses.setPermissionCheckHandler((_wc, permission, origin) => {
       const host = hostOf(origin);
-      const remembered = host ? s.sitePermissions[host]?.[permission] : undefined;
+      // Always read the live settings: "allow always" replaces the settings object after this handler is installed.
+      const remembered = host ? this.deps.store.current.sitePermissions[host]?.[permission] : undefined;
       return remembered === true;
     });
     ses.on("will-download", (_event, item) => this.handleDownload(item));
@@ -183,7 +184,6 @@ export class Shell {
     this.tabs.on("changed", () => this.syncViews());
     this.tabs.on("status", (text) => this.setStatus(text));
     this.tabs.on("visited", (url, title) => this.deps.history.record(url, title));
-    this.tabs.on("focusin", () => this.openKeyboard("page"));
     this.tabs.on("fullscreen", (tab, on) => {
       if (tab === this.tabs.active) this.setChromeVisible(!on);
     });
@@ -537,7 +537,7 @@ export class Shell {
         if (wc && this.inputMode === "Cursor") { const size = this.pageSize(); await this.cursor.moveBy(wc, input.dx, input.dy, size.width, size.height); }
         break;
       case "cursor-click": if (wc && this.inputMode === "Cursor") this.cursor.click(wc); break;
-      case "scroll": if (wc) this.cursor.scroll(wc, -input.notches); break;
+      case "scroll": if (wc) this.cursor.scroll(wc, input.notches); break;
     }
   }
 
