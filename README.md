@@ -14,7 +14,7 @@ It opens YouTube's TV route. The address bar accepts URLs or search text; the in
 
 ## Controller
 
-An Xbox/XInput-compatible controller is supported. D-pad and left stick move the on-screen keyboard or send arrow keys into the page; A selects/activates, B goes back or closes the keyboard, LB/RB go back/forward, X reloads, and Y/Start opens the controller keyboard. `Ctrl+L` and `Ctrl+R` are available too.
+An Xbox/XInput-compatible controller is supported. D-pad and left stick move the on-screen keyboard or send arrow keys into the page; A selects/activates, B goes back or closes the keyboard, LB/RB go back/forward, X reloads, Y opens the controller keyboard, Start opens a new tab, Back (view) closes the current tab, and LT/RT switch tabs. `Ctrl+L`, `Ctrl+R`, `Ctrl+T`, `Ctrl+W` and `Ctrl+Tab` are available too.
 
 ## TV identity
 
@@ -27,4 +27,4 @@ dotnet build .\JoyChromium.csproj --configuration Release
 dotnet run --project .\tests\TvIdentity.Smoke.csproj --configuration Release
 ```
 
-GitHub Actions runs these checks on Windows. This is an early single-page prototype: it has no tab strip, extension support, or independent Chromium update pipeline.
+GitHub Actions runs these checks on Windows. This is an early prototype: it has no extension support, or independent Chromium update pipeline.
