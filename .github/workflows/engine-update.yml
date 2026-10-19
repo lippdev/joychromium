@@ -1,0 +1,52 @@
+name: Engine update
+
+# The app runs on the castLabs Electron for Content Security build (ADR-009), which is published on GitHub releases
+# rather than npm, so Dependabot cannot see it. This job looks for a newer ECS tag and opens the same kind of pull
+# request Dependabot used to open: "chore(deps): bump electron …", which is what release.yml watches for.
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find the newest stable ECS release
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh api repos/castlabs/electron-releases/releases --jq '[.[] | select(.prerelease == false) | .tag_name] | first')
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Newest ECS release: $TAG"
+      - name: Compare with the installed engine
+        id: current
+        run: |
+          CURRENT=$(node -p "require('./app/package.json').devDependencies.electron")
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Installed: $CURRENT"
+      - name: Open the bump pull request
+        if: steps.latest.outputs.tag != '' && contains(steps.current.outputs.current, steps.latest.outputs.tag) == false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.latest.outputs.tag }}
+        run: |
+          git config user.name "joychromium-bot"
+          git config user.email "bot@users.noreply.github.com"
+          cd app
+          npm pkg set "devDependencies.electron=github:castlabs/electron-releases#$TAG"
+          npm pkg set "build.electronDownload.customDir=$TAG"
+          cd ..
+          git checkout -b "chore/engine-${TAG//[^A-Za-z0-9.-]/_}"
+          git add app/package.json
+          git commit -m "chore(deps): bump electron to ${TAG} (castLabs ECS)"
+          git push -u origin HEAD
+          gh pr create --fill --title "chore(deps): bump electron to ${TAG}" \
+            --body "New castLabs Electron for Content Security release: \`${TAG}\`. CI runs the same checks as any other change, and a green run auto-merges and publishes a release."

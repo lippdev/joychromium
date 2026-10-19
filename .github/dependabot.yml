@@ -1,6 +1,7 @@
 version: 2
 updates:
-  # The Electron shell. Chromium security fixes arrive as Electron patch releases; checking daily keeps the lag to hours.
+  # The engine (castLabs Electron for Content Security) is published on GitHub releases and not on npm, so it is
+  # updated by .github/workflows/engine-update.yml instead of Dependabot.
   - package-ecosystem: npm
     directory: /app
     schedule:
@@ -11,7 +12,7 @@ updates:
       # Everything except Electron is grouped so the queue stays readable; Electron gets its own PR (it triggers a release).
       npm-minor-patch:
         patterns: ["*"]
-        exclude-patterns: ["electron"]
+        exclude-patterns: ["electron", "@electron/fuses", "preact", "esbuild"]
         update-types: ["minor", "patch"]
   - package-ecosystem: github-actions
     directory: /

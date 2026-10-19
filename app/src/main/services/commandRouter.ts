@@ -1,7 +1,7 @@
 import { Pages } from "../../shared/pages";
 import { newTabTarget } from "../../shared/settings";
 import { buildSuggestions } from "../../shared/suggestion";
-import { insertIntoPage, submitPage } from "./keyboard";
+import { insertIntoPage, mediaControl, submitPage } from "./keyboard";
 import type { ShellHost } from "./shellHost";
 import type { ShellCommand } from "../../shared/ipc";
 import type { AppSettings } from "../../shared/settings";
@@ -77,6 +77,7 @@ export class CommandRouter {
         h.broadcast();
         break;
       case "cycle-input-mode": h.cycleInputMode(); break;
+      case "media": await mediaControl(wc, command.action); break;
       case "chrome-height": h.setLayout(command.height, 0); break;
       case "ui-settings": {
         const patch: Partial<AppSettings> = {};

@@ -15,7 +15,8 @@ Escopos sugeridos: `electron`, `shell`, `controller`, `security`, `adblock`, `po
 
 ## Código
 - TypeScript estrito (`app/tsconfig.json`). Lógica pura em `src/shared/` com teste unitário (vitest); o que toca o Electron é coberto pelo e2e (Playwright).
-- Preloads são sandboxed e não podem importar módulos.
+- O build é um script com esbuild (`app/scripts/build.mjs`): empacota main, preloads, shell e copia `src/assets`. Não há passo `tsc` de emissão; o typecheck é `npm run typecheck`.
+- Preloads são sandboxed, mas, como são empacotados, **podem importar `src/shared`** (é assim que o contrato de IPC deixa de ser duplicado).
 - Páginas internas conversam com o processo principal só por `{type, ...}` via `window.joy`.
 
 ## Checks locais (em `app/`)
@@ -24,6 +25,8 @@ npm run typecheck
 npm test
 npm run test:e2e
 ```
+
+Para gerar todos os instaladores de Linux localmente é preciso `rpmbuild` (`sudo apt-get install rpm`); sem ele, use `npx electron-builder --linux AppImage deb`.
 
 No Linux, o e2e precisa de um servidor X virtual: `xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" npm run test:e2e`.
 
@@ -34,6 +37,7 @@ No Linux, o e2e precisa de um servidor X virtual: `xvfb-run --auto-servernum --s
 - Empacotamento: `npm run dist` gera os instaladores da plataforma em que você está. Os targets de macOS e arm64 são construídos no CI.
 
 ## Releases e atualizações automáticas
-- Dependabot propõe cada Electron novo diariamente; `auto-merge.yml` mergeia quando o CI passa nos três sistemas; `release.yml` cria a tag `vX.Y.Z` (derivada da última tag — nunca faz commit na `main`), gera os instaladores de Windows, macOS e Linux e publica na GitHub Release. Windows e Linux se atualizam sozinhos; no macOS, sem assinatura, o app avisa e abre a página da release.
+- O motor é o castLabs Electron for Content Security (`github:castlabs/electron-releases#v…+wvcus`), que não está no npm: `engine-update.yml` abre o PR de bump todo dia. A versão aparece em dois lugares no `package.json` (`devDependencies.electron` e `build.electronDownload.customDir`) e os dois precisam mudar juntos.
+- Dependabot cuida das demais dependências; `auto-merge.yml` mergeia quando o CI passa nos três sistemas; `release.yml` cria a tag `vX.Y.Z` (derivada da última tag — nunca faz commit na `main`), gera os instaladores de Windows, macOS e Linux e publica na GitHub Release. Windows e Linux se atualizam sozinhos; no macOS, sem assinatura, o app avisa e abre a página da release.
 - Release manual: Actions → Release → *Run workflow* com o nível do bump.
 - Rollback: adicione a versão a `blockedAppVersions` em `policy/policy.json`, assine e faça merge; o updater pula a versão.

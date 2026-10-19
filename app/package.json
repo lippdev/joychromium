@@ -16,9 +16,10 @@
     "build:ts": "tsc -p tsconfig.json"
   },
   "devDependencies": {
+    "@electron/fuses": "^2.1.3",
     "@playwright/test": "1.64.1",
     "@types/node": "26.6.5",
-    "electron": "44.8.0",
+    "electron": "github:castlabs/electron-releases#v44.5.1+wvcus",
     "electron-builder": "26.15.3",
     "esbuild": "^0.28.2",
     "preact": "^10.29.8",
@@ -54,8 +55,7 @@
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         }
       ],
@@ -72,22 +72,19 @@
         {
           "target": "AppImage",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "deb",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "rpm",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         }
       ],
@@ -142,7 +139,11 @@
       }
     },
     "afterPack": "scripts/after-pack.mjs",
-    "rpm": {}
+    "rpm": {},
+    "electronDownload": {
+      "mirror": "https://github.com/castlabs/electron-releases/releases/download/",
+      "customDir": "v44.5.1+wvcus"
+    }
   },
   "author": {
     "name": "lippdev",

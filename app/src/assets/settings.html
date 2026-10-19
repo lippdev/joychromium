@@ -147,6 +147,7 @@
     </div>
     <div class="row"><div><span data-i18n="settings.engine">Motor do navegador (Chromium)</span> <span id="runtime2"></span><small data-i18n="settings.engineNote">Vem junto com o app</small></div></div>
     <div class="row"><div><span data-i18n="settings.ads">Motor de bloqueio</span> <span id="adBlockVersion"></span><small id="adBlockUpdate"></small></div></div>
+    <div class="row"><div><span data-i18n="settings.drm">Widevine (DRM)</span><small id="widevine"></small></div></div>
     <div class="row"><div><span data-i18n="settings.policy">Política de segurança</span><small id="policy"></small></div></div>
     <div class="row">
       <div><span data-i18n="settings.diagnostics">Diagnóstico</span><small data-i18n="settings.diagnosticsHint">Compacta os logs na pasta Downloads</small></div>
@@ -337,6 +338,7 @@
     $('defaultInputMode').value = msg.defaultInputMode;
     renderInputModes(msg.siteInputModes || {});
     $('runtime2').textContent = msg.runtimeVersion || '';
+    $('widevine').textContent = msg.widevine || '';
     $('appVersion').textContent = 'v' + msg.appVersion;
     $('adBlockVersion').textContent = msg.adBlockVersion ? 'v' + msg.adBlockVersion : 'não instalado';
     showUpdate(msg);

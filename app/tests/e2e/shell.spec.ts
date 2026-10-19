@@ -45,9 +45,9 @@ test("shell UI, tabs, internal pages and session", async () => {
   await command({ type: "navigate", url: "joychromium://favorites" });
   await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toMatch(/Favorites|Favoritos/);
 
-  // Web pages get the spatial-navigation script and the cursor overlay.
+  // Web pages get the spatial-navigation script in their own world: the page itself cannot see it.
   await command({ type: "navigate", url: "about:blank" });
-  await expect.poll(() => app.evaluate(() => globalThis.joy.pageEval("typeof window.__joy + '/' + typeof window.__joyCursor")), { timeout: 15_000 }).toBe("object/object");
+  await expect.poll(() => app.evaluate(() => globalThis.joy.spatialWorld()), { timeout: 15_000 }).toEqual({ isolated: "object", page: "undefined" });
 
   await command({ type: "close-tab" });
   await expect.poll(tabs).toHaveLength(1);
