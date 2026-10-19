@@ -61,7 +61,7 @@ npm run test:e2e  # Playwright launches the real app with a throwaway profile
 npm run dist      # local installer in app/release (no publish)
 ```
 
-Layout: `src/shared` (pure rules), `src/main` (Electron main process), `src/preload` (sandboxed bridges), `src/renderer` (shell UI), `src/assets` (internal pages). See `CONTRIBUTING.md` for the branch and commit conventions and `docs/CHECKLIST.md` for what is done and what is planned.
+Layout: `src/shared` (pure rules), `src/main` (Electron main process), `src/preload` (sandboxed bridges), `src/renderer` (shell UI), `src/assets` (internal pages). See `CONTRIBUTING.md` for the branch and commit conventions and `docs/PRD.md` for the architecture, platform matrix, redesign and backlog (`docs/CHECKLIST.md` is the historical WebView2-era checklist).
 
 ## History
 
