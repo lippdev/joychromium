@@ -3,11 +3,24 @@
   "compilerOptions": {
     "module": "ES2022",
     "moduleResolution": "bundler",
-    "outDir": "dist/esm",
-    "rootDir": "src",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "types": [],
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ]
   },
-  "exclude": [],
-  "include": ["src/renderer/**/*.ts", "src/shared/controllerInput.ts", "src/shared/ipc.ts", "src/shared/settings.ts", "src/shared/pages.ts"]
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "src/shared/ipc.ts",
+    "src/shared/settings.ts",
+    "src/shared/pages.ts",
+    "src/shared/controllerInput.ts",
+    "src/shared/platform.ts",
+    "src/shared/security.ts"
+  ]
 }

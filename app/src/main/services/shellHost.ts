@@ -30,6 +30,7 @@ export interface ShellHost {
   status(text: string): void;
   broadcast(): void;
   syncViews(): void;
+  setLayout(top: number, bottom: number): void;
   setChromeVisible(visible: boolean): void;
   applyWindowMode(mode: WindowMode, persist: boolean): void;
   resolvePermission(allow: boolean, remember: boolean): void;
