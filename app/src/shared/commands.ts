@@ -45,7 +45,8 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
       return (c.uiScale === undefined || typeof c.uiScale === "number")
         && (c.overscan === undefined || typeof c.overscan === "number")
         && (c.highContrast === undefined || typeof c.highContrast === "boolean")
-        && (c.language === undefined || c.language === "pt-BR" || c.language === "en");
+        && (c.language === undefined || c.language === "pt-BR" || c.language === "en")
+        && (c.crashReports === undefined || typeof c.crashReports === "boolean");
     case "keyboard-open":
       return c.target === "address" || c.target === "page";
     case "back":

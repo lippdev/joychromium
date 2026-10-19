@@ -6,6 +6,7 @@ import {
 } from "../shared/settings";
 import { currentShortcutMod } from "./platform";
 import { dictionary } from "../shared/i18n";
+import { clearBrowsingData } from "./services/privacy";
 import type { ShellDeps } from "./shell";
 import type { Shell } from "./shell";
 import type { Tab } from "./tabs";
@@ -56,6 +57,7 @@ export class PageBridge {
       uiScale: s.uiScale,
       overscan: s.overscan,
       highContrast: s.highContrast,
+      crashReports: s.crashReports,
       appVersion: this.deps.appVersion,
       appUpdate: this.deps.updateStatus(),
       updateUrl: this.deps.updateUrl(),
@@ -134,6 +136,7 @@ export class PageBridge {
         if (typeof m.overscan === "number" && m.overscan >= 0 && m.overscan <= 8) patch.overscan = m.overscan;
         if (typeof m.highContrast === "boolean") patch.highContrast = m.highContrast;
         if (m.language === "pt-BR" || m.language === "en") patch.language = m.language;
+        if (typeof m.crashReports === "boolean") patch.crashReports = m.crashReports;
         store.update((s) => ({ ...s, ...patch }));
         this.shell.broadcast();
         this.reply(tab, { type: "init", ...this.payloadFields() });
@@ -176,8 +179,7 @@ export class PageBridge {
         }
         break;
       case "clear-data":
-        await tab.webContents.session.clearStorageData();
-        await tab.webContents.session.clearCache();
+        await clearBrowsingData({ session: tab.webContents.session, clearHistory: () => this.deps.history.clear() });
         this.shell.setStatus("BROWSING DATA CLEARED");
         break;
       default:

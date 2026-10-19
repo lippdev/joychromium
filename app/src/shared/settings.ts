@@ -118,6 +118,8 @@ export interface AppSettings {
   overscan: number;
   highContrast: boolean;
   language: Language;
+  /** Sends crash reports so bugs get fixed. Off until the user says yes. */
+  crashReports: boolean;
   /** host -> permission kind -> allowed */
   sitePermissions: Record<string, Record<string, boolean>>;
 }
@@ -146,6 +148,7 @@ export function defaultSettings(): AppSettings {
     overscan: 0,
     highContrast: false,
     language: "pt-BR",
+    crashReports: false,
     sitePermissions: {},
   };
 }
@@ -223,6 +226,7 @@ export function parseSettings(input: unknown): AppSettings {
     overscan: typeof r.overscan === "number" && r.overscan >= 0 && r.overscan <= 8 ? r.overscan : d.overscan,
     highContrast: bool(r.highContrast, d.highContrast),
     language: oneOf(["pt-BR", "en"] as const, r.language, d.language),
+    crashReports: bool(r.crashReports, d.crashReports),
     sitePermissions: permissions,
   };
 }

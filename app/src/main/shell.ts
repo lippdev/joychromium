@@ -335,6 +335,7 @@ export class Shell {
       overscan: s.overscan,
       highContrast: s.highContrast,
       language: s.language,
+      crashReports: s.crashReports,
     };
     if (!this.window.isDestroyed()) this.window.webContents.send(Channels.shellState, state);
   }
