@@ -3,7 +3,7 @@
 Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows, macOS e Linux com o mesmo código; abre em tela cheia (modo TV) por padrão. Todo o app vive em `app/`.
 
 ## Comandos (em `app/`)
-- Build: `npm run build`
+- Build: `npm run build` (esbuild empacota main, preloads e shell, e copia `src/assets`)
 - Rodar: `npm start`
 - Typecheck: `npm run typecheck`
 - Testes unitários (vitest): `npm test`
@@ -21,12 +21,13 @@ Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows
 ## Arquitetura
 - `src/shared/`: regras puras (settings, segurança, policy, sugestões, controle, páginas, plataforma).
 - `src/main/`: processo principal — `platform.ts` (opções de janela, menu, caminhos e extensões por SO), `shell.ts` (janela, layout das views, comandos, permissões, downloads), `tabs.ts` (uma `WebContentsView` por aba + hooks de segurança), `pageBridge.ts` (mensagens das páginas internas), `protocol.ts` (esquema `joychromium://`), `adblock.ts`, `policyService.ts`, `updater.ts`, `history.ts`, `store.ts`, `log.ts`.
-- `src/preload/`: bridges sandboxed — **não podem importar módulos**; constantes de canal ficam inline.
-- `src/renderer/chrome.ts`: UI do shell (abas, toolbar, teclado, prompts) e Gamepad API.
+- `src/preload/`: bridges sandboxed, empacotados pelo esbuild — **podem importar `src/shared`** (use o contrato de `shared/ipc.ts`, não repita nomes de canal).
+- `src/renderer/shell/`: UI do shell em Preact (barra, teclado, menu rápido, seletor de abas, toasts) e Gamepad API; `src/assets/design/tokens.css` é o design system de todas as páginas.
 - `src/assets/`: páginas internas (HTML) e `spatial.js` (navegação espacial + cursor virtual, injetado em toda página).
 
 ## Atualizações e release
-- Dependabot abre PR (`chore(deps): bump electron …`) → `ci.yml` → `auto-merge.yml` mergeia → `release.yml` deriva a versão da última tag, cria a tag, gera nsis/dmg-zip/AppImage/deb/rpm e publica na GitHub Release → `electron-updater` instala no usuário. Release manual: `workflow_dispatch` em `release.yml`.
+- O motor é o castLabs ECS (`github:castlabs/electron-releases#v…+wvcus`), fora do npm: `engine-update.yml` abre o PR de bump. A versão fica em `devDependencies.electron` e em `build.electronDownload.customDir`, e as duas precisam mudar juntas.
+- PR de bump (`chore(deps): bump electron …`) → `ci.yml` → `auto-merge.yml` mergeia → `release.yml` deriva a versão da última tag, cria a tag, gera nsis/dmg-zip/AppImage/deb/rpm e publica na GitHub Release → `electron-updater` instala no usuário. Release manual: `workflow_dispatch` em `release.yml`.
 - Sem assinatura de código por enquanto (ver `docs/PRD.md`, ADR-010): no macOS o build recebe assinatura ad-hoc via `scripts/after-pack.mjs` e o updater só avisa da versão nova.
 - `policy/policy.json` é assinado com `node app/scripts/policy-sign.mjs sign <keyfile> policy/policy.json` (chave em `~/.joychromium/policy-signing.key`, for a do repo — `%USERPROFILE%` no Windows).
 - Não subir `node_modules/`, `dist/`, `release/`.

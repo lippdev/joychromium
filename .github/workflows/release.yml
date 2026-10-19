@@ -95,6 +95,10 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: app/package-lock.json
+      - name: RPM tools (Linux only, for the rpm target)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+        working-directory: .
       - run: npm ci
       - run: npm test
       - name: Stamp the version into the package (not committed; the tag is the source of truth)

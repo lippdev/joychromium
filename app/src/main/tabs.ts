@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { join } from "node:path";
 import { displayUrl, errorPageFor, isInternal, isWebUrl, Pages } from "../shared/pages";
 import { hostOf, isHttp, isNavigationAllowed, upgradeToHttps } from "../shared/security";
+import { SPATIAL_WORLD } from "./controllerActions";
 import type { TabState } from "../shared/ipc";
 
 export interface TabEnvironment {
@@ -202,6 +203,8 @@ export class TabManager extends EventEmitter<TabEvents> {
       target = upgradeToHttps(url)!;
     }
     try {
+      // A navigation requested while another is in flight must not be overtaken by the older one finishing later.
+      if (tab.isLoading) tab.webContents.stop();
       await tab.webContents.loadURL(target);
     } catch (error) {
       // did-fail-load handles the user-visible part; loadURL rejects for the same failures.
@@ -288,8 +291,11 @@ export class TabManager extends EventEmitter<TabEvents> {
     wc.on("enter-html-full-screen", () => this.emit("fullscreen", tab, true));
     wc.on("leave-html-full-screen", () => this.emit("fullscreen", tab, false));
     wc.on("dom-ready", () => {
-      // Spatial focus navigation plus the virtual cursor overlay, injected into every web document.
-      if (!isInternal(wc.getURL())) wc.executeJavaScript(this.env.spatialScript, true).catch(() => undefined);
+      // Spatial focus navigation plus the virtual cursor overlay, injected into every web document in the isolated
+      // world: the page's own scripts cannot read, replace or break them.
+      if (!isInternal(wc.getURL())) {
+        wc.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code: this.env.spatialScript }]).catch(() => undefined);
+      }
     });
     wc.on("render-process-gone", (_event, details) => {
       this.env.log.error(`Renderer gone for ${tab.url}: ${details.reason} (${details.exitCode})`);

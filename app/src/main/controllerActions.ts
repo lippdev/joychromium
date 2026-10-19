@@ -14,12 +14,26 @@ export function sendArrow(wc: WebContents, direction: Direction): void {
   sendKey(wc, ARROW_KEYS[direction]);
 }
 
+/**
+ * The injected scripts live in their own world, so the page cannot see or replace `window.__joy`. Every interaction
+ * with them has to run in that same world.
+ */
+export const SPATIAL_WORLD = 73;
+
+export async function runInPageWorld<T>(wc: WebContents, code: string): Promise<T | undefined> {
+  try {
+    return (await wc.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code }])) as T;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function spatialMove(wc: WebContents, direction: Direction): Promise<void> {
-  await wc.executeJavaScript(`window.__joy && window.__joy.move(${JSON.stringify(direction)})`, true).catch(() => undefined);
+  await runInPageWorld(wc, `window.__joy && window.__joy.move(${JSON.stringify(direction)})`);
 }
 
 export async function spatialActivate(wc: WebContents): Promise<void> {
-  await wc.executeJavaScript("window.__joy && window.__joy.activate()", true).catch(() => undefined);
+  await runInPageWorld(wc, "window.__joy && window.__joy.activate()");
 }
 
 /** Virtual cursor: the overlay is drawn by the injected script; hover and clicks are real input events at the same point. */
@@ -35,7 +49,7 @@ export class VirtualCursor {
   }
 
   async show(wc: WebContents, visible: boolean): Promise<void> {
-    await wc.executeJavaScript(`window.__joyCursor && window.__joyCursor.show(${visible}, ${this.x}, ${this.y})`, true).catch(() => undefined);
+    await runInPageWorld(wc, `window.__joyCursor && window.__joyCursor.show(${visible}, ${this.x}, ${this.y})`);
   }
 
   async moveBy(wc: WebContents, dx: number, dy: number, width: number, height: number): Promise<void> {

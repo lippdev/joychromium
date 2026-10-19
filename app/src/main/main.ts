@@ -18,6 +18,8 @@ import { urlFromArgv } from "../shared/platform";
 import { startupTargets } from "../shared/settings";
 import { installApplicationMenu } from "./platform";
 import { CrashReporting } from "./services/crashReporting";
+import { prepareWidevine } from "./services/widevine";
+import { runInPageWorld } from "./controllerActions";
 
 /** Oldest Chromium the shell should run on; the remote policy can raise it. */
 export const MINIMUM_CHROMIUM = "150.0.0.0";
@@ -32,6 +34,10 @@ export interface JoyState {
   /** Evaluates JavaScript in the active tab (tests only; tab views are not reachable through Playwright). */
   pageEval: (script: string) => Promise<unknown>;
   dataDir: string;
+  /** Widevine status from the content-security build, for the diagnostics and the tests. */
+  widevine: string;
+  /** Where the injected navigation script lives: "object" in its own world, "undefined" in the page's. */
+  spatialWorld: () => Promise<{ isolated: string; page: string }>;
 }
 
 declare global {
@@ -63,6 +69,8 @@ globalThis.joy = {
   command: async () => undefined,
   pageEval: async () => undefined,
   dataDir,
+  widevine: "starting",
+  spatialWorld: async () => ({ isolated: "unavailable", page: "unavailable" }),
 };
 
 process.on("uncaughtException", (error) => log.error("Uncaught exception", error));
@@ -78,6 +86,8 @@ async function start(): Promise<void> {
 
   const minimum = effectiveMinimumChromium(policy.current, MINIMUM_CHROMIUM);
   if (!versionAtLeast(process.versions.chrome, minimum)) log.warn(`Chromium ${process.versions.chrome} is below the minimum ${minimum}`);
+
+  globalThis.joy.widevine = await prepareWidevine(log);
 
   const doh = dohTemplate(settings.dnsOverHttps);
   if (doh) app.configureHostResolver({ secureDnsMode: "secure", secureDnsServers: [doh] });
@@ -122,6 +132,13 @@ async function start(): Promise<void> {
   globalThis.joy.tabs = () => shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active }));
   globalThis.joy.command = (command) => shell.handle(command as never);
   globalThis.joy.pageEval = (script) => shell.activeWebContents?.executeJavaScript(script, true) ?? Promise.resolve(undefined);
+  globalThis.joy.spatialWorld = async () => {
+    const wc = shell.activeWebContents;
+    if (!wc) return { isolated: "no-tab", page: "no-tab" };
+    const isolated = await runInPageWorld<string>(wc, "typeof window.__joy");
+    const page = await wc.executeJavaScript("typeof window.__joy", true).catch(() => "error");
+    return { isolated: isolated ?? "error", page: String(page) };
+  };
 
   // A marker left behind at start means the last run was killed or crashed; its tabs are worth restoring.
   const crashed = store.previousRunCrashed();
