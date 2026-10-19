@@ -27,6 +27,7 @@ export interface TabState {
   isMuted: boolean;
   favicon?: string;
   isLoading: boolean;
+  sleeping: boolean;
 }
 
 export interface PermissionPrompt {

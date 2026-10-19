@@ -15,27 +15,60 @@ export interface TabEnvironment {
   log: { info: (m: string) => void; warn: (m: string) => void; error: (m: string, e?: unknown) => void };
 }
 
-/** One tab: a WebContentsView plus the state the shell shows for it. */
+/** How long an inactive tab keeps its process before it is parked. */
+export const SLEEP_AFTER_MS = 10 * 60_000;
+
+/** One tab: a WebContentsView plus the state the shell shows for it. The view is recreated when a sleeping tab wakes. */
 export class Tab {
-  readonly view: WebContentsView;
+  private viewRef: WebContentsView;
   title = "New tab";
   url = "";
   favicon: string | undefined;
   isPlayingAudio = false;
   isLoading = false;
   lastActive = Date.now();
+  /** Parked: the process is gone and only the URL and title are kept. */
+  sleeping = false;
   /** Original http URL while an automatic https upgrade is in flight, so a failure can offer the fallback. */
   pendingHttpsUpgrade: string | undefined;
 
-  constructor(readonly id: number, readonly isPrivate: boolean, ses: Session, preload: string) {
-    this.view = new WebContentsView({
+  constructor(readonly id: number, readonly isPrivate: boolean, private readonly ses: Session, private readonly preload: string) {
+    this.viewRef = Tab.createView(ses, preload);
+  }
+
+  private static createView(ses: Session, preload: string): WebContentsView {
+    const view = new WebContentsView({
       webPreferences: { session: ses, preload, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: true },
     });
-    this.view.setBackgroundColor("#0C0E13");
+    view.setBackgroundColor("#0C0E13");
+    return view;
+  }
+
+  get view(): WebContentsView {
+    return this.viewRef;
   }
 
   get webContents(): WebContents {
-    return this.view.webContents;
+    return this.viewRef.webContents;
+  }
+
+  /** Drops the renderer process; the URL and title stay so the tab can be restored on demand. */
+  sleep(): boolean {
+    if (this.sleeping) return false;
+    this.isLoading = false;
+    this.isPlayingAudio = false;
+    this.viewRef.webContents.close();
+    this.sleeping = true;
+    return true;
+  }
+
+  /** Recreates the view for a parked tab and returns it, or undefined when the tab was awake already. */
+  wake(): WebContentsView | undefined {
+    if (!this.sleeping) return undefined;
+    this.viewRef = Tab.createView(this.ses, this.preload);
+    this.sleeping = false;
+    this.lastActive = Date.now();
+    return this.viewRef;
   }
 
   get isMuted(): boolean {
@@ -53,6 +86,7 @@ export class Tab {
       isMuted: this.isMuted,
       favicon: this.favicon,
       isLoading: this.isLoading,
+      sleeping: this.sleeping,
     };
   }
 }
@@ -99,7 +133,27 @@ export class TabManager extends EventEmitter<TabEvents> {
     if (this.active === tab) return;
     this.active = tab;
     tab.lastActive = Date.now();
+    const view = tab.wake();
+    if (view) {
+      this.wire(tab);
+      void this.load(tab, tab.url);
+    }
     this.emit("changed");
+  }
+
+  /**
+   * Parks every inactive tab that has been idle for `idleMs` and is not playing audio, so a TV box with a dozen
+   * tabs open does not keep a dozen Chromium processes alive. Returns how many tabs went to sleep.
+   */
+  enforceSleep(now = Date.now(), idleMs = SLEEP_AFTER_MS): number {
+    let slept = 0;
+    for (const tab of this.tabs) {
+      if (tab === this.active || tab.sleeping || tab.isPlayingAudio) continue;
+      if (now - tab.lastActive < idleMs) continue;
+      if (tab.sleep()) slept++;
+    }
+    if (slept > 0) this.emit("changed");
+    return slept;
   }
 
   close(tab: Tab): void {
@@ -112,7 +166,7 @@ export class TabManager extends EventEmitter<TabEvents> {
       const next = this.tabs[Math.min(index, this.tabs.length - 1)];
       if (next) this.activate(next);
     }
-    tab.webContents.close();
+    if (!tab.sleeping) tab.webContents.close();
     this.emit("changed");
   }
 
