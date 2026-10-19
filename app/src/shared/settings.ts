@@ -1,6 +1,9 @@
 import { isWebUrl, Pages } from "./pages";
 import type { WindowMode } from "./platform";
 
+export type Language = "pt-BR" | "en";
+export const UI_SCALES = [0.8, 1, 1.25, 1.5] as const;
+
 export interface Theme {
   accent: string;
   background: string;
@@ -109,6 +112,12 @@ export interface AppSettings {
   blockDangerousDownloads: boolean;
   /** tv opens fullscreen for a controller; window is the desktop layout. */
   windowMode: WindowMode;
+  /** UI scale for the viewing distance: 0.8 (dense), 1 (TV), 1.25, 1.5. */
+  uiScale: number;
+  /** Safe-area margin in percent of the screen, for TVs that crop the edges. */
+  overscan: number;
+  highContrast: boolean;
+  language: Language;
   /** host -> permission kind -> allowed */
   sitePermissions: Record<string, Record<string, boolean>>;
 }
@@ -133,6 +142,10 @@ export function defaultSettings(): AppSettings {
     dnsOverHttps: "Off",
     blockDangerousDownloads: true,
     windowMode: "tv",
+    uiScale: 1,
+    overscan: 0,
+    highContrast: false,
+    language: "pt-BR",
     sitePermissions: {},
   };
 }
@@ -206,6 +219,10 @@ export function parseSettings(input: unknown): AppSettings {
     dnsOverHttps: oneOf(["Off", "Cloudflare", "Quad9", "Google"] as const, r.dnsOverHttps, d.dnsOverHttps),
     blockDangerousDownloads: bool(r.blockDangerousDownloads, d.blockDangerousDownloads),
     windowMode: oneOf(["tv", "window"] as const, r.windowMode, d.windowMode),
+    uiScale: (UI_SCALES as readonly number[]).includes(Number(r.uiScale)) ? Number(r.uiScale) : d.uiScale,
+    overscan: typeof r.overscan === "number" && r.overscan >= 0 && r.overscan <= 8 ? r.overscan : d.overscan,
+    highContrast: bool(r.highContrast, d.highContrast),
+    language: oneOf(["pt-BR", "en"] as const, r.language, d.language),
     sitePermissions: permissions,
   };
 }

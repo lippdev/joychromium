@@ -326,7 +326,11 @@ export class Shell {
       suggestions: this.suggestions,
       shortcutMod: currentShortcutMod(),
       nativeWindowControls: nativeWindowControls(),
-      windowMode: this.deps.store.current.windowMode,
+      windowMode: s.windowMode,
+      uiScale: s.uiScale,
+      overscan: s.overscan,
+      highContrast: s.highContrast,
+      language: s.language,
     };
     if (!this.window.isDestroyed()) this.window.webContents.send(Channels.shellState, state);
   }
@@ -353,8 +357,21 @@ export class Shell {
       const tab = this.tabs.tabs.find((t) => t.webContents === event.sender);
       if (tab) void this.bridge.handle(tab, message).catch((error) => this.deps.log.error("Page message failed", error));
     });
-    ipcMain.on("shell:layout", (event, top: number, bottom: number) => {
+    ipcMain.on(Channels.shellLayout, (event, top: number, bottom: number) => {
       if (event.sender === this.window.webContents) this.setLayout(top, bottom);
+    });
+    ipcMain.handle(Channels.shellThumbnails, async (event) => {
+      if (event.sender !== this.window.webContents) return [];
+      const shots = await Promise.all(this.tabs.tabs.map(async (tab) => {
+        if (tab.sleeping) return { id: tab.id, dataUrl: "" };
+        try {
+          const image = await tab.webContents.capturePage();
+          return { id: tab.id, dataUrl: image.isEmpty() ? "" : image.resize({ width: 480 }).toDataURL() };
+        } catch {
+          return { id: tab.id, dataUrl: "" };
+        }
+      }));
+      return shots;
     });
   }
 

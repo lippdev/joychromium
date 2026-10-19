@@ -4,6 +4,7 @@ import { buildSuggestions } from "../../shared/suggestion";
 import { insertIntoPage, submitPage } from "./keyboard";
 import type { ShellHost } from "./shellHost";
 import type { ShellCommand } from "../../shared/ipc";
+import type { AppSettings } from "../../shared/settings";
 
 /** Runs every command that arrives from the chrome UI, the keyboard or the gamepad. */
 export class CommandRouter {
@@ -76,6 +77,17 @@ export class CommandRouter {
         h.broadcast();
         break;
       case "cycle-input-mode": h.cycleInputMode(); break;
+      case "chrome-height": h.setLayout(command.height, 0); break;
+      case "ui-settings": {
+        const patch: Partial<AppSettings> = {};
+        if (command.uiScale !== undefined) patch.uiScale = command.uiScale;
+        if (command.overscan !== undefined) patch.overscan = Math.max(0, Math.min(8, command.overscan));
+        if (command.highContrast !== undefined) patch.highContrast = command.highContrast;
+        if (command.language !== undefined) patch.language = command.language;
+        h.store.update((s) => ({ ...s, ...patch }));
+        h.broadcast();
+        break;
+      }
       case "escape":
         if (h.permissions.prompt) h.resolvePermission(false, false);
         else if (h.keyboard) h.closeKeyboard();

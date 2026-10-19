@@ -39,6 +39,13 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
       return actions.includes(c.action as (typeof actions)[number]);
     case "zoom":
       return typeof c.delta === "number";
+    case "chrome-height":
+      return typeof c.height === "number" && c.height >= 0 && c.height < 1000;
+    case "ui-settings":
+      return (c.uiScale === undefined || typeof c.uiScale === "number")
+        && (c.overscan === undefined || typeof c.overscan === "number")
+        && (c.highContrast === undefined || typeof c.highContrast === "boolean")
+        && (c.language === undefined || c.language === "pt-BR" || c.language === "en");
     case "keyboard-open":
       return c.target === "address" || c.target === "page";
     case "back":
