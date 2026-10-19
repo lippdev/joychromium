@@ -120,9 +120,20 @@ async function start(): Promise<void> {
   globalThis.joy.command = (command) => shell.handle(command as never);
   globalThis.joy.pageEval = (script) => shell.activeWebContents?.executeJavaScript(script, true) ?? Promise.resolve(undefined);
 
+  // A marker left behind at start means the last run was killed or crashed; its tabs are worth restoring.
+  const crashed = store.previousRunCrashed();
+  store.markRunning();
+  const lastSession = store.loadSession();
   const startUrl = process.env.JOYCHROMIUM_START;
-  const targets = startUrl ? [startUrl] : settings.onboardingCompleted ? startupTargets(settings, store.loadSession()) : [Pages.welcome];
+  const targets = startUrl
+    ? [startUrl]
+    : !settings.onboardingCompleted
+      ? [Pages.welcome]
+      : crashed && settings.startup !== "Restore" && lastSession.length > 0
+        ? lastSession
+        : startupTargets(settings, lastSession);
   await shell.start(targets);
+  if (crashed && !startUrl) shell.setStatus("RESTORED AFTER AN UNEXPECTED CLOSE");
 
   // Background maintenance: remote policy, block lists, app update. Never blocks the UI.
   void (async () => {
@@ -159,3 +170,4 @@ app.on("certificate-error", (event, _wc, url, error, _cert, callback) => {
 
 app.on("child-process-gone", (_event, details) => log.warn(`Child process gone: ${details.type} ${details.reason}`));
 app.on("window-all-closed", () => app.quit());
+app.on("will-quit", () => store.markCleanExit());

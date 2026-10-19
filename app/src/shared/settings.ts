@@ -142,9 +142,32 @@ const oneOf = <T extends string>(options: readonly T[], value: unknown, fallback
 const bool = (value: unknown, fallback: boolean): boolean => (typeof value === "boolean" ? value : fallback);
 const webUrl = (value: unknown, fallback: string): string => (isWebUrl(value as string) ? (value as string) : fallback);
 
+/** Bumped whenever a stored file needs a new shape; migrations below bring older files forward. */
+export const SETTINGS_SCHEMA_VERSION = 2;
+
+/**
+ * Old versions this app wrote. The file is plain JSON with every field optional, so the only migrations needed are
+ * the ones that change meaning rather than presence:
+ *   1 -> 2  saved passwords and autofill were removed (they never had any effect); tracking prevention started
+ *           being enforced, and its default became Balanced. Nothing to rewrite — parseSettings drops the dead keys.
+ */
+export function migrateSettings(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const source = raw as Record<string, unknown>;
+  const version = typeof source.schemaVersion === "number" ? source.schemaVersion : 1;
+  const migrated: Record<string, unknown> = { ...source };
+  if (version < 2) {
+    delete migrated.passwordAutosave;
+    delete migrated.autofill;
+  }
+  migrated.schemaVersion = SETTINGS_SCHEMA_VERSION;
+  return migrated;
+}
+
 /** Lenient parse: every field is optional and validated independently; anything invalid falls back to the default. */
-export function parseSettings(raw: unknown): AppSettings {
+export function parseSettings(input: unknown): AppSettings {
   const d = defaultSettings();
+  const raw = migrateSettings(input);
   if (!raw || typeof raw !== "object") return d;
   const r = raw as Record<string, unknown>;
   const list = (value: unknown): Shortcut[] | undefined =>
