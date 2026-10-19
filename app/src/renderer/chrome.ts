@@ -17,6 +17,8 @@ const cmd = (command: ShellCommand): void => window.shell.command(command);
 
 let state: ShellState | undefined;
 let shift = false;
+let mod = "Ctrl";
+const isMac = () => mod === "Cmd";
 let keyboardWasOpen = false;
 let lastSentLayout = "";
 
@@ -57,7 +59,7 @@ function renderTabs(s: ShellState): void {
         const snd = document.createElement("button");
         snd.className = `snd${t.isMuted ? " muted" : ""}`;
         snd.textContent = t.isMuted ? "🔇" : "🔊";
-        snd.title = "Mute / unmute · Ctrl+M";
+        snd.title = `Mute / unmute · ${mod}+M`;
         snd.addEventListener("click", (e) => { e.stopPropagation(); cmd({ type: "mute-tab", id: t.id }); });
         el.appendChild(snd);
       }
@@ -112,6 +114,11 @@ function render(s: ShellState): void {
   $("controller").classList.toggle("on", s.controllerConnected);
   $("status").textContent = s.status;
   document.body.classList.toggle("hidden-chrome", !s.chromeVisible);
+  document.body.classList.toggle("native-controls", s.nativeWindowControls);
+  mod = s.shortcutMod;
+  $("favorite").title = `Add to favorites · ${mod}+D · LB+Y`;
+  (document.querySelector('[data-cmd="settings"]') as HTMLElement).title = `Settings · ${mod}+,`;
+  (document.querySelector('[data-cmd="window-mode"]') as HTMLElement).classList.toggle("on", s.windowMode === "tv");
 
   const perm = $("permission");
   perm.hidden = !s.permission;
@@ -232,8 +239,9 @@ function wire(): void {
     else if (e.key === "ArrowDown") { const first = document.querySelector<HTMLButtonElement>("#suggestions .sug"); if (first) { e.preventDefault(); first.focus(); } }
   });
   document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key.toLowerCase() === "l") { e.preventDefault(); address.focus(); address.select(); }
-    if (e.ctrlKey && e.key.toLowerCase() === "f") { e.preventDefault(); cmd({ type: "find", text: $<HTMLInputElement>("findtext").value }); $("findtext").focus(); }
+    const shortcut = isMac() ? e.metaKey : e.ctrlKey;
+    if (shortcut && e.key.toLowerCase() === "l") { e.preventDefault(); address.focus(); address.select(); }
+    if (shortcut && e.key.toLowerCase() === "f") { e.preventDefault(); cmd({ type: "find", text: $<HTMLInputElement>("findtext").value }); $("findtext").focus(); }
   });
   for (const el of document.querySelectorAll<HTMLElement>("[data-key]")) {
     el.addEventListener("click", () => {

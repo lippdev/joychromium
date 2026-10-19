@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -34,7 +34,10 @@ jobs:
       - name: End-to-end (real Electron, Linux under Xvfb)
         if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" npm run test:e2e
-      - name: Package (no publish) to prove the installer builds
+      - name: End-to-end (real Electron, macOS)
+        if: runner.os == 'macOS'
+        run: npm run test:e2e
+      - name: Package (no publish) to prove the installers build
         run: npm run build && npx electron-builder --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,4 +48,7 @@ jobs:
             app/release/*.exe
             app/release/*.AppImage
             app/release/*.deb
+            app/release/*.rpm
+            app/release/*.dmg
+            app/release/*.zip
           if-no-files-found: ignore

@@ -51,7 +51,8 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
@@ -65,8 +66,27 @@
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "build/icon.png",
       "category": "Network",
@@ -80,7 +100,6 @@
     },
     "deb": {
       "depends": [
-        "libgtk-3-0",
         "libnotify4",
         "libnss3",
         "libxss1",
@@ -88,9 +107,39 @@
         "xdg-utils",
         "libatspi2.0-0",
         "libuuid1",
-        "libsecret-1-0"
+        "libsecret-1-0",
+        "libgtk-3-0"
       ]
-    }
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.entertainment",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "JoyChromium asks for the camera when a site needs it, for example a video call.",
+        "NSMicrophoneUsageDescription": "JoyChromium asks for the microphone when a site needs it, for example a video call."
+      }
+    },
+    "afterPack": "scripts/after-pack.mjs",
+    "rpm": {}
   },
   "author": {
     "name": "lippdev",

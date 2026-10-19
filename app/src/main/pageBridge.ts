@@ -4,6 +4,7 @@ import {
   DEFAULT_SHORTCUTS, parseSearchEngine, parseShortcut, parseTheme, SEARCH_ENGINES, THEME_PRESETS, type AppSettings,
   withoutInputMode, withoutPermissions,
 } from "../shared/settings";
+import { currentShortcutMod } from "./platform";
 import type { ShellDeps } from "./shell";
 import type { Shell } from "./shell";
 import type { Tab } from "./tabs";
@@ -40,15 +41,15 @@ export class PageBridge {
       httpsOnly: s.httpsOnly,
       trackingPrevention: s.trackingPrevention,
       dnsOverHttps: s.dnsOverHttps,
-      passwordAutosave: s.passwordAutosave,
-      autofill: s.autofill,
       blockDangerousDownloads: s.blockDangerousDownloads,
       sitePermissions: s.sitePermissions,
       defaultInputMode: s.defaultInputMode,
       siteInputModes: s.siteInputModes,
       runtimeVersion: process.versions.chrome,
+      shortcutMod: currentShortcutMod(),
       appVersion: this.deps.appVersion,
       appUpdate: this.deps.updateStatus(),
+      updateUrl: this.deps.updateUrl(),
       adBlockVersion: this.deps.adblock.listsVersion,
       adBlockUpdate: this.deps.adblock.status,
       policy: this.deps.policy.status,
@@ -108,7 +109,7 @@ export class PageBridge {
         break;
       case "privacy-save": {
         const patch: Partial<AppSettings> = {};
-        for (const key of ["httpsOnly", "passwordAutosave", "autofill", "blockDangerousDownloads"] as const) if (typeof m[key] === "boolean") patch[key] = m[key] as boolean;
+        for (const key of ["httpsOnly", "blockDangerousDownloads"] as const) if (typeof m[key] === "boolean") patch[key] = m[key] as boolean;
         if (m.trackingPrevention === "Basic" || m.trackingPrevention === "Balanced" || m.trackingPrevention === "Strict") patch.trackingPrevention = m.trackingPrevention;
         if (m.dnsOverHttps === "Off" || m.dnsOverHttps === "Cloudflare" || m.dnsOverHttps === "Quad9" || m.dnsOverHttps === "Google") patch.dnsOverHttps = m.dnsOverHttps;
         store.update((s) => ({ ...s, ...patch }));
@@ -142,7 +143,10 @@ export class PageBridge {
         break;
       case "update-check":
         await this.deps.checkUpdates();
-        this.reply(tab, { type: "update-status", appUpdate: this.deps.updateStatus(), adBlockUpdate: this.deps.adblock.status, policy: this.deps.policy.status });
+        this.reply(tab, { type: "update-status", appUpdate: this.deps.updateStatus(), updateUrl: this.deps.updateUrl(), adBlockUpdate: this.deps.adblock.status, policy: this.deps.policy.status });
+        break;
+      case "update-download":
+        await this.deps.openUpdatePage();
         break;
       case "export-diagnostics":
         try {

@@ -1,10 +1,10 @@
 import { BrowserWindow, ipcMain, powerSaveBlocker, session, type Session, type WebContents } from "electron";
 import { mkdirSync, existsSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { Channels, type ControllerEvent, type PermissionPrompt, type ShellCommand, type ShellState } from "../shared/ipc";
 import { displayUrl, isInternal, isWebUrl, Pages } from "../shared/pages";
-import { hostOf, isDangerousDownload, safeFileName, allowPopup } from "../shared/security";
+import type { WindowMode } from "../shared/platform";
+import { hostOf, isDangerousDownload, isThirdPartyRequest, safeFileName, allowPopup, trackingPolicy } from "../shared/security";
 import { buildSearchUrl, isFavorite, newTabTarget, toggleFavorite, withInputMode, withPermission, type InputMode } from "../shared/settings";
 import { buildSuggestions } from "../shared/suggestion";
 import { defaultModeFor, nextMode } from "../shared/controllerInput";
@@ -15,6 +15,7 @@ import type { Log } from "./log";
 import { PageBridge } from "./pageBridge";
 import type { PolicyService } from "./policyService";
 import type { SettingsStore } from "./store";
+import { browserWindowOptions, currentShortcutMod, downloadsFolder, nativeWindowControls, platformDangerousExtensions } from "./platform";
 import { Tab, TabManager } from "./tabs";
 
 export interface ShellDeps {
@@ -28,6 +29,8 @@ export interface ShellDeps {
   appVersion: string;
   updateStatus: () => string;
   checkUpdates: () => Promise<void>;
+  updateUrl: () => string | undefined;
+  openUpdatePage: () => Promise<void>;
   exportDiagnostics: () => Promise<string>;
 }
 
@@ -68,17 +71,7 @@ export class Shell {
   private lastSavedSession = "";
 
   constructor(private readonly deps: ShellDeps) {
-    this.window = new BrowserWindow({
-      width: 1440,
-      height: 900,
-      minWidth: 900,
-      minHeight: 600,
-      frame: false,
-      backgroundColor: deps.store.current.theme.background,
-      title: "JoyChromium",
-      show: false,
-      webPreferences: { preload: join(deps.distDir, "preload", "chrome.js"), sandbox: true, contextIsolation: true, nodeIntegration: false },
-    });
+    this.window = new BrowserWindow(browserWindowOptions(deps.store.current.theme.background, join(deps.distDir, "preload", "chrome.js")));
     this.tabs = new TabManager({
       preloadDir: join(deps.distDir, "preload"),
       spatialScript: deps.spatialScript,
@@ -98,6 +91,7 @@ export class Shell {
 
   async start(targets: readonly string[]): Promise<void> {
     await this.window.loadURL("joychromium://chrome/");
+    this.applyWindowMode(this.deps.store.current.windowMode, false);
     this.window.show();
     targets.forEach((url, i) => this.tabs.open(url, { activate: i === 0 }));
     setInterval(() => this.housekeeping(), 30_000).unref();
@@ -133,6 +127,39 @@ export class Shell {
     });
     ses.on("will-download", (_event, item) => this.handleDownload(item));
     ses.setSpellCheckerEnabled(false);
+    this.wireTracking(ses);
+  }
+
+  private readonly trackingWired = new WeakSet<Session>();
+
+  /** Reads the live tracking level, so a settings change applies without reinstalling the hooks. */
+  private wireTracking(ses: Session): void {
+    if (this.trackingWired.has(ses)) return;
+    this.trackingWired.add(ses);
+    const filter = { urls: ["http://*/*", "https://*/*"] };
+    const policy = () => trackingPolicy(this.deps.store.current.trackingPrevention);
+    ses.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+      const headers = { ...details.requestHeaders };
+      const current = policy();
+      if (current.sendGpc) {
+        headers.DNT = "1";
+        headers["Sec-GPC"] = "1";
+      }
+      if (current.blockThirdPartyCookies && isThirdPartyRequest(details.url, details.referrer)) {
+        delete headers.Cookie;
+        delete headers.cookie;
+      }
+      callback({ requestHeaders: headers });
+    });
+    ses.webRequest.onHeadersReceived(filter, (details, callback) => {
+      if (!policy().blockThirdPartyCookies || !isThirdPartyRequest(details.url, details.referrer)) {
+        callback({});
+        return;
+      }
+      const responseHeaders = { ...details.responseHeaders };
+      for (const key of Object.keys(responseHeaders)) if (key.toLowerCase() === "set-cookie") delete responseHeaders[key];
+      callback({ responseHeaders });
+    });
   }
 
   private async decidePermission(kind: string, url: string): Promise<boolean> {
@@ -160,12 +187,12 @@ export class Shell {
   private handleDownload(item: Electron.DownloadItem): void {
     const name = safeFileName(item.getFilename());
     const s = this.deps.store.current;
-    if (s.blockDangerousDownloads && isDangerousDownload(name, this.deps.policy.current.extraDangerousExtensions)) {
+    if (s.blockDangerousDownloads && isDangerousDownload(name, [...platformDangerousExtensions(), ...this.deps.policy.current.extraDangerousExtensions])) {
       item.cancel();
       this.setStatus(`DOWNLOAD BLOCKED · ${name}`);
       return;
     }
-    const folder = join(homedir(), "Downloads", "JoyChromium");
+    const folder = downloadsFolder();
     mkdirSync(folder, { recursive: true });
     let target = join(folder, name);
     const dot = name.lastIndexOf(".");
@@ -242,9 +269,26 @@ export class Shell {
   private setChromeVisible(visible: boolean): void {
     this.chromeVisible = visible;
     if (!visible && !this.window.isFullScreen()) this.window.setFullScreen(true);
-    if (visible && this.window.isFullScreen()) this.window.setFullScreen(false);
+    // Leaving page fullscreen must not drop TV mode back to a window.
+    if (visible && this.window.isFullScreen() && this.deps.store.current.windowMode !== "tv") this.window.setFullScreen(false);
     this.applyBounds();
     this.broadcast();
+  }
+
+  private applyWindowMode(mode: WindowMode, persist: boolean): void {
+    if (persist) this.deps.store.update((s) => ({ ...s, windowMode: mode }));
+    const tv = this.deps.store.current.windowMode === "tv";
+    if (tv && !this.window.isFullScreen()) this.window.setFullScreen(true);
+    if (!tv && this.window.isFullScreen()) this.window.setFullScreen(false);
+    this.broadcast();
+  }
+
+  /** A second launch focuses this window instead of opening another copy of the profile. */
+  focusFromSecondInstance(url?: string): void {
+    if (this.window.isMinimized()) this.window.restore();
+    this.window.show();
+    this.window.focus();
+    if (url) this.navigate(url);
   }
 
   private housekeeping(): void {
@@ -284,6 +328,9 @@ export class Shell {
       keyboard: this.keyboard,
       find: this.find,
       suggestions: this.suggestions,
+      shortcutMod: currentShortcutMod(),
+      nativeWindowControls: nativeWindowControls(),
+      windowMode: this.deps.store.current.windowMode,
     };
     if (!this.window.isDestroyed()) this.window.webContents.send(Channels.shellState, state);
   }
@@ -486,6 +533,7 @@ export class Shell {
         break;
       case "zoom": if (wc) { const z = command.delta === 0 ? 1 : Math.min(3, Math.max(0.5, wc.getZoomFactor() + command.delta)); wc.setZoomFactor(z); this.setStatus(`ZOOM ${Math.round(z * 100)}%`); } break;
       case "fullscreen-toggle": this.setChromeVisible(!this.chromeVisible); break;
+      case "window-mode": this.applyWindowMode(this.deps.store.current.windowMode === "tv" ? "window" : "tv", true); break;
       case "find":
         this.find = { text: command.text };
         if (wc && command.text) wc.findInPage(command.text, { forward: !command.backwards, findNext: true });
@@ -507,6 +555,7 @@ export class Shell {
         else if (this.keyboard) this.closeKeyboard();
         else if (this.find) { this.find = undefined; wc?.stopFindInPage("clearSelection"); this.broadcast(); }
         else if (wc && !this.chromeVisible) await wc.executeJavaScript("document.exitFullscreen && document.exitFullscreen()", true).catch(() => undefined);
+        else if (this.deps.store.current.windowMode === "tv") this.applyWindowMode("window", true);
         break;
     }
   }
@@ -547,7 +596,7 @@ export class Shell {
     const key = input.key.toLowerCase();
     let command: ShellCommand | undefined;
     if (key === "escape") command = { type: "escape" };
-    else if (key === "f11") command = { type: "fullscreen-toggle" };
+    else if (key === "f11") command = { type: "window-mode" };
     else if (ctrl && key === "t") command = input.shift ? { type: "reopen-tab" } : { type: "new-tab" };
     else if (ctrl && key === "n" && input.shift) command = { type: "new-tab", isPrivate: true };
     else if (ctrl && key === "w") command = { type: "close-tab" };

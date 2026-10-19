@@ -1,4 +1,4 @@
-import { app, Menu, session } from "electron";
+import { app, session } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AdBlock } from "./adblock";
@@ -14,7 +14,9 @@ import { Updater } from "./updater";
 import { Pages } from "../shared/pages";
 import { effectiveMinimumChromium } from "../shared/policy";
 import { dohTemplate, versionAtLeast } from "../shared/security";
+import { urlFromArgv } from "../shared/platform";
 import { startupTargets } from "../shared/settings";
+import { installApplicationMenu } from "./platform";
 
 /** Oldest Chromium the shell should run on; the remote policy can raise it. */
 export const MINIMUM_CHROMIUM = "150.0.0.0";
@@ -37,9 +39,12 @@ declare global {
 }
 
 registerScheme();
-Menu.setApplicationMenu(null);
+installApplicationMenu();
 
 const dataDir = process.env.JOYCHROMIUM_DATA ?? app.getPath("userData");
+app.setPath("userData", dataDir);
+const hasInstanceLock = app.requestSingleInstanceLock();
+if (!hasInstanceLock) app.quit();
 const distDir = join(__dirname, "..");
 const log = new Log(join(dataDir, "logs"));
 const store = new SettingsStore(dataDir, (m) => log.warn(m));
@@ -100,6 +105,8 @@ async function start(): Promise<void> {
       await adblock.refreshLists();
       await updater.check();
     },
+    updateUrl: () => updater.manualUpdate?.url,
+    openUpdatePage: () => updater.openDownloadPage(),
     exportDiagnostics: () =>
       exportDiagnostics(join(app.getPath("downloads"), "JoyChromium"), log, store, [
         `JoyChromium ${app.getVersion()} · Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,
@@ -108,6 +115,7 @@ async function start(): Promise<void> {
         `App update ${updater.status}`,
       ]),
   });
+  shellRef = shell;
   globalThis.joy.tabs = () => shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active }));
   globalThis.joy.command = (command) => shell.handle(command as never);
   globalThis.joy.pageEval = (script) => shell.activeWebContents?.executeJavaScript(script, true) ?? Promise.resolve(undefined);
@@ -128,11 +136,19 @@ async function start(): Promise<void> {
   })();
 }
 
-app.whenReady().then(start).catch((error) => {
-  log.error("Start failed", error);
-  console.error(error);
-  app.exit(1);
+let shellRef: Shell | undefined;
+
+app.on("second-instance", (_event, argv) => {
+  shellRef?.focusFromSecondInstance(urlFromArgv(argv));
 });
+
+if (hasInstanceLock) {
+  app.whenReady().then(start).catch((error) => {
+    log.error("Start failed", error);
+    console.error(error);
+    app.exit(1);
+  });
+}
 
 app.on("certificate-error", (event, _wc, url, error, _cert, callback) => {
   // Never offer a bypass: a TV-room browser should not teach anyone to click through certificate warnings.

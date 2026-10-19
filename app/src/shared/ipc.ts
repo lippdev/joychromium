@@ -49,6 +49,9 @@ export interface ShellState {
   keyboard?: { target: "address" | "page"; title: string };
   find?: { text: string };
   suggestions: { title: string; url: string }[];
+  shortcutMod: "Ctrl" | "Cmd";
+  nativeWindowControls: boolean;
+  windowMode: "tv" | "window";
 }
 
 export type ShellCommand =
@@ -72,6 +75,7 @@ export type ShellCommand =
   | { type: "window"; action: "minimize" | "maximize" | "close" }
   | { type: "zoom"; delta: number }
   | { type: "fullscreen-toggle" }
+  | { type: "window-mode" }
   | { type: "find"; text: string; backwards?: boolean }
   | { type: "find-close" }
   | { type: "keyboard-open"; target: "address" | "page" }

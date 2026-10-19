@@ -30,7 +30,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tab .x, .tab .snd { width: 24px; height: 24px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; }
 .tab .x:hover { background: var(--border); }
 .tab .snd.muted { color: var(--accent); }
-.caption { width: 46px; height: 42px; border: 0; background: transparent; color: var(--muted); font-family: "Segoe MDL2 Assets", "Segoe UI Symbol"; font-size: 10px; }
+.caption { display: grid; place-items: center; width: 46px; height: 42px; border: 0; background: transparent; color: var(--muted); }
+.caption svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1; }
+.caption.close svg { stroke-width: 1.2; }
+body.native-controls #wincontrols { display: none; }
+body.native-controls #titlebar { padding-left: 78px; }
 #newtab { width: 34px; height: 34px; margin: 0 0 2px 2px; font-family: inherit; font-size: 14px; }
 .caption:hover { background: var(--hover); }
 .caption.close:hover { background: #C42B1C; color: #fff; }
