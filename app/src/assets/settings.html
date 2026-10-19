@@ -126,7 +126,11 @@
     <div id="permissions"></div>
 
     <div class="row">
-      <div><span data-i18n="settings.clearData">Limpar cookies, cache e dados de sites</span><small>Desconecta de todos os sites</small></div>
+      <div><span data-i18n="settings.crashReports">Enviar relatórios de falha</span><small>Desligado por padrão. Ajuda a corrigir erros; nenhuma página visitada é enviada.</small></div>
+      <label class="switch"><input type="checkbox" id="crashReports" data-ui><span></span></label>
+    </div>
+    <div class="row">
+      <div><span data-i18n="settings.clearData">Limpar cookies, cache, dados de sites e histórico</span><small>Desconecta de todos os sites</small></div>
       <button class="ghost" id="clearData" data-i18n="settings.clear">Limpar agora</button>
     </div>
     <div class="status" id="clearStatus"></div>
@@ -276,11 +280,11 @@
   const sendUi = () => {
     post('ui-settings', {
       uiScale: Number($('uiScale').value), overscan: Number($('overscan').value),
-      highContrast: $('highContrast').checked, language: $('language').value,
+      highContrast: $('highContrast').checked, language: $('language').value, crashReports: $('crashReports').checked,
     });
     flash('uiStatus', i18n.t('settings.saved'));
   };
-  for (const id of ['uiScale', 'overscan', 'highContrast', 'language']) $(id).addEventListener('change', sendUi);
+  for (const id of ['uiScale', 'overscan', 'highContrast', 'language', 'crashReports']) $(id).addEventListener('change', sendUi);
 
   function showUpdate(msg) {
     $('appUpdate').textContent = msg.appUpdate || '';
@@ -328,6 +332,7 @@
     $('overscan').value = String(msg.overscan ?? 0);
     $('highContrast').checked = !!msg.highContrast;
     $('language').value = msg.language ?? 'pt-BR';
+    $('crashReports').checked = !!msg.crashReports;
     renderPermissions(msg.sitePermissions || {});
     $('defaultInputMode').value = msg.defaultInputMode;
     renderInputModes(msg.siteInputModes || {});
