@@ -17,6 +17,7 @@ import { dohTemplate, versionAtLeast } from "../shared/security";
 import { urlFromArgv } from "../shared/platform";
 import { startupTargets } from "../shared/settings";
 import { installApplicationMenu } from "./platform";
+import { CrashReporting } from "./services/crashReporting";
 
 /** Oldest Chromium the shell should run on; the remote policy can raise it. */
 export const MINIMUM_CHROMIUM = "150.0.0.0";
@@ -52,6 +53,7 @@ const history = new History(join(dataDir, "history.jsonl"), (m) => log.warn(m));
 const policy = new PolicyService(dataDir, (m) => log.warn(m));
 const adblock = new AdBlock(dataDir, (m) => log.info(m));
 const updater = new Updater(log, () => policy.current.blockedAppVersions);
+const crashes = new CrashReporting(dataDir, log);
 
 globalThis.joy = {
   adblockReady: false,
@@ -71,6 +73,7 @@ async function start(): Promise<void> {
   log.info(`JoyChromium ${app.getVersion()} starting · Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`);
   const settings = store.load();
   policy.loadCached();
+  crashes.sync(settings.crashReports);
   installProtocolHandler(distDir);
 
   const minimum = effectiveMinimumChromium(policy.current, MINIMUM_CHROMIUM);
@@ -113,7 +116,7 @@ async function start(): Promise<void> {
         `Ad blocking ${adblock.status}`,
         `Policy ${policy.status}`,
         `App update ${updater.status}`,
-      ]),
+      ], crashes.files()),
   });
   shellRef = shell;
   globalThis.joy.tabs = () => shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active }));

@@ -84,6 +84,7 @@ export class CommandRouter {
         if (command.overscan !== undefined) patch.overscan = Math.max(0, Math.min(8, command.overscan));
         if (command.highContrast !== undefined) patch.highContrast = command.highContrast;
         if (command.language !== undefined) patch.language = command.language;
+        if (command.crashReports !== undefined) patch.crashReports = command.crashReports;
         h.store.update((s) => ({ ...s, ...patch }));
         h.broadcast();
         break;

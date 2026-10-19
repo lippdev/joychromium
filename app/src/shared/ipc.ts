@@ -62,6 +62,7 @@ export interface ShellState {
   overscan: number;
   highContrast: boolean;
   language: "pt-BR" | "en";
+  crashReports: boolean;
 }
 
 export type ShellCommand =
@@ -96,7 +97,7 @@ export type ShellCommand =
   | { type: "address-input"; text: string }
   | { type: "cycle-input-mode" }
   | { type: "chrome-height"; height: number }
-  | { type: "ui-settings"; uiScale?: number; overscan?: number; highContrast?: boolean; language?: "pt-BR" | "en" }
+  | { type: "ui-settings"; uiScale?: number; overscan?: number; highContrast?: boolean; language?: "pt-BR" | "en"; crashReports?: boolean }
   | { type: "escape" };
 
 export type ControllerEvent =
