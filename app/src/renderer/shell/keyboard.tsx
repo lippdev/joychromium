@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import type { ShellState } from "../../shared/ipc";
+import { t } from "../../shared/i18n";
 import { cmd } from "./bridge";
 import { CloseIcon } from "./icons";
 
@@ -41,9 +42,9 @@ export function Keyboard({ state }: { state: ShellState }) {
     <div class="overlay bottom" id="keyboard" role="dialog" aria-modal="true" aria-label="Teclado do controle">
       <div class="keyboard">
         <div class="keyboard-head">
-          <span class="label">{target === "address" ? "ENDEREÇO" : "TEXTO NA PÁGINA"}</span>
-          <span class="hint">D-PAD MOVE · A ESCREVE · B FECHA · Y ALTERNA</span>
-          <button class="icon-btn" aria-label="Fechar teclado" onClick={() => cmd({ type: "keyboard-close" })}><CloseIcon /></button>
+          <span class="label">{target === "address" ? t(state.language, "input.address") : t(state.language, "input.page")}</span>
+          <span class="hint">{t(state.language, "input.hint")}</span>
+          <button class="icon-btn" aria-label={t(state.language, "nav.close")} onClick={() => cmd({ type: "keyboard-close" })}><CloseIcon /></button>
         </div>
 
         <div class="keyboard-rows">
@@ -53,7 +54,7 @@ export function Keyboard({ state }: { state: ShellState }) {
                 <button class="key" onClick={() => type(letter)}>{shift ? letter.toUpperCase() : letter}</button>
               ))}
               {letters === rows[rows.length - 1] && (
-                <button class="key wide" onClick={backspace} aria-label="Apagar">⌫</button>
+                <button class="key wide" onClick={backspace} aria-label={t(state.language, "input.delete")}>⌫</button>
               )}
             </div>
           ))}
@@ -63,20 +64,20 @@ export function Keyboard({ state }: { state: ShellState }) {
         </div>
 
         <div class="key-row actions">
-          <button class={`key wide ${shift ? "on" : ""}`} onClick={() => setShift(!shift)}>SHIFT</button>
+          <button class={`key wide ${shift ? "on" : ""}`} onClick={() => setShift(!shift)}>{t(state.language, "input.shift")}</button>
           <button class="key wide" onClick={() => setRow(row === "letters" ? "accents" : "letters")}>
             {row === "letters" ? "á ç" : "abc"}
           </button>
           <button class="key wide" onClick={() => setLayout(layout === "qwerty" ? "abc" : "qwerty")}>
             {layout === "qwerty" ? "ABC" : "QWERTY"}
           </button>
-          <button class="key wider" onClick={() => type(" ")}>ESPAÇO</button>
+          <button class="key wider" onClick={() => type(" ")}>{t(state.language, "input.space")}</button>
           <button class="key wide" onClick={backspace}>⌫</button>
           <button
             class="key wide primary"
             onClick={() => { if (target === "page") cmd({ type: "keyboard-submit" }); else document.getElementById("go")?.click(); }}
           >
-            OK
+            {t(state.language, "input.ok")}
           </button>
         </div>
       </div>

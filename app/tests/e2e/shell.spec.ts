@@ -35,7 +35,7 @@ test("shell UI, tabs, internal pages and session", async () => {
 
   await command({ type: "settings" });
   await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.url).toBe("joychromium://settings");
-  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toBe("Settings");
+  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toMatch(/Settings|Configurações/);
   await expect(chrome.locator("#address")).toHaveValue("joychromium://settings");
 
   // The settings page asked for its data over the bridge and rendered it.
@@ -43,7 +43,7 @@ test("shell UI, tabs, internal pages and session", async () => {
   expect(await app.evaluate(() => globalThis.joy.pageEval("document.querySelectorAll('#presets .preset').length"))).toBeGreaterThan(3);
 
   await command({ type: "navigate", url: "joychromium://favorites" });
-  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toBe("Favorites");
+  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toMatch(/Favorites|Favoritos/);
 
   // Web pages get the spatial-navigation script and the cursor overlay.
   await command({ type: "navigate", url: "about:blank" });

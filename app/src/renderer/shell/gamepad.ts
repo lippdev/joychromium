@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
+import { controllerFamily, buttonGlyphs } from "../../shared/controllerGlyphs";
 import { directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
 import type { ShellState } from "../../shared/ipc";
 import { bridge, cmd } from "./bridge";
@@ -49,8 +50,9 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       }
       if (!connected.current) {
         connected.current = true;
-        bridge().controller({ type: "connected", connected: true });
+        bridge().controller({ type: "connected", connected: true, family: controllerFamily(pad.id) });
       }
+      const glyphs = buttonGlyphs(controllerFamily(pad.id));
 
       const s = stateRef.current;
       const overlayOpen = overlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);

@@ -167,3 +167,28 @@ describe("update metadata", () => {
     expect(versionFromUpdateYml("no version here")).toBeUndefined();
   });
 });
+
+describe("controller glyphs", () => {
+  it("recognises the common controllers", async () => {
+    const { controllerFamily, buttonGlyphs } = await import("../../src/shared/controllerGlyphs");
+    expect(controllerFamily("Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)")).toBe("xbox");
+    expect(controllerFamily("DualSense Wireless Controller")).toBe("playstation");
+    expect(controllerFamily("Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)")).toBe("switch");
+    expect(controllerFamily("8BitDo Pro 2")).toBe("generic");
+    expect(controllerFamily(undefined)).toBe("generic");
+    expect(buttonGlyphs("playstation")).toEqual({ select: "✕", back: "○", reload: "□", keyboard: "△" });
+    expect(buttonGlyphs("xbox").select).toBe("A");
+  });
+});
+
+describe("translations", () => {
+  it("falls back to English and covers both languages", async () => {
+    const { t, dictionary } = await import("../../src/shared/i18n");
+    expect(t("pt-BR", "nav.back")).toBe("Voltar");
+    expect(t("en", "nav.back")).toBe("Back");
+    expect(t("pt-BR", "menu.title")).toBe("Menu rápido");
+    expect(dictionary("en")["settings.title"]).toBe("Settings");
+    expect(dictionary("pt-BR")["settings.title"]).toBe("Configurações");
+    expect(t("en", "no.such.key")).toBe("no.such.key");
+  });
+});

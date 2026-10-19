@@ -1,36 +1,31 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Can't reach this page</title>
+<title>Não foi possível abrir esta página</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="design/tokens.css">
+<link rel="stylesheet" href="pages.css">
 <style>
-  :root { --accent: #64DDB5; --bg: #0C0E13; --surface: #14171E; --text: #F3F5F9; --accent-text: #07120F;
-    --muted: color-mix(in srgb, var(--text) 70%, var(--surface)); --border: color-mix(in srgb, var(--surface) 86%, var(--text)); }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 16px/1.5 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; }
-  .card { width: min(680px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 36px 40px; }
-  h1 { margin: 0 0 8px; font-size: 26px; }
-  p { margin: 0 0 12px; color: var(--muted); }
+  body { display: grid; place-items: center; min-height: 100vh; padding: var(--space-5); }
+  .card { width: min(calc(720 * var(--u)), 100%); padding: var(--space-6); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+  h1 { margin: 0 0 var(--space-2); font-size: var(--text-xl); }
+  p { margin: 0 0 var(--space-3); color: var(--muted); }
   code { color: var(--text); word-break: break-all; }
-  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-  button { font: inherit; font-weight: 600; padding: 12px 22px; border-radius: 10px; cursor: pointer; outline: none; }
-  .primary { background: var(--accent); color: var(--accent-text); border: 0; }
-  .ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
-  .warn { background: transparent; color: #FFB4A0; border: 1px solid #FFB4A0; }
-  button:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
+  .warn { background: transparent; color: var(--danger); border: 1px solid var(--danger); min-height: calc(44 * var(--u)); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); }
 </style>
 </head>
 <body>
 <div class="card">
-  <h1 id="title">Can't reach this page</h1>
+  <h1 id="title">Não foi possível abrir esta página</h1>
   <p><code id="url"></code></p>
   <p id="reason"></p>
-  <p id="httpsNote" hidden>JoyChromium tried the secure (https) version first and it did not answer. Opening it over plain http is not private: anyone on the network can read or change what you see.</p>
+  <p id="httpsNote" hidden>O JoyChromium tentou primeiro a versão segura (https) e ela não respondeu. Abrir em http não é privado: qualquer pessoa na rede pode ler ou alterar o que você vê.</p>
   <div class="actions">
-    <button class="primary" id="retry" autofocus>Try again</button>
-    <button class="ghost" id="home">Go home</button>
-    <button class="warn" id="http" hidden>Open over http anyway</button>
+    <button class="primary" id="retry" autofocus>Tentar de novo</button>
+    <button class="ghost" id="home">Ir para o início</button>
+    <button class="warn" id="http" hidden>Abrir em http mesmo assim</button>
   </div>
 </div>
 <script>
@@ -39,8 +34,8 @@
   const $ = id => document.getElementById(id);
   const post = (type, payload) => { try { window.joy.post({ type, ...payload }); } catch (_) {} };
   $('url').textContent = url;
-  $('reason').textContent = reason ? `Reason: ${reason}` : '';
-  if (upgraded) { $('title').textContent = 'No secure connection'; $('httpsNote').hidden = false; $('http').hidden = false; }
+  $('reason').textContent = reason ? `Motivo: ${reason}` : '';
+  if (upgraded) { $('title').textContent = 'Sem conexão segura'; $('httpsNote').hidden = false; $('http').hidden = false; }
   $('retry').addEventListener('click', () => post('navigate', { url: upgraded ? url.replace(/^http:/, 'https:') : url }));
   $('home').addEventListener('click', () => post('navigate', { url: 'joychromium://newtab' }));
   $('http').addEventListener('click', () => post('navigate', { url, allowHttp: true }));

@@ -105,6 +105,9 @@ body {
 .window-btn.close:hover { background: #c42b1c; color: #fff; }
 
 .tab-hint {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
   padding: 0 var(--space-3) var(--space-2);
   color: var(--faint);
   font-size: var(--text-sm);
@@ -112,6 +115,9 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.tab-hint span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pad-hints { color: var(--muted); flex: none; }
 
 .status-line {
   position: fixed;
