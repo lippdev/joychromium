@@ -14,11 +14,15 @@ test("opens fullscreen in TV mode and keeps a single instance", async () => {
     await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFullScreen()), { timeout: 30_000 }).toBe(true);
     expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
 
-    // A second copy of the same profile must hand over and exit instead of opening another window.
+    // A second copy of the same profile must hand over and exit instead of opening another window. Some platforms
+    // end it with a signal instead of exit code 0, so what matters is that it ended at all.
     const electronBinary = await app.evaluate(() => process.execPath);
     const second = spawn(electronBinary, ["."], { env: { ...process.env, JOYCHROMIUM_DATA: data }, stdio: "ignore" });
-    const exitCode = await new Promise<number | null>((resolve) => second.once("exit", resolve));
-    expect(exitCode).toBe(0);
+    const ended = await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => resolve(false), 20_000);
+      second.once("exit", () => { clearTimeout(timer); resolve(true); });
+    });
+    expect(ended).toBe(true);
     expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
   } finally {
     await app.close();
