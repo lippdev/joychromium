@@ -47,6 +47,7 @@ export interface ShellState {
   inputMode: "Spatial" | "Cursor" | "Arrows";
   adBlock: boolean;
   controllerConnected: boolean;
+  controllerFamily: "xbox" | "playstation" | "switch" | "generic";
   chromeVisible: boolean;
   permission?: PermissionPrompt;
   theme: { accent: string; background: string; surface: string; text: string };
@@ -104,4 +105,4 @@ export type ControllerEvent =
   | { type: "cursor-move"; dx: number; dy: number }
   | { type: "cursor-click" }
   | { type: "scroll"; notches: number }
-  | { type: "connected"; connected: boolean };
+  | { type: "connected"; connected: boolean; family?: "xbox" | "playstation" | "switch" | "generic" };

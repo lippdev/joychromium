@@ -7,7 +7,7 @@ export interface InputHost {
   readonly activeWebContents: WebContents | undefined;
   readonly inputMode: InputMode;
   pageSize(): { width: number; height: number };
-  setControllerConnected(connected: boolean): void;
+  setControllerConnected(connected: boolean, family?: "xbox" | "playstation" | "switch" | "generic"): void;
 }
 
 /**
@@ -21,7 +21,7 @@ export class InputRouter {
     const wc = this.host.activeWebContents;
     switch (input.type) {
       case "connected":
-        this.host.setControllerConnected(input.connected);
+        this.host.setControllerConnected(input.connected, input.family);
         break;
       case "direction":
         if (!wc) return;

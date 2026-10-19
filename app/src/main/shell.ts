@@ -55,6 +55,7 @@ export class Shell {
   suggestions: ShellState["suggestions"] = [];
   private statusText = "STARTING · TV IDENTITY ON";
   controllerConnected = false;
+  controllerFamily: ShellState["controllerFamily"] = "generic";
   readonly permissions = new PermissionQueue();
   private readonly httpAllowedHosts = new Set<string>();
   private readonly recentPopups: number[] = [];
@@ -65,6 +66,7 @@ export class Shell {
   private readonly controller: InputRouter;
   private readonly navigation: Navigation;
   private lastSavedSession = "";
+  private chromeHideTimer: NodeJS.Timeout | undefined;
 
   constructor(private readonly deps: ShellDeps) {
     this.window = new BrowserWindow(browserWindowOptions(deps.store.current.theme.background, join(deps.distDir, "preload", "chrome.js")));
@@ -216,7 +218,7 @@ export class Shell {
   // ---- Tabs and layout ----
 
   private wireTabs(): void {
-    this.tabs.on("changed", () => this.syncViews());
+    this.tabs.on("changed", () => { this.syncViews(); this.scheduleChromeHide(); });
     this.tabs.on("status", (text) => this.setStatus(text));
     this.tabs.on("visited", (url, title) => this.deps.history.record(url, title));
     this.tabs.on("fullscreen", (tab, on) => {
@@ -268,6 +270,7 @@ export class Shell {
   }
 
   setChromeVisible(visible: boolean): void {
+    if (!visible) clearTimeout(this.chromeHideTimer);
     this.layout.setChromeVisible(visible, () => this.deps.store.current.windowMode === "tv");
     this.layout.apply();
     this.broadcast();
@@ -317,6 +320,7 @@ export class Shell {
       inputMode: this.inputMode,
       adBlock: this.deps.adblock.isReady && s.adBlockEnabled,
       controllerConnected: this.controllerConnected,
+      controllerFamily: this.controllerFamily,
       chromeVisible: this.chromeVisible,
       permission: this.permissions.prompt,
       theme: s.theme,
@@ -388,6 +392,7 @@ export class Shell {
   }
 
   openKeyboard(target: "address" | "page"): void {
+    this.revealChrome();
     this.keyboard = { target, title: target === "address" ? "ADDRESS / SEARCH" : "PAGE TEXT ENTRY" };
     this.broadcast();
   }
@@ -470,15 +475,35 @@ export class Shell {
   }
 
   async handle(command: ShellCommand): Promise<void> {
+    // The bar comes back for anything the user asked for, except the renderer reporting its own height.
+    if (command.type !== "chrome-height") this.revealChrome();
     await this.router.run(command);
+  }
+
+  /** Shows the bar and arms the timer that hides it again while a web page has the screen. */
+  revealChrome(): void {
+    if (!this.chromeVisible) this.setChromeVisible(true);
+    this.scheduleChromeHide();
+  }
+
+  private scheduleChromeHide(): void {
+    clearTimeout(this.chromeHideTimer);
+    if (this.deps.store.current.windowMode !== "tv") return;
+    const tab = this.tabs.active;
+    if (!tab || tab.sleeping || isInternal(tab.url)) return;
+    this.chromeHideTimer = setTimeout(() => {
+      if (this.deps.store.current.windowMode === "tv" && !this.permissions.prompt && !this.keyboard) this.setChromeVisible(false);
+    }, 4_000);
+    this.chromeHideTimer.unref?.();
   }
 
   async handleController(input: ControllerEvent): Promise<void> {
     await this.controller.run(input);
   }
 
-  setControllerConnected(connected: boolean): void {
+  setControllerConnected(connected: boolean, family?: ShellState["controllerFamily"]): void {
     this.controllerConnected = connected;
+    if (family) this.controllerFamily = family;
     this.broadcast();
   }
 

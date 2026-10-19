@@ -28,7 +28,10 @@ export function installProtocolHandler(distDir: string): void {
       const page = internalPageFile(request.url);
       if (page) file = join(root, "assets", page);
     } else {
-      file = join(root, "assets", normalize(url.pathname));
+      // Internal pages live in dist/assets; a path that starts with /assets already points inside it.
+      const path = normalize(url.pathname);
+      const candidate = path.startsWith("/assets/") ? join(root, path) : join(root, "assets", path);
+      file = existsSync(candidate) ? candidate : join(root, "assets", path);
     }
     // Never serve outside dist/, whatever the path says.
     if (!file || !normalize(file).startsWith(root) || !existsSync(file)) {

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ShellState } from "../../shared/ipc";
+import { buttonGlyphs } from "../../shared/controllerGlyphs";
+import { t } from "../../shared/i18n";
 import { bridge, cmd } from "./bridge";
 import {
   BackIcon, CloseIcon, ForwardIcon, FullscreenIcon, GamepadIcon, HomeIcon, MenuIcon, PlusIcon, ReloadIcon,
@@ -15,7 +17,7 @@ const Empty: ShellState = {
   tabs: [], activeUrl: "", isFavorite: false, inputMode: "Spatial", adBlock: false, controllerConnected: false,
   chromeVisible: true, theme: { accent: "#64DDB5", background: "#0C0E13", surface: "#14171E", text: "#F3F5F9" },
   status: "", suggestions: [], shortcutMod: "Ctrl", nativeWindowControls: false, windowMode: "tv",
-  uiScale: 1, overscan: 0, highContrast: false, language: "pt-BR",
+  uiScale: 1, overscan: 0, highContrast: false, language: "pt-BR", controllerFamily: "generic",
 };
 
 export function App() {
@@ -60,7 +62,8 @@ export function App() {
 
   useGamepad(state, overlay, setOverlay);
 
-  const activeTab = state.tabs.find((t) => t.isActive);
+  const tr = (key: string) => t(state.language, key);
+  const activeTab = state.tabs.find((tab) => tab.isActive);
   const tv = state.windowMode === "tv";
   const overlayOpen = overlay !== "none" || Boolean(state.keyboard) || Boolean(state.permission);
 
@@ -68,59 +71,69 @@ export function App() {
     <div class={`shell ${tv ? "tv" : "window"} ${state.chromeVisible ? "" : "chrome-hidden"} ${overlayOpen ? "overlay-open" : ""}`}>
       <div id="chrome" ref={chromeRef} class={state.chromeVisible ? "" : "hidden"}>
         <div class="bar" style={{ marginLeft: "var(--safe-x)", marginRight: "var(--safe-x)" }}>
-          <button class="icon-btn" aria-label="Voltar" title="Voltar · LB" onClick={() => cmd({ type: "back" })}>
+          <button class="icon-btn" aria-label={tr("nav.back")} title={`${tr("nav.back")} · LB`} onClick={() => cmd({ type: "back" })}>
             <BackIcon />
           </button>
-          <button class="icon-btn" aria-label="Avançar" title="Avançar · RB" onClick={() => cmd({ type: "forward" })}>
+          <button class="icon-btn" aria-label={tr("nav.forward")} title={`${tr("nav.forward")} · RB`} onClick={() => cmd({ type: "forward" })}>
             <ForwardIcon />
           </button>
-          <button class="icon-btn" aria-label="Recarregar" title="Recarregar · X" onClick={() => cmd({ type: "reload" })}>
+          <button class="icon-btn" aria-label={tr("nav.reload")} title={`${tr("nav.reload")} · X`} onClick={() => cmd({ type: "reload" })}>
             <ReloadIcon />
           </button>
 
-          <AddressBar url={state.activeUrl} focused={addressFocused} setFocused={setAddressFocused} />
+          <AddressBar url={state.activeUrl} focused={addressFocused} setFocused={setAddressFocused} language={state.language} />
 
           <button
             class={`icon-btn ${state.isFavorite ? "on" : ""}`}
-            aria-label="Favorito" title={`Favorito · ${state.shortcutMod}+D · LB+Y`}
+            aria-label={tr("nav.favorite")} title={`${tr("nav.favorite")} · ${state.shortcutMod}+D · LB+Y`}
             onClick={() => cmd({ type: "toggle-favorite" })}
           >
             <StarIcon filled={state.isFavorite} />
           </button>
-          <button id="tabs-button" class="icon-btn with-badge" aria-label="Abas" title="Abas · LT/RT" onClick={() => setOverlay("tabs")}>
+          <button id="tabs-button" class="icon-btn with-badge" aria-label={tr("nav.tabs")} title={`${tr("nav.tabs")} · LT/RT`} onClick={() => setOverlay("tabs")}>
             <TabsIcon />
             {state.tabs.length > 1 && <span class="badge">{state.tabs.length}</span>}
           </button>
-          <button class="icon-btn" aria-label="Menu" title="Menu rápido · Start" onClick={() => setOverlay("menu")}>
+          <button class="icon-btn" aria-label={tr("nav.menu")} title={`${tr("nav.menu")} · Start`} onClick={() => setOverlay("menu")}>
             <MenuIcon />
           </button>
 
           {!state.nativeWindowControls && (
             <div class="window-controls">
-              <button class="window-btn" aria-label="Minimizar" onClick={() => cmd({ type: "window", action: "minimize" })}>─</button>
-              <button class="window-btn" aria-label="Maximizar" onClick={() => cmd({ type: "window", action: "maximize" })}>□</button>
-              <button class="window-btn close" aria-label="Fechar" onClick={() => cmd({ type: "window", action: "close" })}>✕</button>
+              <button class="window-btn" aria-label={tr("nav.minimize")} onClick={() => cmd({ type: "window", action: "minimize" })}>─</button>
+              <button class="window-btn" aria-label={tr("nav.maximize")} onClick={() => cmd({ type: "window", action: "maximize" })}>□</button>
+              <button class="window-btn close" aria-label={tr("nav.close")} onClick={() => cmd({ type: "window", action: "close" })}>✕</button>
             </div>
           )}
         </div>
-        {tv && <div class="tab-hint">{activeTab?.title ?? ""}</div>}
+        {tv && (
+          <div class="tab-hint">
+            <span>{activeTab?.title ?? ""}</span>
+            <span class="pad-hints">
+              {(() => {
+                const g = buttonGlyphs(state.controllerFamily);
+                return `${g.back} voltar · ${g.select} abrir · ${g.reload} recarregar · ${g.keyboard} teclado`;
+              })()}
+            </span>
+          </div>
+        )}
       </div>
 
-      {state.permission && <PermissionDialog prompt={state.permission} />}
+      {state.permission && <PermissionDialog prompt={state.permission} language={state.language} />}
       {state.keyboard && <Keyboard state={state} />}
-      {overlay === "tabs" && <TabSwitcher tabs={state.tabs} onClose={() => setOverlay("none")} />}
+      {overlay === "tabs" && <TabSwitcher tabs={state.tabs} language={state.language} onClose={() => setOverlay("none")} />}
       {overlay === "menu" && <QuickMenu state={state} onClose={() => setOverlay("none")} onTabs={() => setOverlay("tabs")} />}
       <Toasts status={state.status} />
       <div class="status-line">
-        <span class={state.adBlock ? "on" : ""}><ShieldIcon /> {state.adBlock ? "ADS BLOCKED" : "ADBLOCK OFF"}</span>
-        <span class={state.controllerConnected ? "on" : ""}><GamepadIcon /> {state.controllerConnected ? "CONTROLLER" : "NO CONTROLLER"}</span>
+        <span class={state.adBlock ? "on" : ""}><ShieldIcon /> {state.adBlock ? tr("status.adsOn") : tr("status.adsOff")}</span>
+        <span class={state.controllerConnected ? "on" : ""}><GamepadIcon /> {state.controllerConnected ? tr("status.padOn") : tr("status.padOff")}</span>
         <span class="mode">{state.inputMode.toUpperCase()}</span>
       </div>
     </div>
   );
 }
 
-function AddressBar({ url, focused, setFocused }: { url: string; focused: boolean; setFocused: (v: boolean) => void }) {
+function AddressBar({ url, focused, setFocused, language }: { url: string; focused: boolean; setFocused: (v: boolean) => void; language: string }) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(url);
   useEffect(() => { if (!focused) setValue(url); }, [url, focused]);
@@ -136,7 +149,7 @@ function AddressBar({ url, focused, setFocused }: { url: string; focused: boolea
         ref={input}
         id="address"
         aria-label="Endereço"
-        placeholder="Pesquisar ou digitar um endereço"
+        placeholder={t(language, "nav.address")}
         autocomplete="off"
         spellcheck={false}
         value={value}
@@ -153,17 +166,18 @@ function AddressBar({ url, focused, setFocused }: { url: string; focused: boolea
   );
 }
 
-function PermissionDialog({ prompt }: { prompt: NonNullable<ShellState["permission"]> }) {
+function PermissionDialog({ prompt, language }: { prompt: NonNullable<ShellState["permission"]>; language: string }) {
+  const tr = (key: string) => t(language, key);
   return (
-    <div class="overlay center" role="dialog" aria-modal="true" aria-label="Pedido de permissão">
+    <div class="overlay center" role="dialog" aria-modal="true" aria-label={tr("permission.title")}>
       <div class="dialog">
-        <h2>Permissão</h2>
-        <p><strong>{prompt.host}</strong> quer usar {prompt.description}.</p>
+        <h2>{tr("permission.title")}</h2>
+        <p><strong>{prompt.host}</strong> {tr("permission.wants")} {prompt.description}.</p>
         <div class="dialog-actions">
-          <button class="btn quiet" autofocus onClick={() => cmd({ type: "permission", allow: false, remember: false })}>Negar</button>
-          <button class="btn quiet" onClick={() => cmd({ type: "permission", allow: false, remember: true })}>Negar sempre</button>
-          <button class="btn" onClick={() => cmd({ type: "permission", allow: true, remember: false })}>Permitir</button>
-          <button class="btn" onClick={() => cmd({ type: "permission", allow: true, remember: true })}>Permitir sempre</button>
+          <button class="btn quiet" autofocus onClick={() => cmd({ type: "permission", allow: false, remember: false })}>{tr("permission.deny")}</button>
+          <button class="btn quiet" onClick={() => cmd({ type: "permission", allow: false, remember: true })}>{tr("permission.denyAlways")}</button>
+          <button class="btn" onClick={() => cmd({ type: "permission", allow: true, remember: false })}>{tr("permission.allow")}</button>
+          <button class="btn" onClick={() => cmd({ type: "permission", allow: true, remember: true })}>{tr("permission.allowAlways")}</button>
         </div>
       </div>
     </div>
