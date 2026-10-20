@@ -17,6 +17,9 @@ export function commandForShortcut(input: ShortcutInput, historyUrl: string, fav
   const mod = input.control || input.meta;
   const key = input.key.toLowerCase();
   if (key === "escape") return { type: "escape" };
+  if (key === "mediaplaypause" || key === "play") return { type: "media", action: "toggle" };
+  if (key === "medianexttrack") return { type: "media", action: "next" };
+  if (key === "mediaprevioustrack") return { type: "media", action: "previous" };
   if (key === "f11") return { type: "window-mode" };
   if (!mod) return undefined;
   if (key === "t") return input.shift ? { type: "reopen-tab" } : { type: "new-tab" };

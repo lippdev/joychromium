@@ -39,6 +39,8 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
       return actions.includes(c.action as (typeof actions)[number]);
     case "zoom":
       return typeof c.delta === "number";
+    case "media":
+      return c.action === "toggle" || c.action === "next" || c.action === "previous";
     case "chrome-height":
       return typeof c.height === "number" && c.height >= 0 && c.height < 1000;
     case "ui-settings":

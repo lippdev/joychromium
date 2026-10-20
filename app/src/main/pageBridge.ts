@@ -51,6 +51,7 @@ export class PageBridge {
       defaultInputMode: s.defaultInputMode,
       siteInputModes: s.siteInputModes,
       runtimeVersion: process.versions.chrome,
+      widevine: globalThis.joy?.widevine,
       shortcutMod: currentShortcutMod(),
       dictionary: dictionary(s.language),
       language: s.language,

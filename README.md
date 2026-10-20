@@ -10,6 +10,7 @@ A controller-first browser for the TV, built on Electron (Chromium). Windows, ma
 | Updates itself | yes | no, it points you to the release page (see below) | AppImage yes; `.deb`/`.rpm` ask for your password |
 | Code signing | none yet | ad-hoc only | none |
 | Native window controls | drawn by the app | macOS traffic lights | drawn by the app |
+| DRM (Netflix, Prime Video) | Widevine from the castLabs build | same | same, without VMP |
 | Shortcuts | `Ctrl+…` | `Cmd+…` | `Ctrl+…` |
 
 Builds are not signed with a paid certificate yet ([PRD](docs/PRD.md), ADR-010). The app works, but the operating system warns the first time:
@@ -30,7 +31,7 @@ npm ci
 npm start
 ```
 
-`npm start` compiles TypeScript and launches Electron. Useful environment variables: `JOYCHROMIUM_DATA` (data folder, defaults to the OS user-data dir) and `JOYCHROMIUM_START` (first URL, skips onboarding).
+`npm start` bundles the app with esbuild and launches Electron. Useful environment variables: `JOYCHROMIUM_DATA` (data folder, defaults to the OS user-data dir) and `JOYCHROMIUM_START` (first URL, skips onboarding).
 
 ## Controller
 
@@ -61,7 +62,7 @@ Ad and tracker blocking (Ghostery engine with the EasyList/EasyPrivacy/uBlock li
 
 ## Staying up to date without waiting for a release
 
-- **Engine**: Electron bundles Chromium. Dependabot proposes each Electron release daily; CI (Windows, macOS and Linux: typecheck, unit tests, an end-to-end run of the real app, and a packaging build) gates it; a green run merges automatically and `release.yml` publishes a new version. Installed apps update themselves, except on macOS.
+- **Engine**: the app runs on the castLabs Electron for Content Security build, which brings Chromium plus the Widevine module that streaming services need. It is not on npm, so `.github/workflows/engine-update.yml` looks for a new release every day and opens a bump PR; CI (Windows, macOS and Linux: typecheck, unit tests, an end-to-end run of the real app, and a packaging build) gates it; a green run merges automatically and `release.yml` publishes a new version. Installed apps update themselves, except on macOS.
 - **Block lists**: the engine re-downloads the lists every 24 hours from the official CDN.
 - **Policy**: `policy/policy.json` (signed with `app/scripts/policy-sign.mjs`; public key embedded in `src/shared/policy.ts`) can raise the minimum Chromium, block hosts, add risky download extensions, mark broken app versions so the updater skips them, and show a message. It is fetched from `main`, verified, cached and can only tighten the defaults.
 
@@ -72,10 +73,10 @@ cd app
 npm run typecheck
 npm test          # vitest: the pure modules in src/shared and src/main
 npm run test:e2e  # Playwright launches the real app with a throwaway profile
-npm run dist      # local installer in app/release (no publish)
+npm run dist      # local installer in app/release (no publish; rpm needs rpmbuild)
 ```
 
-Layout: `src/shared` (pure rules), `src/main` (Electron main process), `src/preload` (sandboxed bridges), `src/renderer` (shell UI), `src/assets` (internal pages). See `CONTRIBUTING.md` for the branch and commit conventions and `docs/PRD.md` for the architecture, platform matrix, redesign and backlog (`docs/history/CHECKLIST-webview2.md` is the historical WebView2-era checklist).
+Layout: `src/shared` (pure rules, tests next to them), `src/main` (Electron main process and its services), `src/preload` (bundled bridges), `src/renderer/shell` (Preact UI), `src/assets` (internal pages and the design tokens). See `CONTRIBUTING.md` for the branch and commit conventions and `docs/PRD.md` for the architecture, platform matrix, redesign and backlog (`docs/history/CHECKLIST-webview2.md` is the historical WebView2-era checklist).
 
 ## History
 

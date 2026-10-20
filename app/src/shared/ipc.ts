@@ -96,6 +96,7 @@ export type ShellCommand =
   | { type: "keyboard-submit" }
   | { type: "address-input"; text: string }
   | { type: "cycle-input-mode" }
+  | { type: "media"; action: "toggle" | "next" | "previous" }
   | { type: "chrome-height"; height: number }
   | { type: "ui-settings"; uiScale?: number; overscan?: number; highContrast?: boolean; language?: "pt-BR" | "en"; crashReports?: boolean }
   | { type: "escape" };
