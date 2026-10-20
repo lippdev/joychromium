@@ -46,7 +46,7 @@ sudo apt install ./JoyChromium-<versão>-linux-amd64.deb
 sudo dnf install ./JoyChromium-<versão>-linux-x86_64.rpm
 ```
 
-Instalações `.deb` e `.rpm` se atualizam pelo próprio app, com uma janela pedindo a senha do sistema. O AppImage se atualiza sozinho, sem senha.
+Instalações `.deb` e `.rpm` se atualizam pelo próprio app: quando a versão nova termina de baixar, Configurações → Sobre mostra **Reiniciar e instalar**, e o sistema pede a senha do seu usuário ali mesmo. O AppImage e as versões de Windows se atualizam ao fechar o app, sem senha.
 
 Em Raspberry Pi e outras máquinas ARM, use os artefatos `arm64`.
 

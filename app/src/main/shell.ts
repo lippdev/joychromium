@@ -38,6 +38,9 @@ export interface ShellDeps {
   updateStatus: () => string;
   checkUpdates: () => Promise<void>;
   updateUrl: () => string | undefined;
+  /** A downloaded deb/rpm waiting for the user to restart, on installs where the package manager asks for the password. */
+  canInstallUpdate: () => boolean;
+  installUpdate: () => boolean;
   openUpdatePage: () => Promise<void>;
   exportDiagnostics: () => Promise<string>;
 }

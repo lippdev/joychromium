@@ -122,6 +122,8 @@ async function start(): Promise<void> {
       await updater.check();
     },
     updateUrl: () => updater.manualUpdate?.url,
+    canInstallUpdate: () => updater.canInstallNow,
+    installUpdate: () => updater.installPending(),
     openUpdatePage: () => updater.openDownloadPage(),
     exportDiagnostics: () =>
       exportDiagnostics(join(app.getPath("downloads"), "JoyChromium"), log, store, [

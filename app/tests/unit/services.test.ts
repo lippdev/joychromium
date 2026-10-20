@@ -9,7 +9,7 @@ import { describePermission, PermissionQueue } from "../../src/main/services/per
 import { isShellCommand } from "../../src/shared/commands";
 import { migrateSettings, parseSettings, SETTINGS_SCHEMA_VERSION } from "../../src/shared/settings";
 import { SettingsStore } from "../../src/main/store";
-import { versionFromUpdateYml } from "../../src/main/updater";
+import { updateDownloadedNotice, updateInstallRoute, versionFromUpdateYml } from "../../src/main/updater";
 
 const key = (k: string, extra: Partial<ShortcutInput> = {}): ShortcutInput => ({
   type: "keyDown", key: k, control: false, meta: false, shift: false, ...extra,
@@ -200,5 +200,19 @@ describe("widevine component status", () => {
     expect(widevineVersion({ oimompecagnajdejgnnjijobebaeigek: { status: "updated", title: "Widevine Content Decryption Module", version: "4.10.3112.0" } })).toBe("4.10.3112.0");
     expect(widevineVersion({})).toBeUndefined();
     expect(widevineVersion({ other: { status: "updated", version: "1.0" } })).toBeUndefined();
+  });
+});
+
+describe("update notice", () => {
+  it("asks for a restart where the package manager installs, and promises an install on quit elsewhere", () => {
+    expect(updateDownloadedNotice("1.4.0", true)).toBe("v1.4.0 downloaded; restart to install (asks for your password)");
+    expect(updateDownloadedNotice("1.4.0", false)).toBe("v1.4.0 downloaded; installs when you close JoyChromium");
+  });
+
+  it("only hands a downloaded package to the package manager", () => {
+    expect(updateInstallRoute(true, true)).toBe("package-manager");
+    expect(updateInstallRoute(true, false)).toBe("release-page");
+    expect(updateInstallRoute(false, true)).toBe("release-page");
+    expect(updateInstallRoute(false, false)).toBe("release-page");
   });
 });

@@ -1,11 +1,26 @@
 import { app, shell } from "electron";
-import { platformId } from "./platform";
+import { installsUpdatesWithPackageManager, platformId } from "./platform";
 import type { Log } from "./log";
 
 /** Where the updater looks for the download page when it cannot install by itself. */
 export const RELEASES_URL = "https://github.com/lippdev/joychromium/releases/latest";
 /** Release metadata electron-builder publishes next to each build. */
 const LATEST_MAC_YML = "https://github.com/lippdev/joychromium/releases/latest/download/latest-mac.yml";
+
+/** Where a pending update goes: the system package manager can finish now, everything else needs the release page. */
+export function updateInstallRoute(downloaded: boolean, packageManaged: boolean): "package-manager" | "release-page" {
+  return downloaded && packageManaged ? "package-manager" : "release-page";
+}
+
+/**
+ * What the settings row says once a build is downloaded. A deb or rpm is installed by the system package manager, which
+ * asks for the user's password, so that has to happen with the window still open instead of at quit time.
+ */
+export function updateDownloadedNotice(version: string, packageManaged: boolean): string {
+  return packageManaged
+    ? `v${version} downloaded; restart to install (asks for your password)`
+    : `v${version} downloaded; installs when you close JoyChromium`;
+}
 
 /** Reads `version:` out of the published update metadata. */
 export function versionFromUpdateYml(text: string): string | undefined {
@@ -32,16 +47,27 @@ export class Updater {
     return platformId() !== "darwin";
   }
 
+  /** True on a deb or rpm install, where the downloaded package goes through dpkg/rpm as root. */
+  private get packageManaged(): boolean {
+    return installsUpdatesWithPackageManager();
+  }
+
+  /** A downloaded package waiting for the user to restart, on an install that asks for the system password. */
+  get canInstallNow(): boolean {
+    return updateInstallRoute(this.downloaded, this.packageManaged) === "package-manager";
+  }
+
   private get autoUpdater(): typeof import("electron-updater").autoUpdater | undefined {
     if (!app.isPackaged || !this.installsItself) return undefined;
     if (!this.updater) {
       const { autoUpdater } = require("electron-updater") as typeof import("electron-updater");
       autoUpdater.autoDownload = true;
-      autoUpdater.autoInstallOnAppQuit = true;
+      // A package manager prompt after the window closed would be a prompt nobody sees: the user starts the install.
+      autoUpdater.autoInstallOnAppQuit = !this.packageManaged;
       autoUpdater.logger = { info: (m) => this.log.info(`updater: ${String(m)}`), warn: (m) => this.log.warn(`updater: ${String(m)}`), error: (m) => this.log.error(`updater: ${String(m)}`), debug: () => undefined };
       autoUpdater.on("update-downloaded", (info) => {
         this.downloaded = true;
-        this.status = `v${info.version} downloaded; installs when you close JoyChromium`;
+        this.status = updateDownloadedNotice(info.version, this.packageManaged);
       });
       this.updater = autoUpdater;
     }
@@ -100,6 +126,13 @@ export class Updater {
     } catch (error) {
       this.status = `Update check failed: ${error instanceof Error ? error.message : String(error)}`;
     }
+  }
+
+  /** Hands a downloaded deb or rpm to the system installer now, while the window can still ask for the password. */
+  installPending(): boolean {
+    if (!this.canInstallNow || !this.updater) return false;
+    this.updater.quitAndInstall();
+    return true;
   }
 
   /** Opens the release page for an update that cannot install itself. */

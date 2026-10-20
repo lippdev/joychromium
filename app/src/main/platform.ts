@@ -19,6 +19,11 @@ export function platformDangerousExtensions(): readonly string[] {
   return extraDangerousExtensions(platformId());
 }
 
+/** deb and rpm are installed by the system package manager; the AppImage replaces itself. */
+export function installsUpdatesWithPackageManager(): boolean {
+  return platformId() === "linux" && !process.env.APPIMAGE;
+}
+
 export function downloadsFolder(): string {
   return join(app.getPath("downloads"), "JoyChromium");
 }
