@@ -87,12 +87,15 @@
     document.querySelectorAll('.step').forEach((el) => el.classList.toggle('show', Number(el.dataset.step) === n));
     document.querySelectorAll('.steps span').forEach((el, i) => el.classList.toggle('done', i <= n));
     $('back').style.visibility = n === 0 ? 'hidden' : 'visible';
-    $('next').textContent = n === 0 ? i18n.t('welcome.start') : n === 4 ? i18n.t('welcome.start') : 'Avançar';
+    $('next').textContent = n === 0 || n === 4 ? i18n.t('welcome.start') : i18n.t('welcome.next');
     const first = document.querySelector('.step.show .opt.active, .step.show .opt, .step.show input');
     (first || $('next')).focus();
   }
 
   function options(box, items, render, isActive, onPick) {
+    // Choosing a language re-renders every list from the new dictionary: without this the focus would fall to the
+    // document and a controller user would have to find the card again.
+    const hadFocus = box.contains(document.activeElement);
     box.replaceChildren(...items.map((item) => {
       const b = document.createElement('button');
       b.className = 'opt' + (isActive(item) ? ' active' : '');
@@ -104,6 +107,7 @@
       });
       return b;
     }));
+    if (hadFocus) (box.querySelector('.opt.active') || box.querySelector('button'))?.focus();
   }
 
   $('next').addEventListener('click', () => {
@@ -112,21 +116,19 @@
   });
   $('back').addEventListener('click', () => show(step - 1));
 
-  // The controller test: the page listens for a gamepad and reports the first button pressed.
+  // The controller test: the shell owns the one Gamepad poll, so the page shows what the shell reports instead of
+  // polling a second time from the tab renderer, where the pad is not guaranteed to be visible.
+  const FAMILIES = { xbox: 'Xbox', playstation: 'PlayStation', switch: 'Switch' };
   let padSeen = false;
-  function watchPad() {
-    const pads = navigator.getGamepads();
-    const pad = [...pads].find((p) => p);
-    if (pad && !padSeen) {
-      padSeen = true;
-      $('pad').classList.add('found');
-      $('padText').textContent = `${i18n.t('welcome.padFound')}: ${pad.id.slice(0, 40)}`;
-    }
-    requestAnimationFrame(watchPad);
+  function paintPad(connected, family) {
+    padSeen = Boolean(connected);
+    $('pad').classList.toggle('found', padSeen);
+    const label = i18n.t(padSeen ? 'welcome.padFound' : 'welcome.pad');
+    $('padText').textContent = padSeen && FAMILIES[family] ? `${label} · ${FAMILIES[family]}` : label;
   }
-  requestAnimationFrame(watchPad);
 
   window.joy.onMessage((msg) => {
+    if (msg.type === 'controller') { paintPad(msg.connected, msg.family); return; }
     if (msg.type !== 'init') return;
     presets = msg.presets;
     engines = msg.searchEngines;
@@ -135,7 +137,7 @@
     language = msg.language || 'pt-BR';
     i18n.set(msg.dictionary, language);
     paint(theme);
-    $('padText').textContent = i18n.t(padSeen ? 'welcome.padFound' : 'welcome.pad');
+    paintPad(msg.controllerConnected, msg.controllerFamily);
     options($('languages'), [['pt-BR', 'Português (Brasil)'], ['en', 'English']],
       ([id, name]) => `<span>${name}</span>`, ([id]) => id === language,
       ([id]) => { language = id; post('ui-settings', { language: id }); });

@@ -199,6 +199,7 @@ const en: Record<string, string> = {
   "welcome.padNone": "No controller yet",
   "welcome.search": "Search engine",
   "welcome.start": "Start",
+  "welcome.next": "Next",
   "welcome.skip": "Skip",
 };
 
@@ -391,6 +392,7 @@ const ptBR: Record<string, string> = {
   "welcome.padNone": "Nenhum controle ainda",
   "welcome.search": "Mecanismo de busca",
   "welcome.start": "Começar",
+  "welcome.next": "Avançar",
   "welcome.skip": "Pular",
 };
 

@@ -1,10 +1,11 @@
 /**
  * How often the shell reads the controller (E4-03).
  *
- * The loop runs on animation frames, which Chromium keeps delivering to this window even when it is minimized or
- * hidden: the shell is frameless, so `document.hidden` never turns true and an idle console would keep waking up sixty
- * times a second to poll a controller nobody can see. The main process knows the real window state, so it reports it
- * and the loop parks — no more frames at all until the window is back on screen.
+ * The loop runs on a timer. An animation-frame loop looked cheaper, but Chromium stops animation frames for a renderer
+ * that is occluded — and a page in HTML fullscreen covers the shell — which left a fullscreen video with no working
+ * buttons, B included. A timer keeps running while the renderer is occluded. The main process still reports the real
+ * window state, so a minimized window parks the loop instead of polling a controller nobody can see; the shell is
+ * frameless, so `document.hidden` alone never tells it that.
  */
 
 /** A 20 Hz read is enough for a controller: the fastest meaningful input, a D-pad repeat, runs at about 5 Hz. */

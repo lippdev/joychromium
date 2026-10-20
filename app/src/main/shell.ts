@@ -25,7 +25,7 @@ import type { SettingsStore } from "./store";
 import { browserWindowOptions, currentShortcutMod, downloadsFolder, nativeWindowControls, platformDangerousExtensions } from "./platform";
 import { decideDownload, downloadStatus } from "./services/downloads";
 import { insertIntoPage, submitPage } from "./services/keyboard";
-import { describePermission, PermissionQueue } from "./services/permissions";
+import { describePermission, permissionNeedsPrompt, PermissionQueue } from "./services/permissions";
 import { Tab, TabManager } from "./tabs";
 
 export interface ShellDeps {
@@ -196,6 +196,7 @@ export class Shell {
   private async decidePermission(kind: string, url: string): Promise<boolean> {
     const host = hostOf(url);
     if (!host || isInternal(url)) return false;
+    if (!permissionNeedsPrompt(kind)) return true;
     const remembered = this.deps.store.current.sitePermissions[host]?.[kind];
     if (remembered !== undefined) return remembered;
     const wait = this.permissions.ask({ host, kind, description: describePermission(kind) });
@@ -605,7 +606,20 @@ export class Shell {
   setControllerConnected(connected: boolean, family?: ShellState["controllerFamily"]): void {
     this.controllerConnected = connected;
     if (family) this.controllerFamily = family;
+    this.publishControllerState();
     this.broadcast();
+  }
+
+  /**
+   * The onboarding page used to poll `navigator.getGamepads` from the tab renderer, which duplicates the one poll the
+   * shell already runs and can miss the pad when the tab is not the focused renderer. The shell owns the input, so it
+   * tells the internal pages what it knows.
+   */
+  private publishControllerState(): void {
+    for (const tab of this.tabs.tabs) {
+      if (tab.sleeping || !isInternal(tab.url)) continue;
+      tab.webContents.send(Channels.pageReply, { type: "controller", connected: this.controllerConnected, family: this.controllerFamily });
+    }
   }
 
   private handleShortcut(event: Electron.Event, input: Electron.Input): void {

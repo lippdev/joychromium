@@ -2,7 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { controllerFamily, type ControllerFamily } from "../../shared/controllerGlyphs";
 import { directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
 import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
-import { gamepadPoll } from "../../shared/gamepadLoop";
+import { GAMEPAD_POLL_MS, gamepadPoll } from "../../shared/gamepadLoop";
 import type { ShellState } from "../../shared/ipc";
 import { bridge, cmd } from "./bridge";
 import { trackActivePad, vibrate } from "./haptics";
@@ -16,9 +16,14 @@ type Overlay = "none" | "tabs" | "menu";
 
 /**
  * Gamepad handling for the shell. The tab of a web page owns the focus while the user reads it, so the shell keeps
- * polling with requestAnimationFrame and only acts when it is visible; a page that needs the D-pad in Arrows mode gets
- * it through the main process. A minimized window stops the loop instead of letting it run on frames nobody sees: the
- * main process reports the window state, and `gamepadPoll` decides per frame.
+ * polling on its own timer; a page that needs the D-pad in Arrows mode gets it through the main process. A minimized
+ * window stops the loop instead of letting it run on ticks nobody sees: the main process reports the window state, and
+ * `gamepadPoll` decides per tick.
+ *
+ * The poll is a timer rather than an animation frame because a page in HTML fullscreen covers the shell's renderer and
+ * Chromium stops its animation frames: with the old rAF loop a video in fullscreen froze every button, B included, so
+ * the viewer could not even go back. Timers keep running while the renderer is merely occluded, and the activity gate
+ * still parks the loop when the window really is out of sight.
  */
 export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: Overlay) => void): void {
   const pressed = useRef(new Set<number>());
@@ -35,21 +40,22 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
   overlayRef.current = overlay;
 
   useEffect(() => {
-    let frame = 0;
-    let parked = false;
+    let timer: number | undefined;
     const windowActive = { current: true };
-    const resume = (): void => {
-      if (!parked) return;
-      parked = false;
-      frame = requestAnimationFrame(tick);
+    const stop = (): void => {
+      if (timer !== undefined) clearInterval(timer);
+      timer = undefined;
     };
-    const tick = (now: number) => {
+    const resume = (): void => {
+      if (timer === undefined) timer = window.setInterval(tick, GAMEPAD_POLL_MS);
+    };
+    function tick(): void {
+      const now = performance.now();
       const decision = gamepadPoll(now, lastTick.current, { hidden: document.hidden, active: windowActive.current });
       if (decision === "park") {
-        parked = true;
+        stop();
         return;
       }
-      frame = requestAnimationFrame(tick);
       if (decision === "wait") return;
       lastTick.current = now;
       const pads = [...navigator.getGamepads()].filter((p): p is Gamepad => Boolean(p));
@@ -146,8 +152,8 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         else if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
         else bridge().controller({ type: "direction", direction });
       }
-    };
-    frame = requestAnimationFrame(tick);
+    }
+    resume();
     const visibility = (): void => {
       if (!document.hidden) resume();
     };
@@ -157,7 +163,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       if (active) resume();
     });
     return () => {
-      cancelAnimationFrame(frame);
+      stop();
       document.removeEventListener("visibilitychange", visibility);
       stopActivity();
     };
@@ -165,8 +171,10 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
 }
 
 /**
- * The D-pad inside the address suggestions: down from the field enters the list, and once inside it the D-pad walks it
- * and leaves at one of its ends for the rest of the overlay. Returns whether the list took the press.
+ * The D-pad inside the address suggestions: down from the address field enters the list, up from the on-screen keys
+ * enters it too because the list sits above them, left and right walk it, and anything else falls through to the
+ * overlay walker. Down on the keys belongs to the keyboard: jacking every down press into the chips left the bottom key
+ * rows unreachable as soon as a suggestion appeared. Returns whether the list took the press.
  */
 function moveSuggestionFocus(direction: Direction): boolean {
   const chips = [...document.querySelectorAll<HTMLElement>(".suggestions .chip")];
@@ -174,11 +182,18 @@ function moveSuggestionFocus(direction: Direction): boolean {
   const current = document.activeElement as HTMLElement | null;
   const index = current ? chips.indexOf(current) : -1;
   if (index < 0) {
-    if (direction !== "down") return false;
+    if (current?.closest("#keyboard")) {
+      // Up from the top key row means the list above it; from any lower row the D-pad is still walking the keys.
+      const rowAbove = current.classList.contains("key")
+        && [...document.querySelectorAll<HTMLElement>("#keyboard .key")]
+          .some((key) => key !== current && key.getBoundingClientRect().bottom <= current.getBoundingClientRect().top + 1);
+      if (rowAbove || direction !== "up") return false;
+    } else if (direction !== "down") return false;
     chips[0].focus();
     return true;
   }
-  const next = direction === "left" || direction === "up" ? index - 1 : index + 1;
+  if (direction !== "left" && direction !== "right") return false;
+  const next = direction === "left" ? index - 1 : index + 1;
   if (next < 0 || next >= chips.length) return false;
   chips[next].focus();
   return true;

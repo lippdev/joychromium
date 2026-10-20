@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { displayUrl, errorPageFor, internalPageFile, isDesignPage, isDevOnlyFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
+import { displayUrl, errorPageFor, internalPageFile, isDevOnlyFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
 import {
   buildSearchUrl, defaultSettings, GOOGLE, isHexColor, isValidSearchTemplate, migrateSettings, newTabTarget, parseSettings,
   parseShortcut, parseTheme, SETTINGS_SCHEMA_VERSION, startupTargets, THEME_PRESETS, toggleFavorite, withInputMode,
@@ -39,8 +39,6 @@ describe("pages", () => {
     expect(internalPageFile("joychromium://design", true)).toBe("design.html");
     expect(internalPageFile("joychromium://design", false)).toBeUndefined();
     expect(internalPageFile("joychromium://settings", false)).toBe("settings.html");
-    expect(isDesignPage("joychromium://design")).toBe(true);
-    expect(isDesignPage(Pages.settings)).toBe(false);
     expect(isDevOnlyFile("/design.html")).toBe(true);
     expect(isDevOnlyFile("C:\\dist\\assets\\design.html")).toBe(true);
     expect(isDevOnlyFile("/settings.html")).toBe(false);

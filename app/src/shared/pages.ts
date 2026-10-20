@@ -34,11 +34,6 @@ export function internalPageFile(url: string, allowDevOnly = true): string | und
   return `${name === "welcome" ? "onboarding" : name}.html`;
 }
 
-/** The design catalog: a development screen that also needs the spatial navigation web pages get. */
-export function isDesignPage(url: string): boolean {
-  return internalPageFile(url) === "design.html";
-}
-
 /** Whether a path names an asset of a development-only page, whatever separators it uses. */
 export function isDevOnlyFile(path: string): boolean {
   return DEV_ONLY_FILES.has(path.split(/[\\/]/).pop() ?? "");
