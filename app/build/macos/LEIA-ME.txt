@@ -1,0 +1,30 @@
+JoyChromium para macOS — build sem assinatura de desenvolvedor
+==============================================================
+
+Este app NÃO é assinado com um Developer ID da Apple (decisão registrada no
+ADR-010 do repositório). Por isso o macOS Sequoia recusa a instalação
+automática da imagem de disco com a mensagem "Este Mac não conseguiu verificar
+o app, então nada foi instalado".
+
+A assinatura do app é válida — o que falta é a notarização, que exige uma
+conta de desenvolvedor Apple. Até lá, o caminho é este:
+
+1. Arraste o JoyChromium para a pasta Aplicativos (ou dê dois cliques em
+   "install-macos.command", que faz isso por você).
+2. Abra o app UMA vez assim: clique com o botão direito no JoyChromium em
+   Aplicativos e escolha "Abrir". Se o macOS não oferecer "Abrir", abra o
+   Terminal e rode:
+
+       xattr -dr com.apple.quarantine /Applications/JoyChromium.app
+
+3. Depois disso o app abre normalmente, como qualquer outro.
+
+O comando do passo 2 só remove a marca de "veio da internet" que faz o macOS
+conferir a notarização. Ele não muda o app.
+
+Para conferir que a assinatura do pacote está íntegra:
+
+    codesign --verify --deep --strict --verbose=2 /Applications/JoyChromium.app
+
+Se você preferir não passar por isso, a alternativa é assinar e notarizar a
+distribuição: docs/RELEASE.md explica o que seria preciso.

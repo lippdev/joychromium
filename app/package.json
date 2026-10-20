@@ -146,6 +146,33 @@
         "NSMicrophoneUsageDescription": "JoyChromium asks for the microphone when a site needs it, for example a video call."
       }
     },
+    "dmg": {
+      "contents": [
+        {
+          "x": "130",
+          "y": "220",
+          "type": "file"
+        },
+        {
+          "x": "410",
+          "y": "220",
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": "130",
+          "y": "400",
+          "type": "file",
+          "path": "build/macos/LEIA-ME.txt"
+        },
+        {
+          "x": "410",
+          "y": "400",
+          "type": "file",
+          "path": "build/macos/install-macos.command"
+        }
+      ]
+    },
     "afterPack": "scripts/after-pack.mjs",
     "rpm": {},
     "electronDownload": {

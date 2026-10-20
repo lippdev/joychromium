@@ -12,9 +12,10 @@ O app funciona nas três plataformas, mas ainda não é assinado com um certific
 ## macOS
 
 1. Baixe o `JoyChromium-<versão>-mac-arm64.dmg` (Apple Silicon) ou `-mac-x64.dmg` (Intel) e abra.
-2. Arraste o JoyChromium para a pasta Aplicativos.
-3. Na primeira abertura, o macOS diz que o app é de um desenvolvedor não identificado. Abra **Ajustes do Sistema → Privacidade e Segurança**, role até a mensagem sobre o JoyChromium e clique em **Abrir Assim Mesmo**. Confirme com a senha ou o Touch ID.
-   - Se essa opção não aparecer, clique com o botão direito no app em Aplicativos, escolha **Abrir** e confirme em **Abrir**.
+2. **Se aparecer "Não foi possível instalar — Este Mac não conseguiu verificar o app"**, isso é o instalador da imagem de disco recusando um app sem notarização. A assinatura do app é válida (`codesign --verify --deep --strict` passa); o que falta é o Developer ID, que o ADR-010 deixou de fora. Feche o aviso e use um destes caminhos:
+   - arraste o **JoyChromium** para a pasta Aplicativos, ou
+   - dê dois cliques em **install-macos.command**, que copia o app para Aplicativos e limpa a marca de quarentena.
+3. Abra o app uma vez com o botão direito → **Abrir** (ou, se o macOS não oferecer essa opção, rode no Terminal `xattr -dr com.apple.quarantine /Applications/JoyChromium.app`). Depois disso ele abre normalmente.
 4. O app **não se atualiza sozinho** no macOS enquanto não houver assinatura. Quando sair uma versão nova, a tela *Sobre e atualizações* avisa e o botão **Download** abre a página da release.
 
 Se o macOS disser que o app está **danificado**, ele foi baixado por um navegador que removeu a assinatura ad-hoc. Baixe de novo pela release e, se precisar, rode no Terminal:
@@ -88,6 +89,7 @@ O app abre em tela cheia, no modo TV. Na primeira vez aparece o onboarding: esco
 |---|---|---|
 | "O Windows protegeu o seu PC" | Windows | Mais informações → Executar assim mesmo |
 | "Não é possível abrir porque é de um desenvolvedor não identificado" | macOS | Ajustes → Privacidade e Segurança → Abrir Assim Mesmo |
+| "Não foi possível instalar — Este Mac não conseguiu verificar o app, então nada foi instalado" | macOS 15 | Arrastar o app para Aplicativos (ou `install-macos.command`) e abrir com o botão direito → Abrir; se não houver a opção, `xattr -dr com.apple.quarantine /Applications/JoyChromium.app` |
 | "O app está danificado" | macOS | Baixar de novo; `xattr -dr com.apple.quarantine` |
 | Sem atualização automática | macOS | Usar o botão Download na tela de atualizações |
 | Erro de sandbox ao abrir o AppImage | Linux (Ubuntu 24.04+) | Instalar o `.deb`/`.rpm` |
