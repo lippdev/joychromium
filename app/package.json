@@ -1,7 +1,7 @@
 {
   "name": "joychromium",
   "productName": "JoyChromium",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Controller-first browser for the TV, built on Electron.",
   "license": "MIT",
   "private": true,

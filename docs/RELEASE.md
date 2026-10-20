@@ -42,5 +42,7 @@ O motor vem do build **castLabs ECS** (`github:castlabs/electron-releases#v44.5.
 
 ## Versões e tags
 
-- A tag é a fonte da verdade (`v<maior>.<menor>.<patch>`); o `package.json` do repositório fica em `1.0.0` de propósito, e o workflow carimba a versão do build.
+- A tag é a fonte da verdade (`v<maior>.<menor>.<patch>`); o `package.json` do repositório fica em `0.1.0` de propósito, e o workflow carimba a versão do build.
 - Tag publicada não é reaproveitada. Se um build saiu quebrado, publique o próximo patch com a correção em vez de mover a tag.
+- **Toda versão abaixo de 1.0 sai como pré-release** (`--prerelease --latest=false`): aparece na lista de releases com o selo *Pre-release*, não vira `latest` e não é oferecida pelo canal de atualização a quem já tem o app instalado. É o que uma alpha significa aqui — dá para baixar e testar, mas ninguém é atualizado para ela sem escolher.
+- Uma release pode ser derrubada (`gh release delete v<versão> --yes --cleanup-tag`) quando o número não faz mais sentido, como foi o caso da `v1.0.0` substituída pela `0.1.0` enquanto o produto ainda está em alpha. Quem já baixou não perde o app; o que deixa de existir é o download e a tag.
