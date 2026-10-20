@@ -49,6 +49,8 @@ export interface ShellDeps {
   installUpdate: () => boolean;
   openUpdatePage: () => Promise<void>;
   exportDiagnostics: () => Promise<string>;
+  /** Called once, when the first tab has its screen: the end of the boot the PRD measures. */
+  onFirstScreen: () => void;
 }
 
 
@@ -117,7 +119,11 @@ export class Shell {
     await this.window.loadURL("joychromium://chrome/");
     this.applyWindowMode(this.deps.store.current.windowMode, false);
     this.window.show();
-    targets.forEach((url, i) => this.tabs.open(url, { activate: i === 0 }));
+    const first = targets[0] === undefined ? undefined : this.tabs.open(targets[0], { activate: true });
+    // The screen the user was waiting for: the shell is loaded above and this is the first tab's own document. Reported
+    // once, at the end of the boot the PRD measures, instead of leaving the measurement to the test's own clock.
+    first?.webContents.once("did-finish-load", () => this.deps.onFirstScreen());
+    targets.slice(1).forEach((url) => this.tabs.open(url, { activate: false }));
     setInterval(() => this.housekeeping(), 30_000).unref();
     setInterval(() => this.tabs.enforceSleep(), 60_000).unref();
   }
