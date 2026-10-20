@@ -60,11 +60,14 @@ export function groupCommits(subjects, { previousTag, version } = {}) {
   lines.push(
     "### Instaladores",
     "",
-    "Windows (\`.exe\`, x64 e arm64), macOS (\`.dmg\`/\`.zip\`, x64 e arm64) e Linux (\`.AppImage\`, \`.deb\`, \`.rpm\`, x64 e arm64).",
-    "Os builds não são assinados: no Windows o SmartScreen pede confirmação e no macOS é preciso liberar o app em Ajustes do Sistema.",
-    "As versões instaladas se atualizam sozinhas (no macOS, o app avisa e abre esta página).",
+    "Windows (`.exe`, x64 e arm64), macOS (`.dmg`/`.zip`, x64 e arm64) e Linux (`.AppImage`, `.deb`, `.rpm`, x64 e arm64).",
+    "Os builds não são assinados (ADR-010): o Windows mostra o SmartScreen e o macOS recusa a instalação de um clique.",
     "",
-    `Guia de instalação: https://github.com/lippdev/joychromium/blob/main/docs/INSTALL.md`,
+    "**macOS:** a imagem de disco traz `LEIA-ME.txt` e `install-macos.command`. Abra o `.dmg` e dê dois cliques em `install-macos.command` — ele copia o app para Aplicativos e limpa a quarentena. Na mão: arraste o **JoyChromium** para Aplicativos e abra uma vez com botão direito → **Abrir**; se essa opção não aparecer, rode `xattr -dr com.apple.quarantine /Applications/JoyChromium.app`. O aviso \"Este Mac não conseguiu verificar o app\" é falta de notarização, não app danificado: `codesign --verify --deep --strict` passa neste build.",
+    "",
+    "As versões instaladas se atualizam sozinhas, exceto no macOS (o app avisa e abre esta página) e nas versões abaixo de 1.0, que saem como pré-release e se atualizam à mão.",
+    "",
+    "Guia de instalação: https://github.com/lippdev/joychromium/blob/main/docs/INSTALL.md",
   );
   return lines.join("\n");
 }
