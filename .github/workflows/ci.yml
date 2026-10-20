@@ -50,7 +50,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
-          sudo dpkg -i release/*-amd64.deb
+          # apt (not dpkg) so the declared dependencies are pulled in, the way people install it.
+          sudo apt-get update
+          sudo apt-get install -y ./release/*-amd64.deb
           profile=$(mktemp -d)
           echo '{"onboardingCompleted":true,"startup":"NewTab","windowMode":"window"}' > "$profile/settings.json"
           JOYCHROMIUM_DATA="$profile" xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" joychromium &
