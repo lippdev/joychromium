@@ -8,7 +8,10 @@ import { versionAtLeast } from "./security";
 export interface RemotePolicy {
   version: number;
   updatedAt?: string;
-  /** Oldest Chromium the shell should run on; the app warns (and, when installed, updates) below it. */
+  /**
+   * Oldest Chromium the shell should run on; the app warns (and, when installed, updates) below it. The published
+   * policy names it `minimumRuntimeVersion`, the name the previous shell used, so both are read.
+   */
   minimumChromiumVersion?: string;
   blockedHosts: string[];
   extraDangerousExtensions: string[];
@@ -49,7 +52,9 @@ export function parsePolicy(policyBytes: Uint8Array): RemotePolicy | undefined {
   return {
     version: typeof r.version === "number" && Number.isFinite(r.version) ? r.version : 0,
     updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : undefined,
-    minimumChromiumVersion: typeof r.minimumChromiumVersion === "string" ? r.minimumChromiumVersion : undefined,
+    minimumChromiumVersion: typeof r.minimumChromiumVersion === "string"
+      ? r.minimumChromiumVersion
+      : typeof r.minimumRuntimeVersion === "string" ? r.minimumRuntimeVersion : undefined,
     blockedHosts: strings(r.blockedHosts).map((h) => h.toLowerCase()),
     extraDangerousExtensions: strings(r.extraDangerousExtensions),
     blockedAppVersions: strings(r.blockedAppVersions),
