@@ -64,6 +64,22 @@ test("shell UI, tabs, internal pages and session", async () => {
   await expect.poll(() => existsSync(join(data, "session.json")), { timeout: 10_000 }).toBe(true);
 });
 
+test("restores the previous tabs after an unexpected close", async () => {
+  await app.close();
+  const fresh = mkdtempSync(join(tmpdir(), "joychromium-e2e-crash-"));
+  writeFileSync(join(fresh, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  writeFileSync(join(fresh, "session.json"), JSON.stringify(["joychromium://newtab", "https://a.example/"]));
+  writeFileSync(join(fresh, "running.json"), "killed");
+  const recovered = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: fresh } });
+  try {
+    await expect.poll(() => recovered.evaluate(() => globalThis.joy.tabs().length), { timeout: 30_000 }).toBe(2);
+    expect((await recovered.evaluate(() => globalThis.joy.tabs().map((t) => t.url)))[0]).toBe("joychromium://newtab");
+  } finally {
+    await recovered.close();
+    rmSync(fresh, { recursive: true, force: true });
+  }
+});
+
 test("first run shows onboarding", async () => {
   // A fresh profile, and only one instance at a time: a second launch of the same profile hands over and exits.
   await app.close();
