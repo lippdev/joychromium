@@ -7,7 +7,7 @@ import { join } from "node:path";
 // The window opens in TV mode (fullscreen) by default, and a second launch reuses the running instance.
 test("opens fullscreen in TV mode and keeps a single instance", async () => {
   const data = mkdtempSync(join(tmpdir(), "joychromium-e2e-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en" }));
   const app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
   try {
     await app.firstWindow();
@@ -36,7 +36,7 @@ test("a Flatpak build reports Flathub as its updater", async () => {
   // FLATPAK_ID only decides the updater on Linux; everywhere else the same variable must change nothing.
   test.skip(process.platform !== "linux", "a Flatpak sandbox only exists on Linux");
   const data = mkdtempSync(join(tmpdir(), "joychromium-e2e-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window" }));
   const app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data, FLATPAK_ID: "dev.lipp.joychromium" } });
   try {
     await app.firstWindow();

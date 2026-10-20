@@ -195,7 +195,7 @@ async function start(): Promise<void> {
   await shell.start(targets);
   // The first window is shown: the boot time the diagnostics report stops here.
   bootMs = Date.now() - startedAt;
-  if (crashed && !startUrl) shell.setStatus("RESTORED AFTER AN UNEXPECTED CLOSE");
+  if (crashed && !startUrl) shell.notify("restoredAfterCrash");
 
   // Background maintenance: remote policy, block lists, app update. Never blocks the UI.
   void (async () => {

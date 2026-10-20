@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { Channels, type ControllerEvent, type PermissionPrompt, type ShellActivity, type ShellCommand, type ShellPreferences, type ShellState } from "../shared/ipc";
 import { diffShellState } from "../shared/statePatch";
+import { statusText, type StatusId } from "../shared/status";
 import { displayUrl, isInternal, isWebUrl, Pages } from "../shared/pages";
 import type { WindowMode } from "../shared/platform";
 import { hostOf, isDangerousDownload, isThirdPartyRequest, allowPopup, safeFileName, trackingPolicy } from "../shared/security";
@@ -23,7 +24,7 @@ import { PageBridge } from "./pageBridge";
 import type { PolicyService } from "./policyService";
 import type { SettingsStore } from "./store";
 import { browserWindowOptions, currentShortcutMod, downloadsFolder, nativeWindowControls, platformDangerousExtensions } from "./platform";
-import { decideDownload, downloadStatus } from "./services/downloads";
+import { decideDownload, downloadDetail } from "./services/downloads";
 import { insertIntoPage, submitPage } from "./services/keyboard";
 import { describePermission, permissionNeedsPrompt, PermissionQueue } from "./services/permissions";
 import { Tab, TabManager } from "./tabs";
@@ -134,6 +135,12 @@ export class Shell {
     this.broadcast();
   }
 
+  /** Raises one of the shell's short messages, in the language the user picked. */
+  notify(id: StatusId, detail?: string): void {
+    this.status(statusText(id, this.deps.store.current.language, detail));
+  }
+
+  /** Raises a message that is not one of the known ids, such as the text of a remote policy. */
   setStatus(text: string): void {
     this.status(text);
   }
@@ -221,28 +228,28 @@ export class Shell {
     });
     if (decision.action === "block") {
       item.cancel();
-      this.setStatus(`DOWNLOAD BLOCKED · ${decision.name}`);
+      this.notify("downloadBlocked", decision.name);
       return;
     }
     const name = safeFileName(item.getFilename());
     mkdirSync(downloadsFolder(), { recursive: true });
     item.setSavePath(decision.path);
-    item.on("updated", () => this.setStatus(downloadStatus(name, item.getReceivedBytes(), item.getTotalBytes())));
-    item.once("done", (_event, state) => this.setStatus(state === "completed" ? `DOWNLOADED · ${name}` : `DOWNLOAD ${state.toUpperCase()} · ${name}`));
+    item.on("updated", () => this.notify("downloading", downloadDetail(name, item.getReceivedBytes(), item.getTotalBytes())));
+    item.once("done", (_event, state) => state === "completed" ? this.notify("downloaded", name) : this.notify("downloadFailed", name));
   }
 
   // ---- Tabs and layout ----
 
   private wireTabs(): void {
     this.tabs.on("changed", () => { this.syncViews(); this.scheduleChromeHide(); });
-    this.tabs.on("status", (text) => this.setStatus(text));
+    this.tabs.on("status", (message) => this.notify(message.id, message.detail));
     this.tabs.on("visited", (url, title) => this.deps.history.record(url, title));
     this.tabs.on("fullscreen", (tab, on) => {
       if (tab === this.tabs.active) this.setChromeVisible(!on);
     });
     this.tabs.on("popup", (url, from) => {
       if (!allowPopup(this.recentPopups, Date.now())) {
-        this.setStatus("POPUP BLOCKED");
+        this.notify("popupBlocked");
         return;
       }
       this.tabs.open(url, { isPrivate: from.isPrivate });
@@ -539,7 +546,7 @@ export class Shell {
     if (!tab || !isWebUrl(tab.url)) return;
     const result = toggleFavorite(this.deps.store.current, tab.url, tab.title);
     this.deps.store.save(result.settings);
-    this.setStatus(result.isFavorite ? "ADDED TO FAVORITES" : "REMOVED FROM FAVORITES");
+    this.notify(result.isFavorite ? "favoriteAdded" : "favoriteRemoved");
     this.broadcast();
   }
 
@@ -555,7 +562,7 @@ export class Shell {
     this.inputMode = mode;
     const wc = this.activeWebContents;
     if (wc) void this.cursor.show(wc, mode === "Cursor");
-    if (announce) this.setStatus(`INPUT · ${mode.toUpperCase()}`);
+    if (announce) this.notify("inputMode", mode.toUpperCase());
   }
 
   cycleInputMode(): void {

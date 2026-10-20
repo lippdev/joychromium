@@ -198,7 +198,7 @@ export class PageBridge {
         break;
       case "clear-data":
         await clearBrowsingData({ session: tab.webContents.session, clearHistory: () => this.deps.history.clear() });
-        this.shell.setStatus("BROWSING DATA CLEARED");
+        this.shell.notify("browsingDataCleared");
         break;
       default:
         break;

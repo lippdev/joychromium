@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { displayUrl, errorPageFor, isInternal, isWebUrl, Pages } from "../shared/pages";
 import { hostOf, isHttp, isNavigationAllowed, upgradeToHttps } from "../shared/security";
 import type { TabState } from "../shared/ipc";
+import type { StatusId } from "../shared/status";
 
 export interface TabEnvironment {
   preloadDir: string;
@@ -105,7 +106,7 @@ export class Tab {
 
 export interface TabEvents {
   changed: [];
-  status: [text: string];
+  status: [message: { id: StatusId; detail?: string }];
   fullscreen: [tab: Tab, on: boolean];
   visited: [url: string, title: string];
   popup: [url: string, from: Tab];
@@ -200,12 +201,12 @@ export class TabManager extends EventEmitter<TabEvents> {
   /** Navigates a tab, applying the allow-list and the https-only upgrade before the request leaves. */
   async load(tab: Tab, url: string): Promise<void> {
     if (!isNavigationAllowed(url)) {
-      this.emit("status", "BLOCKED · UNSUPPORTED ADDRESS");
+      this.emit("status", { id: "blockedScheme" });
       return;
     }
     const host = hostOf(url);
     if (this.env.hostBlocked(host)) {
-      this.emit("status", `BLOCKED BY POLICY · ${host}`);
+      this.emit("status", { id: "blockedHost", detail: host });
       return;
     }
     let target = url;
@@ -281,13 +282,13 @@ export class TabManager extends EventEmitter<TabEvents> {
     wc.on("will-navigate", (event, url) => {
       if (!isNavigationAllowed(url)) {
         event.preventDefault();
-        this.emit("status", "BLOCKED · UNSUPPORTED ADDRESS");
+        this.emit("status", { id: "blockedScheme" });
         return;
       }
       const host = hostOf(url);
       if (this.env.hostBlocked(host)) {
         event.preventDefault();
-        this.emit("status", `BLOCKED BY POLICY · ${host}`);
+        this.emit("status", { id: "blockedHost", detail: host });
         return;
       }
       // A link to another site switches the agent for the destination. The switch cancels the navigation in flight,
@@ -354,10 +355,10 @@ export class TabManager extends EventEmitter<TabEvents> {
     wc.on("render-process-gone", (_event, details) => {
       this.env.log.error(`Renderer gone for ${tab.url}: ${details.reason} (${details.exitCode})`);
       if (details.reason === "killed" || details.reason === "clean-exit") return;
-      this.emit("status", "PAGE CRASHED · RELOADING");
+      this.emit("status", { id: "pageCrashed" });
       void this.load(tab, tab.url || Pages.newtab);
     });
-    wc.on("unresponsive", () => this.emit("status", "PAGE NOT RESPONDING · B TO GO BACK, X TO RELOAD"));
-    wc.on("responsive", () => this.emit("status", "PAGE RESPONDING AGAIN"));
+    wc.on("unresponsive", () => this.emit("status", { id: "pageUnresponsive" }));
+    wc.on("responsive", () => this.emit("status", { id: "pageResponsive" }));
   }
 }

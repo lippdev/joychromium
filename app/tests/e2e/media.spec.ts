@@ -13,7 +13,7 @@ const Button = { A: 0, Start: 9, DpadDown: 13 } as const;
 
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-media-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window" }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
   chrome = await app.firstWindow();
   await expect.poll(tabs, { timeout: 30_000 }).toHaveLength(1);

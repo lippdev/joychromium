@@ -19,7 +19,7 @@ let chrome: Page;
 
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-security-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window" }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data, JOYCHROMIUM_START: "about:blank" } });
   chrome = await app.firstWindow();
   await expect.poll(() => app.evaluate(() => globalThis.joy.tabs().length), { timeout: 30_000 }).toBe(1);

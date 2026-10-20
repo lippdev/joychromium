@@ -9,7 +9,7 @@ let app: ElectronApplication;
 
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-e2e-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window" }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
 });
 
@@ -87,7 +87,7 @@ test("the newest navigation wins when two are requested back to back", async () 
 test("restores the previous tabs after an unexpected close", async () => {
   await app.close();
   const fresh = mkdtempSync(join(tmpdir(), "joychromium-e2e-crash-"));
-  writeFileSync(join(fresh, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  writeFileSync(join(fresh, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window" }));
   writeFileSync(join(fresh, "session.json"), JSON.stringify(["joychromium://newtab", "https://a.example/"]));
   writeFileSync(join(fresh, "running.json"), "killed");
   const recovered = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: fresh } });

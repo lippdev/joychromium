@@ -23,7 +23,7 @@ test.afterEach(async () => {
 });
 
 async function launch(vibration: boolean): Promise<void> {
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window", vibration }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window", vibration }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
   chrome = await app.firstWindow();
   await expect.poll(tabs, { timeout: 30_000 }).toHaveLength(1);

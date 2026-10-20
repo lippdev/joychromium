@@ -17,7 +17,11 @@ let app: ElectronApplication;
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-e2e-tracking-"));
   writeFileSync(join(data, "settings.json"), JSON.stringify({
-    onboardingCompleted: true, startup: "NewTab", windowMode: "window", trackingPrevention: "Balanced",
+    onboardingCompleted: true,
+    startup: "NewTab",
+    windowMode: "window",
+    trackingPrevention: "Balanced",
+    language: "en",
   }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
 });

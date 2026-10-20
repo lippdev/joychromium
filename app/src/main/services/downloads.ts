@@ -28,8 +28,7 @@ export function decideDownload(fileName: string, policy: DownloadPolicy, taken: 
   return { action: "allow", path: nextAvailablePath(policy.folder, name, taken) };
 }
 
-/** Progress line for the status bar. */
-export function downloadStatus(name: string, received: number, total: number): string {
-  if (total <= 0) return `DOWNLOADING · ${name}`;
-  return `DOWNLOADING · ${name} · ${Math.round((received * 100) / total)}%`;
+/** The detail of a download progress message: the file, and how far along it is when the size is known. */
+export function downloadDetail(name: string, received: number, total: number): string {
+  return total <= 0 ? name : `${name} · ${Math.round((received * 100) / total)}%`;
 }
