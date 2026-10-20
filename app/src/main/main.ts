@@ -29,6 +29,8 @@ export const MINIMUM_CHROMIUM = "150.0.0.0";
 /** State the end-to-end tests read through `electronApp.evaluate`. */
 export interface JoyState {
   adblockReady: boolean;
+  /** The tracking-prevention level whose lists the engine is blocking with (tests only). */
+  adblockLevel: () => string | undefined;
   userAgent: string;
   wouldBlock: (url: string) => boolean;
   tabs: () => { url: string; title: string; isActive: boolean; isLoading: boolean; isPlayingAudio: boolean }[];
@@ -71,6 +73,7 @@ const crashes = new CrashReporting(dataDir, log);
 
 globalThis.joy = {
   adblockReady: false,
+  adblockLevel: () => adblock.currentLevel,
   userAgent: "",
   wouldBlock: (url) => adblock.wouldBlock(url),
   tabs: () => [],
@@ -115,7 +118,7 @@ async function start(): Promise<void> {
   globalThis.joy.userAgent = session.defaultSession.getUserAgent();
 
   try {
-    await adblock.load();
+    await adblock.load(settings.trackingPrevention);
   } catch (error) {
     log.error("Ad blocking unavailable", error);
   }

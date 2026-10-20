@@ -122,8 +122,8 @@
       <label class="switch"><input type="checkbox" id="blockDangerousDownloads" data-privacy aria-labelledby="blockDangerousDownloadsLabel"><span></span></label>
     </div>
     <div class="row">
-      <div><label for="trackingPrevention" data-i18n="settings.tracking">Proteção contra rastreamento</label><small>Equilibrado pede para não rastrear; rígido também bloqueia cookies de terceiros</small></div>
-      <select id="trackingPrevention" data-privacy><option>Basic</option><option>Balanced</option><option>Strict</option></select>
+      <div><label for="trackingPrevention" data-i18n="settings.tracking">Proteção contra rastreamento</label><small data-i18n="settings.trackingHint">Básico bloqueia anúncios; equilibrado soma rastreadores; rígido soma widgets sociais</small></div>
+      <select id="trackingPrevention" data-privacy><option value="Basic" data-i18n="settings.trackingBasic">Básico</option><option value="Balanced" data-i18n="settings.trackingBalanced">Equilibrado</option><option value="Strict" data-i18n="settings.trackingStrict">Rígido</option></select>
     </div>
     <div class="row">
       <div><label for="dnsOverHttps" data-i18n="settings.doh">DNS over HTTPS</label><small>Aplica ao reiniciar</small></div>
@@ -312,6 +312,7 @@
 
   window.joy.onMessage((msg) => {
     if (msg.type === 'update-status') showUpdate(msg);
+    if (msg.type === 'adblock-status') $('adBlockUpdate').textContent = msg.adBlockUpdate || '';
     if (msg.type === 'diagnostics') flash('diagStatus', msg.error ? `Falhou: ${msg.error}` : `Salvo em ${msg.path}`);
     if (msg.type !== 'init') return;
     i18n.set(msg.dictionary, msg.language);
