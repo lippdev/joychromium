@@ -26,6 +26,8 @@ Os artefatos publicados na release:
 | macOS | `JoyChromium-<versão>-mac-x64.dmg` / `…-mac-arm64.dmg`, `…-mac-x64.zip` / `…-arm64.zip`, `latest-mac.yml` | não (ADR-010): o app avisa e abre a página da release |
 | Linux | `JoyChromium-<versão>-linux-amd64.deb`, `…-linux-aarch64.rpm`, `…-linux-x86_64.AppImage` (e os arm64), `latest-linux.yml`, `latest-linux-arm64.yml` | AppImage sim; `.deb`/`.rpm` com **Reiniciar e instalar** em Configurações → Sobre |
 
+A assinatura Widevine de produção (VMP) vem do serviço EVS da castLabs e é aplicada pelo hook `afterPack` quando a conta existe: [DRM-EVS.md](DRM-EVS.md).
+
 O motor vem do build **castLabs ECS** (`github:castlabs/electron-releases#v44.5.1+wvcus`), apontado em dois lugares no `app/package.json`: `devDependencies.electron` e `build.electronDownload.customDir`. Os dois precisam mudar juntos; `.github/workflows/engine-update.yml` faz isso todo dia quando a castLabs publica uma versão nova.
 
 ## Antes de uma release de funcionalidade
@@ -33,6 +35,7 @@ O motor vem do build **castLabs ECS** (`github:castlabs/electron-releases#v44.5.
 - `main` verde nos três sistemas, com os checks obrigatórios (`electron (windows-latest)`, `electron (ubuntu-latest)`, `electron (macos-latest)`).
 - Se mexeu em empacotamento, rode o caminho de instalação pelo menos no seu sistema: o CI instala e abre o pacote de cada runner, mas não substitui um teste na máquina onde o app vai rodar.
 - Se mexeu na policy (`policy/policy.json`), assine de novo — veja [POLICY.md](POLICY.md) — e faça o push da assinatura junto, senão a policy remota é ignorada.
+- Se a conta da castLabs EVS existe, confira que a release assinou a CDM: o log do job `build` de Windows e macOS diz `VMP signed …` em vez de `VMP signing skipped: …`. O procedimento e o que fazer quando falta a conta estão em [DRM-EVS.md](DRM-EVS.md).
 
 ## Depois de publicada
 
