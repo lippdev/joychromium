@@ -31,5 +31,5 @@ Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows
 - Sem assinatura de código por enquanto (ver `docs/PRD.md`, ADR-010): no macOS o build recebe assinatura ad-hoc via `scripts/after-pack.mjs` e o updater só avisa da versão nova.
 - `policy/policy.json` é assinado com `node app/scripts/policy-sign.mjs sign <keyfile> policy/policy.json` (chave em `~/.joychromium/policy-signing.key` no Linux e no macOS, `%USERPROFILE%\.joychromium\policy-signing.key` no Windows, sempre fora do repo — procedimento e backup em `docs/POLICY.md`).
 - Flatpak: `flatpak/dev.lipp.joychromium.yml` (runtime freedesktop 26.08 + `org.electronjs.Electron2.BaseApp`, Electron do `node_modules`) e `.github/workflows/flatpak.yml`, que só constrói o bundle como artefato. Dentro do Flatpak o updater não baixa nada: a tela de atualizações diz que quem atualiza é o Flathub (`FLATPAK_UPDATE_STATUS`). Publicar no Flathub depende de conta e revisão — o que falta está em `flatpak/README.md`.
-- Release e instaladores: `docs/RELEASE.md`. Roteiro de teste com controle na TV: `docs/CONTROLLER-TEST.md`.
+- Release e instaladores: `docs/RELEASE.md`. Roteiro de teste com controle na TV: `docs/CONTROLLER-TEST.md`. Wayland nativo (smoke do CI) e Steam Deck: `docs/WAYLAND.md`.
 - Não subir `node_modules/`, `dist/`, `release/`.

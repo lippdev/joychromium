@@ -41,6 +41,14 @@ jobs:
       - name: End-to-end (real Electron, macOS)
         if: runner.os == 'macOS'
         run: npm run test:e2e
+      # Native Wayland, no X11: a headless Weston compositor, DISPLAY unset, and the app has to boot and paint in it.
+      - name: Wayland smoke test (no XWayland)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y weston
+          npm run build
+          node scripts/wayland-smoke.mjs
       - name: Package (no publish) to prove the installers build
         run: npm run build && npx electron-builder --publish never
         env:
