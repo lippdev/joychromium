@@ -72,7 +72,10 @@ export function Keyboard({ state }: { state: ShellState }) {
                   cmd({ type: "keyboard-close" });
                 }}
               >
-                <span class="chip-title">{suggestion.title || suggestion.url}</span>
+                <span class="chip-title">
+                  {suggestion.kind === "favorite" && <span aria-hidden="true">★ </span>}
+                  {suggestion.title || suggestion.url}
+                </span>
                 {suggestion.title && suggestion.title !== suggestion.url && <span class="chip-url">{suggestion.url}</span>}
               </button>
             ))}

@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld("shell", {
   ready(): void {
     ipcRenderer.send(Channels.shellReady);
   },
+  focus(): void {
+    ipcRenderer.send(Channels.shellFocus);
+  },
   onState(callback: (state: ShellState) => void): void {
     ipcRenderer.on(Channels.shellState, (_event, state: ShellState) => callback(state));
   },

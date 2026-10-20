@@ -216,6 +216,8 @@ export class Shell {
     // Only one prompt at a time; anything that piles up behind it is denied for this request.
     if (!wait) return false;
     this.broadcast();
+    // The page that asked is the focused view; the prompt has to take the window's focus or a reader never hears it.
+    this.focusChrome();
     return wait;
   }
 
@@ -449,6 +451,9 @@ export class Shell {
       }
       void this.handle(command).catch((error) => this.deps.log.error(`Command ${command.type} failed`, error));
     });
+    ipcMain.on(Channels.shellFocus, (event) => {
+      if (event.sender === this.window.webContents) this.focusChrome();
+    });
     ipcMain.on(Channels.controller, (event, input: ControllerEvent) => {
       if (event.sender !== this.window.webContents) return;
       void this.handleController(input).catch((error) => this.deps.log.error(`Controller ${input.type} failed`, error));
@@ -502,6 +507,15 @@ export class Shell {
     this.revealChrome();
     this.keyboard = { target, title: target === "address" ? "ADDRESS / SEARCH" : "PAGE TEXT ENTRY" };
     this.broadcast();
+  }
+
+  /**
+   * Hands the window's keyboard focus to the shell. Chromium keeps the focused document per view, so a tab view
+   * that was focused stays focused while the shell's own controls take DOM focus, and a screen reader never gets
+   * a focus event for them: it hears the address bar's value and not the field's name.
+   */
+  private focusChrome(): void {
+    if (!this.window.webContents.isFocused()) this.window.webContents.focus();
   }
 
   closeKeyboard(): void {

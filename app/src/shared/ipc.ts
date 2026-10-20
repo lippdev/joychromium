@@ -29,6 +29,8 @@ export const Channels = {
   shellPreferences: "shell:preferences",
   /** main -> chrome renderer: whether the window is on screen, so idle loops can park while it is minimized */
   shellActivity: "shell:activity",
+  /** chrome renderer -> main: focus landed on a control of the shell, so the window's focus belongs to it and not to a tab */
+  shellFocus: "shell:focus",
 } as const;
 
 /** Whether the window is on screen: sent when it is minimized, hidden, restored or shown. */

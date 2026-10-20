@@ -296,19 +296,19 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | E4 Robustez e desempenho | 1/1 | 1/1 | 2/2 | — |
 | E5 Design system e redesign | 4/4 | 3/3 | — | — |
 | E6 Experiência com controle | 4/5 | 2/2 | 2/2 | E6-07 (controle físico) |
-| E7 Internacionalização e a11y | 1/1 | 1/1 | 0/1 | E7-03 (passada manual) |
+| E7 Internacionalização e a11y | 1/1 | 1/1 | 1/1 | — |
 | E8 Privacidade e observabilidade | 2/2 | 1/1 | 1/1 | — |
 | E9 Distribuição | — | — | 2/2 | — |
 | E10 Mídia e DRM | 2/3 | 2/2 | 1/1 | E10-02 (VMP) |
 | E11 Documentação | 2/2 | 1/1 | — | — |
 
-Somando: **35 de 37 Must**, **19 de 19 Should** e **9 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow. O E9-05 conta como entregue pelo que é código (manifesto, bundle construído no CI e updater que defere ao Flathub); o que falta nele é a publicação, que depende de conta e revisão do Flathub.
+Somando: **35 de 37 Must**, **19 de 19 Should** e **10 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow. O E9-05 conta como entregue pelo que é código (manifesto, bundle construído no CI e updater que defere ao Flathub); o que falta nele é a publicação, que depende de conta e revisão do Flathub.
 
 **Pendências que dependem de terceiros, não de código**
 
 - **E2-03 — proteção da `main` com `electron (macos-latest)`.** O token de automação não tem permissão de administrador na API de branch protection (403). Fica em Settings → Branches, com o nome exato do check.
 - **E6-07 — sessão com controle físico.** O roteiro está em [CONTROLLER-TEST.md](CONTROLLER-TEST.md); falta rodar na TV com o controle na mão e registrar o que falhar.
-- **E7-03 — passada com leitores de tela.** O e2e já verifica os nomes e papéis na DOM e, no Linux, a árvore AT-SPI que o Orca lê; falta ouvir Orca, Narrator e VoiceOver pelo roteiro em [SCREEN-READER.md](SCREEN-READER.md) e registrar o que falhar.
+- **E7-03 — Narrator e VoiceOver.** O critério do item está cumprido e automatizado com o Orca: `app/tests/e2e/orca.spec.ts` faz o Orca falar com o `speech-dispatcher` de módulo `dummy` e confere a fala de cada elemento do fluxo de busca no CI de Linux, e o que foi capturado está em [SCREEN-READER.md](SCREEN-READER.md). Os outros dois leitores não rodam num runner — o Narrator precisa de Windows com uma pessoa e o VoiceOver de macOS —, então essa passada continua manual no mesmo documento. Ela não bloqueia o item, que é Could e tem o critério atendido por um leitor real.
 - **E10-02 — assinatura VMP (EVS).** A CDM baixa e o EME responde `ok` no Linux (ADR-009), mas Windows e macOS em produção precisam da conta gratuita na castLabs e do passo `afterPack` com `castlabs-evs`.
 - **E10-05 — resolução por serviço.** O mecanismo de UA por site está pronto e testado; a tabela em [DRM-UAS.md](DRM-UAS.md) espera alguém com conta nos serviços rodar a medição.
 - **E2-08 — Steam Deck em hardware.** O caminho Wayland nativo é provado no CI em todo PR (Weston headless, sem X11, com screenshot das duas views): [WAYLAND.md](WAYLAND.md). O que falta é rodar num Deck de verdade, no modo Gaming, porque gamescope e HDR não existem neste ambiente; o roteiro está no mesmo documento.
