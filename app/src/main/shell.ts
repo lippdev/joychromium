@@ -6,6 +6,7 @@ import { displayUrl, isInternal, isWebUrl, Pages } from "../shared/pages";
 import type { WindowMode } from "../shared/platform";
 import { hostOf, isDangerousDownload, isThirdPartyRequest, allowPopup, safeFileName, trackingPolicy } from "../shared/security";
 import { commandForShortcut } from "../shared/shortcuts";
+import { userAgentForUrl } from "../shared/streamingUa";
 import { CommandRouter } from "./services/commandRouter";
 import { WindowLayout } from "./services/layout";
 import { InputRouter } from "./services/inputRouter";
@@ -35,6 +36,9 @@ export interface ShellDeps {
   distDir: string;
   spatialScript: string;
   appVersion: string;
+  /** Chrome's agent without the TV marker, and the same agent with it, for the per-site streaming rule. */
+  desktopUserAgent: string;
+  tvUserAgent: string;
   updateStatus: () => string;
   checkUpdates: () => Promise<void>;
   updateUrl: () => string | undefined;
@@ -79,6 +83,8 @@ export class Shell {
       httpsOnly: () => deps.store.current.httpsOnly,
       httpAllowedHosts: this.httpAllowedHosts,
       hostBlocked: (host) => deps.policy.current.blockedHosts.some((b) => host === b || host?.endsWith(`.${b}`) === true),
+      userAgentFor: (url) =>
+        userAgentForUrl(url, { desktop: deps.desktopUserAgent, tv: deps.tvUserAgent, enabled: deps.store.current.streamingDesktopUa }),
       prepareSession: (ses) => this.prepareSession(ses),
       log: deps.log,
     });

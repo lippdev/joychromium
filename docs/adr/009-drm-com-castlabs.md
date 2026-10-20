@@ -14,6 +14,9 @@ Trocar `electron` pelo build **ECS** da castLabs (`github:castlabs/electron-rele
 ## VMP
 Widevine de produção no Windows e no macOS exige assinatura VMP pelo serviço EVS (gratuito, com conta castLabs). O Linux não usa VMP. Um passo de `afterPack` com `castlabs-evs` entra quando a conta existir; até lá os builds servem para desenvolvimento.
 
+## UA por site (E10-05)
+O UA de TV pode custar resolução em um serviço e ajudar em outro, e não há garantia em nenhuma direção. A medição e a tabela por serviço ficam em [`docs/DRM-UAS.md`](../DRM-UAS.md); a regra que decide o UA por host está em `app/src/shared/streamingUa.ts` e chega pela opção *Mídia e DRM → UA de desktop nos serviços de streaming*, desligada por padrão até uma linha da tabela mostrar ganho.
+
 ## Verificação (20/10/2026, Linux x64)
 A ressalva do spike caiu em parte: a CDM **baixa e o EME funciona** numa máquina com rede aberta.
 

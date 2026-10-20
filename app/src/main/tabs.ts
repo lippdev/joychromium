@@ -12,6 +12,8 @@ export interface TabEnvironment {
   httpsOnly: () => boolean;
   httpAllowedHosts: Set<string>;
   hostBlocked: (host: string | undefined) => boolean;
+  /** The agent a tab loads a URL with: the desktop one on a listed streaming host, the TV one elsewhere. */
+  userAgentFor: (url: string) => string;
   prepareSession: (ses: Session) => void;
   log: { info: (m: string) => void; warn: (m: string) => void; error: (m: string, e?: unknown) => void };
 }
@@ -218,6 +220,8 @@ export class TabManager extends EventEmitter<TabEvents> {
       }
       tab.loadingNavigation = true;
       try {
+        // Set per document, so a streaming host gets the desktop agent and every other tab keeps the TV identity.
+        tab.webContents.setUserAgent(this.env.userAgentFor(target));
         await tab.webContents.loadURL(target);
       } catch (error) {
         // did-fail-load handles the user-visible part; loadURL rejects for the same failures.
@@ -290,10 +294,22 @@ export class TabManager extends EventEmitter<TabEvents> {
         this.emit("status", `BLOCKED BY POLICY · ${host}`);
         return;
       }
-      if (this.env.httpsOnly() && isHttp(url) && host && !this.env.httpAllowedHosts.has(host)) {
+      // A link to another site switches the agent for the destination. The switch cancels the navigation in flight,
+      // so when the agent has to change the shell loads the destination itself, the way it does for an https upgrade.
+      const upgrade = this.env.httpsOnly() && isHttp(url) && host && !this.env.httpAllowedHosts.has(host) ? upgradeToHttps(url)! : undefined;
+      const target = upgrade ?? url;
+      const agent = this.env.userAgentFor(target);
+      if (agent !== wc.getUserAgent()) {
+        event.preventDefault();
+        if (upgrade) tab.pendingHttpsUpgrade = url;
+        wc.setUserAgent(agent);
+        void wc.loadURL(target);
+        return;
+      }
+      if (upgrade) {
         event.preventDefault();
         tab.pendingHttpsUpgrade = url;
-        void wc.loadURL(upgradeToHttps(url)!);
+        void wc.loadURL(upgrade);
       }
     });
     wc.on("did-start-navigation", (details) => {
