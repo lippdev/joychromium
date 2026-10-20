@@ -1,8 +1,8 @@
-// JoyChromium spatial navigation. Injected into every document; the shell calls window.__joy.move('up'|'down'|'left'|'right'),
+// JoyChromium spatial navigation. Injected into every frame, in its own world; the shell calls window.__joy.move(...),
 // window.__joy.activate() and the media actions. Focus is real DOM focus, so pages get their normal :focus / focusin behaviour.
 (() => {
   if (window.__joy) return;
-  const SELECTOR = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"], [role="menuitem"], [role="tab"], [role="option"], [contenteditable="true"], video[controls], audio[controls]';
+  const SELECTOR = 'a[href], button, iframe:not([tabindex="-1"]), input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"], [role="menuitem"], [role="tab"], [role="option"], [contenteditable="true"], video[controls], audio[controls]';
   // The script runs before the document has a root; the focus style is attached lazily on first use.
   let styled = false;
   const ensureStyle = () => {
@@ -41,8 +41,7 @@
     return current && document.contains(current) && visible(current) ? current : null;
   };
   // Score: distance along the axis dominates; off-axis distance is penalised; only elements ahead count.
-  const pick = (from, dir) => {
-    const fr = from ? from.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 2, width: 0, height: 0, right: innerWidth / 2, bottom: innerHeight / 2 };
+  const pick = (fr, dir, from) => {
     const fc = center(fr);
     let best = null, bestScore = Infinity;
     for (const el of candidates()) {
@@ -66,6 +65,64 @@
     }
     return best;
   };
+  const viewportCenter = () => ({ left: innerWidth / 2, top: innerHeight / 2, right: innerWidth / 2, bottom: innerHeight / 2, width: 0, height: 0 });
+
+  // ---- Focus across frames ----
+  // The D-pad acts on the frame that holds the focus. A direction pressed on an <iframe> goes into its document, starting
+  // from the edge it came through; a frame with nothing ahead hands the direction back to its parent, which continues from
+  // the <iframe>; the top frame scrolls. Frames pass those directions by postMessage, so a cross-origin player is crossed
+  // like a same-origin one. A page can post the same messages, and the worst it can do is move the focus.
+  const post = (win, message) => {
+    try { if (win) win.postMessage(message, '*'); } catch (_) {}
+  };
+  const isFrame = el => Boolean(el) && el.tagName === 'IFRAME';
+  const focusedFrame = () => (isFrame(document.activeElement) ? document.activeElement : null);
+  // Calls into a child frame and waits for its answer; a frame without the script (or a dead one) answers undefined.
+  const pending = new Map();
+  let calls = 0;
+  const call = (frame, method, arg) => new Promise(resolve => {
+    const id = ++calls;
+    pending.set(id, resolve);
+    post(frame.contentWindow, { joy: 'call', id, method, arg });
+    setTimeout(() => { if (pending.delete(id)) resolve(undefined); }, 250);
+  });
+  const enterRect = dir => dir === 'up' || dir === 'left'
+    ? { left: innerWidth, top: innerHeight, right: innerWidth, bottom: innerHeight, width: 0, height: 0 }
+    : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
+  const enterFrame = dir => {
+    const next = pick(enterRect(dir), dir) || candidates()[0] || null;
+    if (next) {
+      mark(next);
+      if (isFrame(next)) post(next.contentWindow, { joy: 'enter', dir });
+      return 'moved';
+    }
+    // Nothing to focus here: hand the direction back, so an empty frame cannot trap the D-pad.
+    if (window !== window.top) post(window.parent, { joy: 'exit', dir });
+    return 'none';
+  };
+  const moveFrom = (fromEl, dir) => {
+    const from = fromEl || focused();
+    const next = pick(from ? from.getBoundingClientRect() : viewportCenter(), dir, from);
+    if (next) {
+      mark(next);
+      if (isFrame(next)) post(next.contentWindow, { joy: 'enter', dir });
+      return 'moved';
+    }
+    if (window !== window.top) { post(window.parent, { joy: 'exit', dir }); return 'exit'; }
+    scroll(dir);
+    // After scrolling new elements may be in view; try once more on the next frame.
+    requestAnimationFrame(() => {
+      const again = focused();
+      const n = pick(again ? again.getBoundingClientRect() : viewportCenter(), dir, again);
+      if (n) mark(n);
+    });
+    return 'scrolled';
+  };
+  const forwardMedia = method => {
+    const frame = focusedFrame();
+    return frame ? call(frame, method).then(Boolean) : false;
+  };
+
   const scroll = dir => {
     const dx = dir === 'left' ? -innerWidth / 2 : dir === 'right' ? innerWidth / 2 : 0;
     const dy = dir === 'up' ? -innerHeight / 2 : dir === 'down' ? innerHeight / 2 : 0;
@@ -119,19 +176,16 @@
       try { session.setActionHandler(action, handlers[action]); } catch (_) {}
     }
   }
-  window.__joy = {
+  const api = {
     move(dir) {
-      const from = focused();
-      const next = pick(from, dir);
-      if (next) { mark(next); return 'moved'; }
-      scroll(dir);
-      // After scrolling new elements may be in view; try once more on the next frame.
-      requestAnimationFrame(() => { const n = pick(focused(), dir); if (n) mark(n); });
-      return 'scrolled';
+      const frame = focusedFrame();
+      // The focused frame owns the direction; one that never answers (no script, or a dead document) hands it back here.
+      return frame ? call(frame, 'move', dir).then(r => (r === undefined ? moveFrom(frame, dir) : r)) : moveFrom(null, dir);
     },
     activate() {
       const el = focused();
       if (!el) return 'none';
+      if (isFrame(el)) { post(el.contentWindow, { joy: 'activate' }); return 'forwarded'; }
       const tag = el.tagName;
       const textual = tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable ||
         (tag === 'INPUT' && !['checkbox', 'radio', 'submit', 'button', 'reset', 'image', 'file', 'color', 'range'].includes((el.type || 'text').toLowerCase()));
@@ -139,12 +193,44 @@
       el.click();
       return 'click';
     },
-    playPause,
-    mediaToggle,
-    mediaNext() { return skip('next'); },
-    mediaPrevious() { return skip('previous'); },
+    playPause() {
+      const decision = playPause();
+      if (decision === 'media') return decision;
+      const frame = focusedFrame();
+      // A player inside an iframe owns its <video>: ask that frame instead of guessing.
+      return frame ? call(frame, 'playPause').then(v => (v === 'media' ? 'media' : 'focus')) : decision;
+    },
+    mediaToggle() { return mediaToggle() || forwardMedia('mediaToggle'); },
+    mediaNext() { return skip('next') || forwardMedia('mediaNext'); },
+    mediaPrevious() { return skip('previous') || forwardMedia('mediaPrevious'); },
     clear() { if (current) current.classList.remove('__joy-focus'); current = null; }
   };
+  window.__joy = api;
+
+  addEventListener('message', event => {
+    const data = event.data;
+    if (!data || typeof data !== 'object' || typeof data.joy !== 'string') return;
+    if (data.joy === 'reply') {
+      const done = pending.get(data.id);
+      if (done) { pending.delete(data.id); done(data.value); }
+      return;
+    }
+    if (data.joy === 'exit') {
+      // A child frame ran out of room: focus its <iframe> and carry the direction on from there.
+      const sender = Array.from(document.querySelectorAll('iframe')).find(f => f.contentWindow === event.source);
+      if (sender) { mark(sender); moveFrom(sender, data.dir); }
+      return;
+    }
+    // Only the parent frame commands a frame, and only with the messages handled here.
+    if (event.source !== window.parent) return;
+    if (data.joy === 'enter') { enterFrame(data.dir); return; }
+    if (data.joy === 'activate') { api.activate(); return; }
+    if (data.joy === 'call') {
+      const method = api[data.method];
+      Promise.resolve(typeof method === 'function' ? method(data.arg) : undefined)
+        .then(value => post(event.source, { joy: 'reply', id: data.id, value }));
+    }
+  });
 })();
 
 // Virtual cursor overlay (Cursor input mode). The shell moves it and sends real mouse events at the same point.
