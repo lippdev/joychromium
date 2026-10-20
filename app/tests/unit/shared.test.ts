@@ -219,6 +219,8 @@ describe("history and suggestions", () => {
       const s = buildSuggestions("two", [{ name: "Two", url: "https://b.example/two" }], history.recent());
       expect(s).toHaveLength(1);
       expect(s[0]?.kind).toBe("favorite");
+      // The star is decoration, drawn by the chip; a reader that read it would say "star Two".
+      expect(s[0]?.title).toBe("Two");
       expect(buildSuggestions("", [], history.recent())).toHaveLength(0);
       expect(buildSuggestions("joychromium://settings", [], history.recent())).toHaveLength(0);
     } finally {

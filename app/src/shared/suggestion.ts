@@ -25,7 +25,7 @@ export function buildSuggestions(query: string, favorites: readonly Shortcut[], 
   for (const f of favorites) {
     if (matches(q, f.name, f.url) && !seen.has(f.url)) {
       seen.add(f.url);
-      result.push({ title: `★ ${f.name}`, url: f.url, kind: "favorite" });
+      result.push({ title: f.name, url: f.url, kind: "favorite" });
     }
   }
   for (const h of history) {

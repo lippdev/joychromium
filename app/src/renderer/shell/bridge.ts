@@ -6,6 +6,8 @@ export interface ShellBridge {
   controller(event: ControllerEvent): void;
   /** Tells the main process the UI is listening, which makes it send the first full snapshot. */
   ready(): void;
+  /** Tells the main process the shell has keyboard focus, so a tab view does not keep it. */
+  focus(): void;
   onState(callback: (state: ShellState) => void): void;
   onPatch(callback: (patch: ShellStatePatch) => void): void;
   /** Whether the window is on screen, so idle loops park while it is minimized. Returns its own unsubscribe. */

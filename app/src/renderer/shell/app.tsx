@@ -78,7 +78,12 @@ export function App() {
   const overlayOpen = overlay !== "none" || Boolean(state.keyboard) || Boolean(state.permission);
 
   return (
-    <div class={`shell ${tv ? "tv" : "window"} ${state.chromeVisible ? "" : "chrome-hidden"} ${overlayOpen ? "overlay-open" : ""}`}>
+    <div
+      class={`shell ${tv ? "tv" : "window"} ${state.chromeVisible ? "" : "chrome-hidden"} ${overlayOpen ? "overlay-open" : ""}`}
+      // A screen reader learns which control has focus from the focused document: while a tab view keeps the
+      // window's focus, the reader hears the address bar's value but not its name.
+      onFocusIn={() => bridge().focus()}
+    >
       <div id="chrome" ref={chromeRef} class={state.chromeVisible ? "" : "hidden"}>
         <div class="bar" style={{ marginLeft: "var(--safe-x)", marginRight: "var(--safe-x)" }}>
           <button class="icon-btn" aria-label={tr("nav.back")} title={`${tr("nav.back")} · LB`} onClick={() => cmd({ type: "back" })}>
@@ -197,13 +202,17 @@ function AddressBar({ url, focused, setFocused, language, keyboard }: { url: str
 
 function PermissionDialog({ prompt, language }: { prompt: NonNullable<ShellState["permission"]>; language: string }) {
   const tr = (key: string) => t(language, key);
+  const deny = useRef<HTMLButtonElement>(null);
+  // The page asked for the permission, so its view is the one with focus: the prompt takes the focus itself, or a
+  // reader user is never told it is there.
+  useEffect(() => { deny.current?.focus(); }, []);
   return (
     <div class="overlay center" role="dialog" aria-modal="true" aria-label={tr("permission.title")}>
       <div class="dialog">
         <h2>{tr("permission.title")}</h2>
         <p><strong>{prompt.host}</strong> {tr("permission.wants")} {prompt.description}.</p>
         <div class="dialog-actions">
-          <button class="btn quiet" autofocus onClick={() => cmd({ type: "permission", allow: false, remember: false })}>{tr("permission.deny")}</button>
+          <button ref={deny} class="btn quiet" onClick={() => cmd({ type: "permission", allow: false, remember: false })}>{tr("permission.deny")}</button>
           <button class="btn quiet" onClick={() => cmd({ type: "permission", allow: false, remember: true })}>{tr("permission.denyAlways")}</button>
           <button class="btn" onClick={() => cmd({ type: "permission", allow: true, remember: false })}>{tr("permission.allow")}</button>
           <button class="btn" onClick={() => cmd({ type: "permission", allow: true, remember: true })}>{tr("permission.allowAlways")}</button>
