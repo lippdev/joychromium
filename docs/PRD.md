@@ -284,6 +284,42 @@ Regras de escopo:
 6. **Branch e PR** seguem o `CONTRIBUTING.md`: branch `tipo/eX-YY-descricao` (ex.: `feat/e1-03-menu-macos`), título em Conventional Commits e `Closes #N` no corpo. Tamanho **G** deve ser quebrado em PRs menores dentro da mesma issue.
 7. **Definição de pronto:** critérios de aceite atendidos; `npm run typecheck`, `npm test` e `npm run test:e2e` verdes nos três SOs do CI; teste com controle quando mexe em entrada ou UI; PRD atualizado se o escopo mudou.
 
+### 9.3 Status por item
+
+Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregue tem código na `main` e teste). O que falta está separado entre o que exige conta, hardware ou permissão de administrador e o que simplesmente ficou fora deste ciclo.
+
+| Épico | Must | Should | Could | O que falta |
+|---|---|---|---|---|
+| E1 Correções multiplataforma | 9/9 | 1/1 | — | — |
+| E2 Empacotamento e CI | 5/5 | 3/4 | 1/1 | E2-08 (Wayland/SteamOS) |
+| E3 Fundação de arquitetura | 5/5 | 3/3 | — | — |
+| E4 Robustez e desempenho | 1/1 | 1/1 | 1/2 | E4-03 (Could) |
+| E5 Design system e redesign | 4/4 | 3/3 | — | — |
+| E6 Experiência com controle | 4/5 | 2/2 | 2/2 | E6-07 (controle físico) |
+| E7 Internacionalização e a11y | 1/1 | 1/1 | 0/1 | E7-03 (leitor de tela) |
+| E8 Privacidade e observabilidade | 2/2 | 1/1 | 1/1 | — |
+| E9 Distribuição | — | — | 1/2 | E9-05 (Flatpak) |
+| E10 Mídia e DRM | 2/3 | 2/2 | 1/1 | E10-02 (VMP) |
+| E11 Documentação | 2/2 | 1/1 | — | — |
+
+Somando: **35 de 37 Must**, **18 de 19 Should** e **7 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow.
+
+**Pendências que dependem de terceiros, não de código**
+
+- **E2-03 — proteção da `main` com `electron (macos-latest)`.** O token de automação não tem permissão de administrador na API de branch protection (403). Fica em Settings → Branches, com o nome exato do check.
+- **E6-07 — sessão com controle físico.** O roteiro está em [CONTROLLER-TEST.md](CONTROLLER-TEST.md); falta rodar na TV com o controle na mão e registrar o que falhar.
+- **E10-02 — assinatura VMP (EVS).** A CDM baixa e o EME responde `ok` no Linux (ADR-009), mas Windows e macOS em produção precisam da conta gratuita na castLabs e do passo `afterPack` com `castlabs-evs`.
+- **E10-05 — resolução por serviço.** O mecanismo de UA por site está pronto e testado; a tabela em [DRM-UAS.md](DRM-UAS.md) espera alguém com conta nos serviços rodar a medição.
+- **E2-08 — Wayland e SteamOS.** Só se valida em máquina com Wayland/GNOME/KDE e no modo Gaming do Steam Deck.
+
+**Fora deste ciclo (Could, sem bloqueio)**
+
+- **E4-03** pausar o polling do controle com a janela minimizada e **E7-03** teste com leitor de tela (Narrator, VoiceOver, Orca): ambos pequenos, nenhum bloqueia a distribuição.
+- **E9-05** Flatpak no Flathub: exige conta e a revisão do Flathub, não é trabalho de código no repositório.
+- **E9-01 a E9-03** seguem congelados pelo ADR-010: sem assinatura de código até a decisão mudar.
+
+**O que o app faz hoje, em uma frase:** navegador de TV multiplataforma com tela cheia por padrão, controle como entrada principal (incluindo iframes e mídia), PT-BR e EN, bloqueio de anúncios e rastreadores por nível, DRM Widevine no Linux, atualização automática nos instaladores, e CI nos três sistemas que instala e abre o pacote de cada um.
+
 ### E1 — Correções multiplataforma (Marco M1)
 
 | ID | História | MoSCoW | Tamanho | Critérios de aceite |
