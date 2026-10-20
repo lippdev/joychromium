@@ -20,7 +20,7 @@
     "@playwright/test": "1.64.1",
     "@types/node": "26.6.5",
     "axe-core": "4.14.0",
-    "electron": "github:castlabs/electron-releases#v44.5.1+wvcus",
+    "electron": "github:castlabs/electron-releases#v42.11.10+wvcus",
     "electron-builder": "26.15.3",
     "esbuild": "^0.28.2",
     "preact": "^11.0.1",
@@ -147,7 +147,7 @@
     "rpm": {},
     "electronDownload": {
       "mirror": "https://github.com/castlabs/electron-releases/releases/download/",
-      "customDir": "v44.5.1+wvcus"
+      "customDir": "v42.11.10+wvcus"
     }
   },
   "author": {
