@@ -6,8 +6,8 @@ A controller-first browser for the TV, built on Electron (Chromium). Windows, ma
 
 | | Windows | macOS | Linux |
 |---|---|---|---|
-| Installers | `.exe` (NSIS, x64 + arm64) | `.dmg` / `.zip` (x64 + arm64) | `.AppImage`, `.deb`, `.rpm` (x64 + arm64) |
-| Updates itself | yes | no, it points you to the release page (see below) | AppImage yes; `.deb`/`.rpm` ask for your password |
+| Installers | `.exe` (NSIS, x64 + arm64) | `.dmg` / `.zip` (x64 + arm64) | `.AppImage`, `.deb`, `.rpm` (x64 + arm64); Flatpak bundle from CI (not on Flathub yet) |
+| Updates itself | yes | no, it points you to the release page (see below) | AppImage yes; `.deb`/`.rpm` ask for your password; inside the Flatpak, the host updates it |
 | Code signing | none yet | ad-hoc only | none |
 | Native window controls | drawn by the app | macOS traffic lights | drawn by the app |
 | DRM (Netflix, Prime Video) | Widevine from the castLabs build | same | same, without VMP |
@@ -19,7 +19,7 @@ Builds are not signed with a paid certificate yet ([PRD](docs/PRD.md), ADR-010).
 
 - **macOS**: open the `.dmg`, drag JoyChromium to Applications, then right-click the app → *Open* → *Open*. On recent versions, use *System Settings → Privacy & Security → Open Anyway*. Apple Silicon refuses a completely unsigned app, so every build gets an ad-hoc signature; that is enough to launch, but not enough for automatic updates.
 - **Windows**: SmartScreen shows *Windows protected your PC*; choose *More info → Run anyway*. The warning fades as the build gains reputation.
-- **Linux**: AppImage needs `chmod +x JoyChromium-*.AppImage`; if your distribution blocks the sandbox (Ubuntu 24.04 restricts user namespaces), install the `.deb` instead.
+- **Linux**: AppImage needs `chmod +x JoyChromium-*.AppImage`; if your distribution blocks the sandbox (Ubuntu 24.04 restricts user namespaces), install the `.deb` or the Flatpak bundle instead.
 
 Step-by-step instructions, including recovery when the system refuses to open the app, are in [docs/INSTALL.md](docs/INSTALL.md).
 

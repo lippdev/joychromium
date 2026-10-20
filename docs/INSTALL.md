@@ -46,6 +46,34 @@ sudo apt install ./JoyChromium-<versão>-linux-amd64.deb
 sudo dnf install ./JoyChromium-<versão>-linux-x86_64.rpm
 ```
 
+**Flatpak** (o app ainda não está publicado no Flathub; o bundle sai do CI como artefato):
+
+```bash
+flatpak install --user ./JoyChromium.flatpak
+flatpak run dev.lipp.joychromium
+```
+
+Dentro do Flatpak o app **não se atualiza sozinho**: o bundle é atualizado pelo Flatpak, junto com o runtime, e a tela
+*Sobre e atualizações* diz isso em vez de oferecer um download. Quando sair uma versão nova, instale o bundle novo
+(`flatpak install --user ./JoyChromium-<versão>.flatpak`) ou, depois que o app estiver no Flathub, rode
+`flatpak update dev.lipp.joychromium`.
+
+O app só enxerga `~/Downloads` (os downloads e o zip de diagnóstico caem em `~/Downloads/JoyChromium`); o resto da sua
+pasta pessoal fica fora do sandbox. Os dados do app ficam em `~/.var/app/dev.lipp.joychromium/`.
+
+Sem `--device=all`, o sandbox não entrega `/dev/input`, então o controle não aparece para o app (teclado, mouse e
+controle remoto funcionam). Num Flatpak 1.15.6 ou mais novo, libere só os dispositivos de entrada:
+
+```bash
+flatpak override --user --device=input dev.lipp.joychromium
+```
+
+Em Flatpak mais antigo — o 1.14 do Ubuntu 24.04, por exemplo — só existe a opção ampla:
+
+```bash
+flatpak override --user --device=all dev.lipp.joychromium
+```
+
 Instalações `.deb` e `.rpm` se atualizam pelo próprio app: quando a versão nova termina de baixar, Configurações → Sobre mostra **Reiniciar e instalar**, e o sistema pede a senha do seu usuário ali mesmo. O AppImage e as versões de Windows se atualizam ao fechar o app, sem senha.
 
 Em Raspberry Pi e outras máquinas ARM, use os artefatos `arm64`.

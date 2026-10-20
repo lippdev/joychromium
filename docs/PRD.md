@@ -177,7 +177,7 @@ app/
 | Fechar última janela | sai | sai (decisão de produto: é um app de TV) | sai |
 | Downloads | `app.getPath("downloads")` | idem | idem (respeita XDG) |
 | Extensões perigosas extras | — | `.dmg .pkg .mpkg .app .command .scpt .workflow .terminal` | `.desktop .flatpakref .snap` |
-| Formatos | NSIS (x64, arm64) | DMG + ZIP (universal ou x64 + arm64) | AppImage, deb, rpm (x64, arm64); Flatpak depois |
+| Formatos | NSIS (x64, arm64) | DMG + ZIP (universal ou x64 + arm64) | AppImage, deb, rpm (x64, arm64); bundle Flatpak (publicação no Flathub pendente de conta) |
 | Auto-update | NSIS por usuário (automático) | aviso de nova versão + download manual (Squirrel.Mac exige assinatura) | AppImage automático; deb/rpm com prompt de senha |
 | Assinatura de código | nenhuma (ADR-010) | ad-hoc apenas (ADR-010) | nenhuma |
 | Widevine (ADR-009) | ECS + VMP via EVS | ECS + VMP via EVS (antes do empacotamento final) | ECS, sem VMP |
@@ -298,7 +298,7 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | E6 Experiência com controle | 4/5 | 2/2 | 2/2 | E6-07 (controle físico) |
 | E7 Internacionalização e a11y | 1/1 | 1/1 | 0/1 | E7-03 (leitor de tela) |
 | E8 Privacidade e observabilidade | 2/2 | 1/1 | 1/1 | — |
-| E9 Distribuição | — | — | 1/2 | E9-05 (Flatpak) |
+| E9 Distribuição | — | — | 2/2 | — |
 | E10 Mídia e DRM | 2/3 | 2/2 | 1/1 | E10-02 (VMP) |
 | E11 Documentação | 2/2 | 1/1 | — | — |
 
@@ -311,11 +311,11 @@ Somando: **35 de 37 Must**, **18 de 19 Should** e **8 de 10 Could**. O E2-07 (sm
 - **E10-02 — assinatura VMP (EVS).** A CDM baixa e o EME responde `ok` no Linux (ADR-009), mas Windows e macOS em produção precisam da conta gratuita na castLabs e do passo `afterPack` com `castlabs-evs`.
 - **E10-05 — resolução por serviço.** O mecanismo de UA por site está pronto e testado; a tabela em [DRM-UAS.md](DRM-UAS.md) espera alguém com conta nos serviços rodar a medição.
 - **E2-08 — Wayland e SteamOS.** Só se valida em máquina com Wayland/GNOME/KDE e no modo Gaming do Steam Deck.
+- **E9-05 — publicação no Flathub.** O manifesto (`flatpak/dev.lipp.joychromium.yml`), o bundle e o workflow de CI estão no repositório e o app sabe que, dentro do sandbox, quem atualiza é o Flathub; falta a conta no Flathub, o repositório `flathub/dev.lipp.joychromium` e a revisão de terceiros. O que a submissão ainda pede está em [flatpak/README.md](../flatpak/README.md).
 
 **Fora deste ciclo (Could, sem bloqueio)**
 
 - **E4-03** pausar o polling do controle com a janela minimizada e **E7-03** teste com leitor de tela (Narrator, VoiceOver, Orca): ambos pequenos, nenhum bloqueia a distribuição.
-- **E9-05** Flatpak no Flathub: exige conta e a revisão do Flathub, não é trabalho de código no repositório.
 - **E9-01 a E9-03** seguem congelados pelo ADR-010: sem assinatura de código até a decisão mudar.
 
 **O que o app faz hoje, em uma frase:** navegador de TV multiplataforma com tela cheia por padrão, controle como entrada principal (incluindo iframes e mídia), PT-BR e EN, bloqueio de anúncios e rastreadores por nível, DRM Widevine no Linux, atualização automática nos instaladores, e CI nos três sistemas que instala e abre o pacote de cada um.

@@ -29,3 +29,32 @@ test("opens fullscreen in TV mode and keeps a single instance", async () => {
     rmSync(data, { recursive: true, force: true });
   }
 });
+
+// Inside the Flatpak sandbox the host updates the bundle, so the settings row says where updates come from instead of
+// offering a download that would land on top of the sandbox files.
+test("a Flatpak build reports Flathub as its updater", async () => {
+  // FLATPAK_ID only decides the updater on Linux; everywhere else the same variable must change nothing.
+  test.skip(process.platform !== "linux", "a Flatpak sandbox only exists on Linux");
+  const data = mkdtempSync(join(tmpdir(), "joychromium-e2e-"));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  const app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data, FLATPAK_ID: "dev.lipp.joychromium" } });
+  try {
+    await app.firstWindow();
+    // Navigating while the first tab is still loading opens a second one, so let the startup tab land first.
+    await expect.poll(async () => {
+      const open = await app.evaluate(() => globalThis.joy.tabs());
+      return open.length === 1 && !open[0]?.isLoading;
+    }, { timeout: 30_000 }).toBe(true);
+    await app.evaluate(({}, url) => globalThis.joy.command({ type: "navigate", url }), "joychromium://settings");
+    // Tab views are not reachable through Playwright, so the page is read through the test bridge.
+    const read = (script: string) =>
+      app.evaluate(({}, code) => globalThis.joy.pageEval(code) as Promise<string>, script);
+    // The row shows where updates come from as soon as the page opens, with no check and no download on offer.
+    await expect.poll(() => read("document.getElementById('appUpdate')?.textContent ?? ''"), { timeout: 30_000 })
+      .toBe("Updates come from Flathub; install the new version from your software center");
+    expect(await read("String(document.getElementById('updateDownload')?.hidden)")).toBe("true");
+  } finally {
+    await app.close();
+    rmSync(data, { recursive: true, force: true });
+  }
+});

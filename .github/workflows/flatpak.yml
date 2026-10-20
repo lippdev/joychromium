@@ -1,0 +1,62 @@
+name: Flatpak
+
+# Builds flatpak/dev.lipp.joychromium.yml and uploads the bundle as an artifact. Nothing is published here: Flathub
+# takes the app through its own account and review, and this job only proves the manifest still builds.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "flatpak/**"
+      - "app/package.json"
+      - "app/package-lock.json"
+      - "app/src/**"
+      - ".github/workflows/flatpak.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "flatpak/**"
+      - "app/package.json"
+      - "app/package-lock.json"
+      - "app/src/**"
+      - ".github/workflows/flatpak.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    name: bundle (flatpak)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install flatpak-builder, Flathub and the runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          # Same refs the manifest declares: the platform, the SDK that builds it, the Electron base and Node.
+          sudo flatpak install -y --noninteractive flathub \
+            org.freedesktop.Platform//26.08 \
+            org.freedesktop.Sdk//26.08 \
+            org.electronjs.Electron2.BaseApp//26.08 \
+            org.freedesktop.Sdk.Extension.node24//26.08
+      - name: Build the bundle
+        run: |
+          set -euo pipefail
+          # rofiles-fuse is not available on the runners, and the build directory is thrown away afterwards.
+          flatpak-builder --force-clean --disable-rofiles-fuse --delete-build-dirs \
+            --repo="$PWD/flatpak/repo" --state-dir="$PWD/flatpak/state" --default-branch=stable \
+            "$PWD/flatpak/build" flatpak/dev.lipp.joychromium.yml
+          flatpak build-bundle --arch=x86_64 flatpak/repo JoyChromium.flatpak dev.lipp.joychromium stable
+          sha256sum JoyChromium.flatpak
+      - uses: actions/upload-artifact@v7
+        with:
+          name: JoyChromium-flatpak
+          path: JoyChromium.flatpak
+          if-no-files-found: error
+          retention-days: 14

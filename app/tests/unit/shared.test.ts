@@ -19,7 +19,7 @@ import { buildSuggestions } from "../../src/shared/suggestion";
 import { defaultModeFor, directionOf, nextMode, stickToScroll, stickToVelocity } from "../../src/shared/controllerInput";
 import { activePad, padInUse, padsInUse, startedUsing, type PadSample } from "../../src/shared/controllerSelection";
 import {
-  extraDangerousExtensions, shortcutLabel, shortcutModifier, urlFromArgv, usesNativeWindowControls,
+  extraDangerousExtensions, shortcutLabel, shortcutModifier, updateInstaller, urlFromArgv, usesNativeWindowControls,
 } from "../../src/shared/platform";
 import { diagnosticsLines, formatBootLine, formatMemoryLines, formatTabsLine } from "../../src/shared/diagnostics";
 import { History } from "../../src/main/history";
@@ -324,6 +324,12 @@ describe("platform", () => {
   it("finds a URL handed to a second instance", () => {
     expect(urlFromArgv(["/app/joychromium", "https://a.example/x"])).toBe("https://a.example/x");
     expect(urlFromArgv(["--flag"])).toBeUndefined();
+  });
+  it("leaves updates to the host inside the Flatpak sandbox", () => {
+    expect(updateInstaller("linux", "dev.lipp.joychromium")).toBe("flathub");
+    expect(updateInstaller("linux", undefined)).toBe("app");
+    expect(updateInstaller("darwin", "dev.lipp.joychromium")).toBe("app");
+    expect(updateInstaller("win32", undefined)).toBe("app");
   });
 });
 

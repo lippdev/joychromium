@@ -26,6 +26,17 @@ export function extraDangerousExtensions(platform: string): readonly string[] {
   return [];
 }
 
+export type UpdateInstaller = "app" | "flathub";
+
+/**
+ * Who installs a newer build. A Flatpak bundle is one unit the host updates along with its sandbox, so the bundled
+ * updater must stay out of it; everywhere else electron-updater replaces the app from the GitHub release.
+ * `flatpakId` is the `FLATPAK_ID` variable the Flatpak sandbox exports.
+ */
+export function updateInstaller(platform: string, flatpakId: string | undefined): UpdateInstaller {
+  return platform === "linux" && flatpakId ? "flathub" : "app";
+}
+
 /** A URL handed to a second instance, if the argv contains one. */
 export function urlFromArgv(argv: readonly string[]): string | undefined {
   return argv.find((arg) => /^https?:\/\//i.test(arg) || arg.startsWith("joychromium://"));

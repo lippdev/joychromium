@@ -1,11 +1,17 @@
 import { app, shell } from "electron";
-import { installsUpdatesWithPackageManager, platformId } from "./platform";
+import { currentUpdateInstaller, installsUpdatesWithPackageManager, platformId } from "./platform";
 import type { Log } from "./log";
 
 /** Where the updater looks for the download page when it cannot install by itself. */
 export const RELEASES_URL = "https://github.com/lippdev/joychromium/releases/latest";
 /** Release metadata electron-builder publishes next to each build. */
 const LATEST_MAC_YML = "https://github.com/lippdev/joychromium/releases/latest/download/latest-mac.yml";
+/**
+ * What the settings row says inside the Flatpak sandbox. The bundle is one unit the host updates together with its
+ * runtime, so the app must not download and apply a GitHub build on top of it: that would leave the sandbox files
+ * out of sync and break the next host update.
+ */
+export const FLATPAK_UPDATE_STATUS = "Updates come from Flathub; install the new version from your software center";
 
 /** Where a pending update goes: the system package manager can finish now, everything else needs the release page. */
 export function updateInstallRoute(downloaded: boolean, packageManaged: boolean): "package-manager" | "release-page" {
@@ -33,6 +39,9 @@ export function versionFromUpdateYml(text: string): string | undefined {
  *
  * macOS builds are not signed with a Developer ID (ADR-010), and Squirrel.Mac refuses to apply updates to an
  * unsigned bundle, so on macOS the updater only reports that a newer version exists and opens the release page.
+ *
+ * Flatpak builds are updated by the host from Flathub, so inside the sandbox `check()` reports that and stops before
+ * electron-updater (or even the release metadata) is reached.
  */
 export class Updater {
   status = "Not checked yet";
@@ -41,10 +50,17 @@ export class Updater {
   /** Set when a newer version exists but the app must update by hand. */
   manualUpdate: { version: string; url: string } | undefined;
 
-  constructor(private readonly log: Log, private readonly blockedVersions: () => readonly string[]) {}
+  constructor(private readonly log: Log, private readonly blockedVersions: () => readonly string[]) {
+    if (this.hostUpdatesIt) this.status = FLATPAK_UPDATE_STATUS;
+  }
+
+  /** True inside the Flatpak sandbox, where the host owns the bundle and its version. */
+  private get hostUpdatesIt(): boolean {
+    return currentUpdateInstaller() === "flathub";
+  }
 
   private get installsItself(): boolean {
-    return platformId() !== "darwin";
+    return platformId() !== "darwin" && !this.hostUpdatesIt;
   }
 
   /** True on a deb or rpm install, where the downloaded package goes through dpkg/rpm as root. */
@@ -90,6 +106,10 @@ export class Updater {
   }
 
   async check(): Promise<void> {
+    if (this.hostUpdatesIt) {
+      this.status = FLATPAK_UPDATE_STATUS;
+      return;
+    }
     if (!app.isPackaged) {
       this.status = "Running unpackaged; self-update only works when installed";
       return;

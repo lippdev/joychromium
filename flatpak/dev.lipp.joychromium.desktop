@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=JoyChromium
+GenericName=Web Browser
+Comment=Controller-first browser for the TV
+Exec=joychromium %U
+Icon=dev.lipp.joychromium
+Terminal=false
+Categories=Network;WebBrowser;
+StartupNotify=true
+StartupWMClass=JoyChromium
