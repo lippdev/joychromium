@@ -53,6 +53,21 @@ export function extensionOf(fileName: string): string {
   return dot < 0 ? "" : fileName.slice(dot).toLowerCase();
 }
 
+/** Balanced and Strict announce Global Privacy Control; Strict also refuses third-party cookies. */
+export function trackingPolicy(level: "Basic" | "Balanced" | "Strict"): { sendGpc: boolean; blockThirdPartyCookies: boolean } {
+  if (level === "Strict") return { sendGpc: true, blockThirdPartyCookies: true };
+  if (level === "Balanced") return { sendGpc: true, blockThirdPartyCookies: false };
+  return { sendGpc: false, blockThirdPartyCookies: false };
+}
+
+/** True when the request host is not the page that referred it. Missing referrer is treated as first-party. */
+export function isThirdPartyRequest(url: string, referrer: string | undefined): boolean {
+  const host = hostOf(url);
+  const from = hostOf(referrer);
+  if (!host || !from) return false;
+  return host !== from && !host.endsWith(`.${from}`) && !from.endsWith(`.${host}`);
+}
+
 export function isDangerousDownload(fileName: string | undefined | null, extra: readonly string[] = []): boolean {
   const ext = extensionOf(fileName ?? "");
   return DANGEROUS_EXTENSIONS.has(ext) || extra.some((e) => e.toLowerCase() === ext);

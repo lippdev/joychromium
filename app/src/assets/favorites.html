@@ -9,7 +9,7 @@
 <body>
 <main>
   <h1>Favorites</h1>
-  <p class="lead">Press the ★ button (or <kbd>Ctrl+D</kbd>, or hold <kbd>LB</kbd> and press <kbd>Y</kbd>) on any page to keep it here. Favorites also appear on the new tab page.</p>
+  <p class="lead">Press the ★ button (or <kbd id="favkey">Ctrl+D</kbd>, or hold <kbd>LB</kbd> and press <kbd>Y</kbd>) on any page to keep it here. Favorites also appear on the new tab page.</p>
   <div class="bar"><input id="q" placeholder="Filter favorites" autofocus autocomplete="off"></div>
   <div id="list"></div>
 </main>
@@ -25,6 +25,7 @@
   window.joy.onMessage(msg => {
     if (msg.type !== 'init') return;
     paint(msg.theme);
+    if (msg.shortcutMod) document.getElementById('favkey').textContent = msg.shortcutMod + '+D';
     all = (msg.favorites || []).map(f => ({ title: f.name, url: f.url }));
     draw();
   });

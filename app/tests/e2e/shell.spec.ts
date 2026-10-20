@@ -9,12 +9,12 @@ let app: ElectronApplication;
 
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-e2e-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
 });
 
 test.afterEach(async () => {
-  await app.close();
+  await app.close().catch(() => undefined);
   rmSync(data, { recursive: true, force: true });
 });
 
@@ -65,11 +65,15 @@ test("shell UI, tabs, internal pages and session", async () => {
 });
 
 test("first run shows onboarding", async () => {
-  writeFileSync(join(data, "settings.json"), "{}");
-  const fresh = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
+  // A fresh profile, and only one instance at a time: a second launch of the same profile hands over and exits.
+  await app.close();
+  const fresh = mkdtempSync(join(tmpdir(), "joychromium-e2e-first-"));
+  writeFileSync(join(fresh, "settings.json"), "{}");
+  const first = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: fresh } });
   try {
-    await expect.poll(() => fresh.evaluate(() => globalThis.joy.tabs()[0]?.url), { timeout: 30_000 }).toBe("joychromium://welcome");
+    await expect.poll(() => first.evaluate(() => globalThis.joy.tabs()[0]?.url), { timeout: 30_000 }).toBe("joychromium://welcome");
   } finally {
-    await fresh.close();
+    await first.close();
+    rmSync(fresh, { recursive: true, force: true });
   }
 });

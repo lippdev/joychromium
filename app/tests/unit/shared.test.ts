@@ -8,11 +8,15 @@ import {
   parseTheme, startupTargets, THEME_PRESETS, toggleFavorite, withInputMode, withoutInputMode, withoutPermissions, withPermission,
 } from "../../src/shared/settings";
 import {
-  allowPopup, dohTemplate, hostOf, isDangerousDownload, isNavigationAllowed, safeFileName, upgradeToHttps, versionAtLeast,
+  allowPopup, dohTemplate, hostOf, isDangerousDownload, isNavigationAllowed, isThirdPartyRequest, safeFileName,
+  trackingPolicy, upgradeToHttps, versionAtLeast,
 } from "../../src/shared/security";
 import { effectiveMinimumChromium, parsePolicy, policyBlocksHost, verifyPolicy } from "../../src/shared/policy";
 import { buildSuggestions } from "../../src/shared/suggestion";
 import { defaultModeFor, directionOf, nextMode, stickToScroll, stickToVelocity } from "../../src/shared/controllerInput";
+import {
+  extraDangerousExtensions, shortcutLabel, shortcutModifier, urlFromArgv, usesNativeWindowControls,
+} from "../../src/shared/platform";
 import { History } from "../../src/main/history";
 import { SettingsStore } from "../../src/main/store";
 import { readFileSync } from "node:fs";
@@ -52,7 +56,7 @@ describe("settings", () => {
     const d = defaultSettings();
     expect(d.searchEngine.name).toBe("Google");
     expect(d.httpsOnly).toBe(true);
-    expect(d.passwordAutosave).toBe(false);
+    expect(d.windowMode).toBe("tv");
     expect(newTabTarget(d)).toBe(Pages.newtab);
     expect(startupTargets(d, [])).toEqual([Pages.newtab]);
     const parsed = parseSettings({ startup: "Restore", homeUrl: "javascript:1", theme: 5, siteInputModes: { "A.example": "Cursor", b: "bad" } });
@@ -194,5 +198,44 @@ describe("controller input", () => {
     expect(directionOf({ up: false, down: false, left: false, right: false }, 0, 0.9)).toBe("down");
     expect(directionOf({ up: true, down: false, left: false, right: false }, 0, 0)).toBe("up");
     expect(directionOf({ up: false, down: false, left: false, right: false }, 0, 0)).toBeUndefined();
+  });
+});
+
+describe("platform", () => {
+  it("uses Cmd on macOS and Ctrl elsewhere", () => {
+    expect(shortcutModifier("darwin")).toBe("Cmd");
+    expect(shortcutModifier("win32")).toBe("Ctrl");
+    expect(shortcutModifier("linux")).toBe("Ctrl");
+    expect(shortcutLabel("darwin", "D")).toBe("Cmd+D");
+    expect(shortcutLabel("linux", "D")).toBe("Ctrl+D");
+  });
+  it("keeps native window controls only on macOS", () => {
+    expect(usesNativeWindowControls("darwin")).toBe(true);
+    expect(usesNativeWindowControls("win32")).toBe(false);
+    expect(usesNativeWindowControls("linux")).toBe(false);
+  });
+  it("adds the installers each system actually uses", () => {
+    expect(extraDangerousExtensions("darwin")).toContain(".dmg");
+    expect(extraDangerousExtensions("darwin")).toContain(".app");
+    expect(extraDangerousExtensions("linux")).toContain(".desktop");
+    expect(extraDangerousExtensions("win32")).toEqual([]);
+  });
+  it("finds a URL handed to a second instance", () => {
+    expect(urlFromArgv(["/app/joychromium", "https://a.example/x"])).toBe("https://a.example/x");
+    expect(urlFromArgv(["--flag"])).toBeUndefined();
+  });
+});
+
+describe("tracking prevention", () => {
+  it("maps levels to a policy", () => {
+    expect(trackingPolicy("Basic")).toEqual({ sendGpc: false, blockThirdPartyCookies: false });
+    expect(trackingPolicy("Balanced")).toEqual({ sendGpc: true, blockThirdPartyCookies: false });
+    expect(trackingPolicy("Strict")).toEqual({ sendGpc: true, blockThirdPartyCookies: true });
+  });
+  it("recognises third-party requests", () => {
+    expect(isThirdPartyRequest("https://ads.example/x", "https://news.example/")).toBe(true);
+    expect(isThirdPartyRequest("https://news.example/x", "https://news.example/")).toBe(false);
+    expect(isThirdPartyRequest("https://cdn.news.example/x", "https://news.example/")).toBe(false);
+    expect(isThirdPartyRequest("https://ads.example/x", undefined)).toBe(false);
   });
 });

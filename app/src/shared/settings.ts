@@ -1,4 +1,5 @@
 import { isWebUrl, Pages } from "./pages";
+import type { WindowMode } from "./platform";
 
 export interface Theme {
   accent: string;
@@ -105,9 +106,9 @@ export interface AppSettings {
   httpsOnly: boolean;
   trackingPrevention: TrackingLevel;
   dnsOverHttps: DohProvider;
-  passwordAutosave: boolean;
-  autofill: boolean;
   blockDangerousDownloads: boolean;
+  /** tv opens fullscreen for a controller; window is the desktop layout. */
+  windowMode: WindowMode;
   /** host -> permission kind -> allowed */
   sitePermissions: Record<string, Record<string, boolean>>;
 }
@@ -130,9 +131,8 @@ export function defaultSettings(): AppSettings {
     httpsOnly: true,
     trackingPrevention: "Balanced",
     dnsOverHttps: "Off",
-    passwordAutosave: false,
-    autofill: false,
     blockDangerousDownloads: true,
+    windowMode: "tv",
     sitePermissions: {},
   };
 }
@@ -181,9 +181,8 @@ export function parseSettings(raw: unknown): AppSettings {
     httpsOnly: bool(r.httpsOnly, d.httpsOnly),
     trackingPrevention: oneOf(["Basic", "Balanced", "Strict"] as const, r.trackingPrevention, d.trackingPrevention),
     dnsOverHttps: oneOf(["Off", "Cloudflare", "Quad9", "Google"] as const, r.dnsOverHttps, d.dnsOverHttps),
-    passwordAutosave: bool(r.passwordAutosave, d.passwordAutosave),
-    autofill: bool(r.autofill, d.autofill),
     blockDangerousDownloads: bool(r.blockDangerousDownloads, d.blockDangerousDownloads),
+    windowMode: oneOf(["tv", "window"] as const, r.windowMode, d.windowMode),
     sitePermissions: permissions,
   };
 }

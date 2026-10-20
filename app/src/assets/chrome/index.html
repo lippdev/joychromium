@@ -14,9 +14,9 @@
     <button id="newtab" class="caption" data-cmd="new-tab" aria-label="New tab" title="New tab · Start">＋</button>
     <div class="spacer"></div>
     <div id="wincontrols">
-      <button class="caption" data-win="minimize" aria-label="Minimize" title="Minimize">&#xE921;</button>
-      <button class="caption" data-win="maximize" aria-label="Maximize" title="Maximize">&#xE922;</button>
-      <button class="caption close" data-win="close" aria-label="Close" title="Close">&#xE8BB;</button>
+      <button class="caption" data-win="minimize" aria-label="Minimize" title="Minimize"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 5.5h10" /></svg></button>
+      <button class="caption" data-win="maximize" aria-label="Maximize" title="Maximize"><svg viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" /></svg></button>
+      <button class="caption close" data-win="close" aria-label="Close" title="Close"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0l10 10M10 0L0 10" /></svg></button>
     </div>
   </div>
   <div id="toolbar">
@@ -29,9 +29,10 @@
       <div id="suggestions" role="listbox" hidden></div>
     </div>
     <button id="go" class="tool primary" aria-label="Go">GO</button>
-    <button id="favorite" class="tool" aria-label="Favorite" title="Add to favorites · Ctrl+D · LB+Y">☆</button>
+    <button id="favorite" class="tool" aria-label="Favorite" title="Add to favorites · LB+Y">☆</button>
     <span id="tvbadge" class="badge">TV ON</span>
-    <button class="tool" data-cmd="settings" aria-label="Settings" title="Settings · Ctrl+,">⚙</button>
+    <button class="tool" data-cmd="settings" aria-label="Settings" title="Settings">⚙</button>
+    <button class="tool" data-cmd="window-mode" aria-label="Switch between TV and window mode" title="TV / window mode · F11">⛶</button>
   </div>
   <div id="permission" class="panel" hidden>
     <div class="panel-title">PERMISSION REQUEST</div>

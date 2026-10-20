@@ -234,7 +234,7 @@ export class TabManager extends EventEmitter<TabEvents> {
     wc.on("enter-html-full-screen", () => this.emit("fullscreen", tab, true));
     wc.on("leave-html-full-screen", () => this.emit("fullscreen", tab, false));
     wc.on("dom-ready", () => {
-      // Same script the WebView2 shell injected: spatial focus navigation plus the virtual cursor overlay.
+      // Spatial focus navigation plus the virtual cursor overlay, injected into every web document.
       if (!isInternal(wc.getURL())) wc.executeJavaScript(this.env.spatialScript, true).catch(() => undefined);
     });
     wc.on("render-process-gone", (_event, details) => {
