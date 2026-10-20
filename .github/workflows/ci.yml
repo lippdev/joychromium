@@ -46,6 +46,15 @@ jobs:
       - name: End-to-end (real Electron, macOS)
         if: runner.os == 'macOS'
         run: npm run test:e2e
+      # The two time budgets of the PRD, section 11, as the e2e measured them on this runner. It prints on every run,
+      # so a slow machine leaves a number in the log instead of a mystery; the file rides along in the job artifact.
+      - name: Section 11 metrics (measured by the e2e)
+        if: always()
+        run: >-
+          node -e "const fs=require('fs');const p='test-results/metrics.json';
+          if(!fs.existsSync(p)){console.log('no metrics.json: the e2e did not reach the metrics spec');process.exit(0);}
+          for(const m of JSON.parse(fs.readFileSync(p,'utf8')).measured)
+          console.log(m.name + ': ' + m.valueMs + ' ms (goal ' + m.goalMs + ' ms, fails above ' + m.limitMs + ' ms)')"
       # Native Wayland, no X11: a headless Weston compositor, DISPLAY unset, and the app has to boot and paint in it.
       - name: Wayland smoke test (no XWayland)
         if: runner.os == 'Linux'
@@ -127,4 +136,5 @@ jobs:
             app/release/*.rpm
             app/release/*.dmg
             app/release/*.zip
+            app/test-results/metrics.json
           if-no-files-found: ignore

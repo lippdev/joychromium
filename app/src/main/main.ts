@@ -12,6 +12,7 @@ import { SettingsStore } from "./store";
 import { ensureTvIdentity } from "./tvIdentity";
 import { Updater } from "./updater";
 import { diagnosticsLines } from "../shared/diagnostics";
+import { firstScreenLine } from "../shared/metrics";
 import { Pages } from "../shared/pages";
 import { effectiveMinimumChromium } from "../shared/policy";
 import { dohTemplate, versionAtLeast } from "../shared/security";
@@ -160,6 +161,7 @@ async function start(): Promise<void> {
     installUpdate: () => updater.installPending(),
     openUpdatePage: () => updater.openDownloadPage(),
     exportDiagnostics: exportDiagnosticsReport,
+    onFirstScreen: () => log.info(firstScreenLine(Date.now() - startedAt)),
   });
   shellRef = shell;
   globalThis.joy.exportDiagnostics = exportDiagnosticsReport;
