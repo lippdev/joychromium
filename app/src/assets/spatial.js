@@ -155,6 +155,18 @@
     invoke(el, el.paused ? 'play' : 'pause');
     return true;
   };
+  // Picture-in-picture: the browser's own PiP window, for the quick menu. An element already in it gets it closed;
+  // otherwise the first video with frames goes into the window. False when this frame has neither.
+  const pictureInPicture = () => {
+    const open = document.pictureInPictureElement;
+    if (open) { invoke(document, 'exitPictureInPicture'); return true; }
+    if (!document.pictureInPictureEnabled) return false;
+    const videos = mediaElements().filter(v => v.tagName === 'VIDEO' && !v.disablePictureInPicture && v.readyState >= 2);
+    const el = videos.find(playing) || videos[0];
+    if (!el) return false;
+    invoke(el, 'requestPictureInPicture');
+    return true;
+  };
   const skip = dir => {
     if (!anyMedia()) return false;
     const control = document.querySelector(dir === 'next'
@@ -203,6 +215,7 @@
     mediaToggle() { return mediaToggle() || forwardMedia('mediaToggle'); },
     mediaNext() { return skip('next') || forwardMedia('mediaNext'); },
     mediaPrevious() { return skip('previous') || forwardMedia('mediaPrevious'); },
+    mediaPictureInPicture() { return pictureInPicture() || forwardMedia('mediaPictureInPicture'); },
     clear() { if (current) current.classList.remove('__joy-focus'); current = null; }
   };
   window.__joy = api;

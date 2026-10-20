@@ -17,9 +17,9 @@ export function sendArrow(wc: WebContents, direction: Direction): void {
 }
 
 /** The injected scripts live in `SPATIAL_WORLD`, out of the page's reach, so every interaction has to run there. */
-export async function runInPageWorld<T>(wc: WebContents, code: string): Promise<T | undefined> {
+export async function runInPageWorld<T>(wc: WebContents, code: string, userGesture = false): Promise<T | undefined> {
   try {
-    return (await wc.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code }])) as T;
+    return (await wc.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code }], userGesture)) as T;
   } catch {
     return undefined;
   }
@@ -33,12 +33,17 @@ export async function spatialActivate(wc: WebContents): Promise<void> {
   await runInPageWorld(wc, "window.__joy && window.__joy.activate()");
 }
 
-const MEDIA_CALLS: Record<MediaAction, string> = { toggle: "mediaToggle", next: "mediaNext", previous: "mediaPrevious" };
+const MEDIA_CALLS: Record<MediaAction, string> = {
+  toggle: "mediaToggle", next: "mediaNext", previous: "mediaPrevious", pip: "mediaPictureInPicture",
+};
 
-/** Runs an explicit media action in the injected script; false when the page has nothing to play, pause or skip. */
+/**
+ * Runs an explicit media action in the injected script; false when the page has nothing to play, pause, skip or put in
+ * a picture-in-picture window. Entering picture-in-picture needs transient user activation, so that one asks for it.
+ */
 export async function spatialMedia(wc: WebContents, action: MediaAction): Promise<boolean> {
   const call = MEDIA_CALLS[action];
-  return Boolean(await runInPageWorld<boolean>(wc, `window.__joy && window.__joy.${call} ? window.__joy.${call}() : false`));
+  return Boolean(await runInPageWorld<boolean>(wc, `window.__joy && window.__joy.${call} ? window.__joy.${call}() : false`, action === "pip"));
 }
 
 /** A's media decision: "media" only when the page paused audible playback that was running. */

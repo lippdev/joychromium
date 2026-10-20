@@ -58,6 +58,9 @@ export const MaximizeIcon = ({ size = 12, class: c }: Props) => (
 export const TvIcon = ({ size = 22, class: c }: Props) => (
   <svg {...base(size)} class={c}><rect x="2" y="5" width="20" height="13" rx="2" /><path d="M8 21h8" /></svg>
 );
+export const PictureInPictureIcon = ({ size = 22, class: c }: Props) => (
+  <svg {...base(size)} class={c}><rect x="2" y="4" width="20" height="16" rx="2" /><rect x="12" y="12" width="8" height="6" rx="1" /></svg>
+);
 export const FullscreenIcon = ({ size = 22, class: c }: Props) => (
   <svg {...base(size)} class={c}><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
 );

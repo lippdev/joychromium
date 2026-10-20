@@ -2,7 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import type { ShellState } from "../../shared/ipc";
 import { t } from "../../shared/i18n";
 import { cmd } from "./bridge";
-import { FullscreenIcon, KeyboardIcon, SettingsIcon, TvIcon, VolumeIcon } from "./icons";
+import { FullscreenIcon, KeyboardIcon, PictureInPictureIcon, SettingsIcon, TvIcon, VolumeIcon } from "./icons";
 
 /** The Start/Guide menu: the things a controller needs that do not deserve a button in the bar. */
 export function QuickMenu({ state, onClose, onTabs }: { state: ShellState; onClose: () => void; onTabs: () => void }) {
@@ -28,6 +28,9 @@ export function QuickMenu({ state, onClose, onTabs }: { state: ShellState; onClo
         </button>
         <button class="menu-item" onClick={() => run({ type: "media", action: "toggle" })}>
           <TvIcon /> {tr("menu.playPause")}
+        </button>
+        <button class="menu-item" onClick={() => run({ type: "media", action: "pip" })}>
+          <PictureInPictureIcon /> {tr("menu.pictureInPicture")}
         </button>
         <button class="menu-item" onClick={() => run({ type: "media", action: "previous" })}>
           <TvIcon /> {tr("menu.previousTrack")}

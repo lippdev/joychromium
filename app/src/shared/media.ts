@@ -1,5 +1,5 @@
 /** What the page's media element is asked to do, from a controller button, a media key or the quick menu. */
-export const MEDIA_ACTIONS = ["toggle", "next", "previous"] as const;
+export const MEDIA_ACTIONS = ["toggle", "next", "previous", "pip"] as const;
 export type MediaAction = (typeof MEDIA_ACTIONS)[number];
 
 /** The `KeyboardEvent.key` values Chromium reports for the hardware media keys. */
