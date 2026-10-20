@@ -1,11 +1,17 @@
 import { app, shell } from "electron";
 import { currentUpdateInstaller, installsUpdatesWithPackageManager, platformId } from "./platform";
+import { followsUpdateChannel } from "../shared/updates";
 import type { Log } from "./log";
 
 /** Where the updater looks for the download page when it cannot install by itself. */
 export const RELEASES_URL = "https://github.com/lippdev/joychromium/releases/latest";
+/** The whole release list, which is where a pre-1.0 build has to look: `latest` never points at a pre-release. */
+export const RELEASES_PAGE_URL = "https://github.com/lippdev/joychromium/releases";
 /** Release metadata electron-builder publishes next to each build. */
 const LATEST_MAC_YML = "https://github.com/lippdev/joychromium/releases/latest/download/latest-mac.yml";
+/** What the settings row says on a pre-1.0 build, which is published as a pre-release and updates by hand. */
+export const alphaUpdateStatus = (version: string): string => `v${version} is an alpha build; new versions come from the releases page`;
+
 /**
  * What the settings row says inside the Flatpak sandbox. The bundle is one unit the host updates together with its
  * runtime, so the app must not download and apply a GitHub build on top of it: that would leave the sandbox files
@@ -42,6 +48,9 @@ export function versionFromUpdateYml(text: string): string | undefined {
  *
  * Flatpak builds are updated by the host from Flathub, so inside the sandbox `check()` reports that and stops before
  * electron-updater (or even the release metadata) is reached.
+ *
+ * Pre-1.0 builds are published as pre-releases, which GitHub's `releases/latest` never serves: they do not check the
+ * automatic channel either, and point the user at the release list instead.
  */
 export class Updater {
   status = "Not checked yet";
@@ -112,6 +121,11 @@ export class Updater {
     }
     if (!app.isPackaged) {
       this.status = "Running unpackaged; self-update only works when installed";
+      return;
+    }
+    if (!followsUpdateChannel(app.getVersion())) {
+      this.manualUpdate = { version: app.getVersion(), url: RELEASES_PAGE_URL };
+      this.status = alphaUpdateStatus(app.getVersion());
       return;
     }
     const updater = this.autoUpdater;
