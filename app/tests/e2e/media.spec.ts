@@ -31,6 +31,7 @@ const command = (c: unknown) => app.evaluate(({}, cmd) => globalThis.joy.command
 const pageEval = (script: string) => app.evaluate(({}, code) => globalThis.joy.pageEval(code), script);
 const spatialEval = (script: string) => app.evaluate(({}, code) => globalThis.joy.spatialEval(code), script);
 const settle = () => expect.poll(async () => (await tabs()).find((t) => t.isActive)?.isLoading, { timeout: 30_000 }).toBe(false);
+const playingAudio = () => expect.poll(async () => (await tabs()).find((t) => t.isActive)?.isPlayingAudio, { timeout: 10_000 });
 
 /** Replaces the gamepad the shell polls, so the real controller path runs without hardware. */
 async function installPad(): Promise<void> {
@@ -57,22 +58,53 @@ const sendMediaKey = (keyCode: string) => app.evaluate(({ webContents }, code) =
   wc?.sendInputEvent({ type: "keyUp", keyCode: code });
 }, keyCode);
 
-/** A muted canvas stream gives a real playing element without a codec, a file or the network. */
-const VIDEO = `(() => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 36;
-  const context = canvas.getContext('2d');
-  setInterval(() => { context.fillStyle = '#123'; context.fillRect(0, 0, 64, 36); }, 100);
+/** 0.25 s of silence as a WAV data URI: real playback without a file, the network or a video codec. */
+function silence(): string {
+  const rate = 8000;
+  const samples = 2000;
+  const bytes = Buffer.alloc(44 + samples);
+  bytes.write("RIFF", 0);
+  bytes.writeUInt32LE(36 + samples, 4);
+  bytes.write("WAVE", 8);
+  bytes.write("fmt ", 12);
+  bytes.writeUInt32LE(16, 16);
+  bytes.writeUInt16LE(1, 20);
+  bytes.writeUInt16LE(1, 22);
+  bytes.writeUInt32LE(rate, 24);
+  bytes.writeUInt32LE(rate, 28);
+  bytes.writeUInt16LE(1, 32);
+  bytes.writeUInt16LE(8, 34);
+  bytes.write("data", 36);
+  bytes.writeUInt32LE(samples, 40);
+  bytes.fill(0x80, 44);
+  return `data:audio/wav;base64,${bytes.toString("base64")}`;
+}
+
+const WAV = silence();
+
+/** A looping video element that really plays, carried by the silent WAV. */
+const video = (muted: boolean) => `(() => {
   const video = document.createElement('video');
   video.id = 'video';
-  video.muted = true;
-  video.srcObject = canvas.captureStream(10);
+  video.muted = ${muted};
+  video.loop = true;
+  video.src = ${JSON.stringify(WAV)};
   window.events = [];
   video.addEventListener('play', () => window.events.push('play'));
   video.addEventListener('pause', () => window.events.push('pause'));
   document.body.appendChild(video);
+  void video.play();
   return 'ok';
+})()`;
+
+/** A focused button that records its click, for the focus-activation cases. */
+const focusedButton = `(() => {
+  const button = document.createElement('button');
+  button.textContent = 'Continue';
+  button.onclick = () => { window.clicked = true; };
+  document.body.appendChild(button);
+  button.focus();
+  return document.activeElement === button;
 })()`;
 
 const TRACK_BUTTONS = `(() => {
@@ -86,54 +118,65 @@ const TRACK_BUTTONS = `(() => {
   return 'ok';
 })()`;
 
-test("A plays and pauses the page's video", async () => {
-  await installPad();
-  await pageEval(VIDEO);
-  // The injected script runs in its own world, so the spy has to live there too: a page-world override is
-  // invisible to it. Each spy records the call and then does the real work.
-  await spatialEval(`(() => {
-    window.calls = [];
-    const play = HTMLMediaElement.prototype.play;
-    const pause = HTMLMediaElement.prototype.pause;
-    HTMLMediaElement.prototype.play = function (...args) { window.calls.push('play'); return play.apply(this, args); };
-    HTMLMediaElement.prototype.pause = function (...args) { window.calls.push('pause'); return pause.apply(this, args); };
-    return 'ok';
-  })()`);
+/**
+ * The injected script runs in its own world, so the spies have to live there too: a page-world override is invisible
+ * to it. Each spy records the call and then does the real work.
+ */
+const recordPlayback = () => spatialEval(`(() => {
+  window.calls = [];
+  const play = HTMLMediaElement.prototype.play;
+  const pause = HTMLMediaElement.prototype.pause;
+  HTMLMediaElement.prototype.play = function (...args) { window.calls.push('play'); return play.apply(this, args); };
+  HTMLMediaElement.prototype.pause = function (...args) { window.calls.push('pause'); return pause.apply(this, args); };
+  return 'ok';
+})()`);
 
-  await press(Button.A);
+test("A pauses the video that is playing", async () => {
+  await installPad();
+  await pageEval(video(false));
   await expect.poll(() => pageEval("document.getElementById('video').paused"), { timeout: 5_000 }).toBe(false);
-  expect(await spatialEval("window.calls")).toEqual(["play"]);
-  expect(await pageEval("window.events")).toEqual(["play"]);
+  await playingAudio().toBe(true);
+  await recordPlayback();
 
   await press(Button.A);
   await expect.poll(() => pageEval("document.getElementById('video').paused"), { timeout: 5_000 }).toBe(true);
-  expect(await spatialEval("window.calls")).toEqual(["play", "pause"]);
+  expect(await spatialEval("window.calls")).toEqual(["pause"]);
   expect(await pageEval("window.events")).toEqual(["play", "pause"]);
 });
 
-test("A still activates the focused element when the page has no media", async () => {
+test("A leaves a muted background video alone and activates the focused element", async () => {
   await installPad();
-  await pageEval(`(() => {
-    const button = document.createElement('button');
-    button.textContent = 'Continue';
-    button.onclick = () => { window.clicked = true; };
-    document.body.appendChild(button);
-    button.focus();
-    return document.activeElement === button;
-  })()`);
+  await pageEval(video(true));
+  await expect.poll(() => pageEval("document.getElementById('video').paused"), { timeout: 5_000 }).toBe(false);
+  await pageEval(focusedButton);
+  await recordPlayback();
 
   await press(Button.A);
   await expect.poll(() => pageEval("window.clicked ?? false"), { timeout: 5_000 }).toBe(true);
+  expect(await pageEval("document.getElementById('video').paused")).toBe(false);
+  expect(await spatialEval("window.calls")).toEqual([]);
+});
+
+test("a page with no media never runs the media action", async () => {
+  await installPad();
+  await pageEval(focusedButton);
+  // The spy answers "media": if the tab gate let the round trip through, A would stop there instead of clicking.
+  await spatialEval("(() => { window.calls = 0; window.__joy.playPause = () => { window.calls += 1; return 'media'; }; return 'ok'; })()");
+
+  await press(Button.A);
+  await expect.poll(() => pageEval("window.clicked ?? false"), { timeout: 5_000 }).toBe(true);
+  expect(await spatialEval("window.calls")).toBe(0);
 });
 
 test("the media keys play, pause and skip tracks", async () => {
-  await pageEval(VIDEO);
+  await pageEval(video(false));
   await pageEval(TRACK_BUTTONS);
+  await expect.poll(() => pageEval("document.getElementById('video').paused"), { timeout: 5_000 }).toBe(false);
 
   await sendMediaKey("MediaPlayPause");
-  await expect.poll(() => pageEval("document.getElementById('video').paused"), { timeout: 5_000 }).toBe(false);
-  await sendMediaKey("MediaPlayPause");
   await expect.poll(() => pageEval("document.getElementById('video').paused"), { timeout: 5_000 }).toBe(true);
+  await sendMediaKey("MediaPlayPause");
+  await expect.poll(() => pageEval("document.getElementById('video').paused"), { timeout: 5_000 }).toBe(false);
 
   // sendInputEvent takes the native key identifier; the page receives the DOM key (MediaTrackNext).
   await sendMediaKey("MediaNextTrack");
@@ -144,7 +187,7 @@ test("the media keys play, pause and skip tracks", async () => {
 
 test("the quick menu skips tracks from the controller", async () => {
   await installPad();
-  await pageEval(VIDEO);
+  await pageEval(video(false));
   await pageEval(TRACK_BUTTONS);
 
   await press(Button.Start);

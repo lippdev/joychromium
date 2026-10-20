@@ -1,13 +1,14 @@
 import type { WebContents } from "electron";
 import type { ControllerEvent } from "../../shared/ipc";
-import { activateIntent } from "../../shared/media";
 import type { InputMode } from "../../shared/settings";
-import { sendArrow, sendKey, spatialActivate, spatialMedia, spatialMove, type VirtualCursor } from "../controllerActions";
+import { sendArrow, sendKey, spatialActivate, spatialMove, spatialPlayPause, type VirtualCursor } from "../controllerActions";
 
 export interface InputHost {
   readonly activeWebContents: WebContents | undefined;
   readonly inputMode: InputMode;
   pageSize(): { width: number; height: number };
+  /** Whether the active tab is playing media, from the shell's own tab state. */
+  isPlayingMedia(): boolean;
   setControllerConnected(connected: boolean, family?: "xbox" | "playstation" | "switch" | "generic"): void;
 }
 
@@ -37,11 +38,14 @@ export class InputRouter {
         break;
       case "activate":
         if (!wc) return;
-        if (this.host.inputMode === "Cursor") this.cursor.click(wc);
-        else if (activateIntent(await spatialMedia(wc, "toggle")) === "focus") {
-          if (this.host.inputMode === "Spatial") await spatialActivate(wc);
-          else sendKey(wc, "Return");
+        if (this.host.inputMode === "Cursor") {
+          this.cursor.click(wc);
+          break;
         }
+        // The tab state is the cheap gate: a page that never played media keeps A on focus, with no round trip.
+        if (this.host.isPlayingMedia() && (await spatialPlayPause(wc)) === "media") break;
+        if (this.host.inputMode === "Spatial") await spatialActivate(wc);
+        else sendKey(wc, "Return");
         break;
       case "cursor-move":
         if (wc && this.host.inputMode === "Cursor") {

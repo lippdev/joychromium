@@ -56,9 +56,11 @@ describe("media", () => {
     expect(isShellCommand({ type: "media", action: "next" })).toBe(true);
     expect(isShellCommand({ type: "media", action: "stop" })).toBe(false);
   });
-  it("gives the A button to play/pause only when the page has media", () => {
-    expect(activateIntent(true)).toBe("media");
-    expect(activateIntent(false)).toBe("focus");
+  it("only turns the A button into play/pause on an explicit media decision", () => {
+    expect(activateIntent("media")).toBe("media");
+    expect(activateIntent("focus")).toBe("focus");
+    expect(activateIntent(undefined)).toBe("focus");
+    expect(activateIntent(true)).toBe("focus");
   });
 });
 

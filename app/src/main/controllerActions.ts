@@ -1,6 +1,6 @@
 import type { WebContents } from "electron";
 import type { Direction } from "../shared/controllerInput";
-import type { MediaAction } from "../shared/media";
+import { activateIntent, type ActivateIntent, type MediaAction } from "../shared/media";
 
 /** Turns controller intents into page input. Everything here goes through Chromium's input pipeline, so it is cross-platform. */
 
@@ -37,12 +37,18 @@ export async function spatialActivate(wc: WebContents): Promise<void> {
   await runInPageWorld(wc, "window.__joy && window.__joy.activate()");
 }
 
-const MEDIA_CALLS: Record<MediaAction, string> = { toggle: "playPause", next: "mediaNext", previous: "mediaPrevious" };
+const MEDIA_CALLS: Record<MediaAction, string> = { toggle: "mediaToggle", next: "mediaNext", previous: "mediaPrevious" };
 
-/** Runs a media action in the injected script; false when the page has nothing to play, pause or skip. */
+/** Runs an explicit media action in the injected script; false when the page has nothing to play, pause or skip. */
 export async function spatialMedia(wc: WebContents, action: MediaAction): Promise<boolean> {
   const call = MEDIA_CALLS[action];
   return Boolean(await runInPageWorld<boolean>(wc, `window.__joy && window.__joy.${call} ? window.__joy.${call}() : false`));
+}
+
+/** A's media decision: "media" only when the page paused audible playback that was running. */
+export async function spatialPlayPause(wc: WebContents): Promise<ActivateIntent> {
+  const decision = await runInPageWorld<unknown>(wc, "window.__joy && window.__joy.playPause ? window.__joy.playPause() : 'focus'");
+  return activateIntent(decision);
 }
 
 /** Play/pause and track skipping for the media keys and the quick menu. */

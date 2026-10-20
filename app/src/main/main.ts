@@ -29,7 +29,7 @@ export interface JoyState {
   adblockReady: boolean;
   userAgent: string;
   wouldBlock: (url: string) => boolean;
-  tabs: () => { url: string; title: string; isActive: boolean; isLoading: boolean }[];
+  tabs: () => { url: string; title: string; isActive: boolean; isLoading: boolean; isPlayingAudio: boolean }[];
   command: (command: unknown) => Promise<void>;
   /** Evaluates JavaScript in the active tab (tests only; tab views are not reachable through Playwright). */
   pageEval: (script: string) => Promise<unknown>;
@@ -136,7 +136,7 @@ async function start(): Promise<void> {
   });
   shellRef = shell;
   globalThis.joy.tabs = () =>
-    shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active, isLoading: t.isLoading }));
+    shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active, isLoading: t.isLoading, isPlayingAudio: t.isPlayingAudio }));
   globalThis.joy.command = (command) => shell.handle(command as never);
   globalThis.joy.pageEval = (script) => shell.activeWebContents?.executeJavaScript(script, true) ?? Promise.resolve(undefined);
   globalThis.joy.spatialEval = (script) => {

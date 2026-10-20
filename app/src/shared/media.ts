@@ -26,10 +26,14 @@ export function mediaCommandForKey(key: string): { type: "media"; action: MediaA
   return action ? { type: "media", action } : undefined;
 }
 
+/** What the A button does next: take over playback, or activate whatever has focus. */
+export type ActivateIntent = "media" | "focus";
+
 /**
- * A is play/pause whenever the page has media to act on; without one it stays the focus activator, so browsing a page
- * with no player is unchanged.
+ * A is play/pause only when the active tab is playing media and the page answers that a playing, unmuted element is
+ * there; a muted background video, a paused player or no player at all keep A as the focus activator. The decision
+ * comes from the injected script and is normalized here, so a missing or garbled answer never becomes a media action.
  */
-export function activateIntent(mediaHandled: boolean): "media" | "focus" {
-  return mediaHandled ? "media" : "focus";
+export function activateIntent(decision: unknown): ActivateIntent {
+  return decision === "media" ? "media" : "focus";
 }
