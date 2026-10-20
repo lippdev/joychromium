@@ -123,8 +123,11 @@ test("the shell passes axe with its overlays open", async () => {
   await chrome.locator("#tabs-button").click();
   await expect(chrome.locator(".tab-grid")).toBeVisible();
   await expect(chrome.locator("#tabs-button")).toHaveAttribute("aria-expanded", "true");
-  // Opening the switcher moves focus into it, and the active tab is the one a controller acts on.
-  expect(await chrome.evaluate(() => document.activeElement?.closest(".tab-card")?.classList.contains("active"))).toBe(true);
+  // Opening the switcher moves focus into it, and the active tab is the one a controller acts on. The focus lands in an
+  // effect after the grid renders, so it is polled: reading it once fails on a runner that renders a tick slower.
+  await expect
+    .poll(() => chrome.evaluate(() => document.activeElement?.closest(".tab-card")?.classList.contains("active")))
+    .toBe(true);
   expectClean("tab switcher", await auditShell());
   await chrome.mouse.click(5, 5);
   await expect(chrome.locator(".tab-grid")).toHaveCount(0);
