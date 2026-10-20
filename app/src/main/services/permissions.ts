@@ -21,6 +21,18 @@ export function describePermission(kind: string): string {
   return PERMISSION_TEXT[kind] ?? kind;
 }
 
+/**
+ * Permissions the shell grants without a prompt. Fullscreen is not a private capability and Chromium already requires
+ * a user gesture for it; a TV browser that interrupted every video with a dialog would fail its own acceptance script.
+ * Everything that exposes something about the user (camera, microphone, location, notifications, clipboard, screen)
+ * still goes through the dialog.
+ */
+const UNPROMPTED: ReadonlySet<string> = new Set(["fullscreen"]);
+
+export function permissionNeedsPrompt(kind: string): boolean {
+  return !UNPROMPTED.has(kind);
+}
+
 export interface PendingPermission {
   prompt: PermissionPrompt;
   resolve: (allow: boolean) => void;

@@ -4,6 +4,7 @@ import { applyShellStatePatch } from "../../shared/statePatch";
 import { buttonGlyphs } from "../../shared/controllerGlyphs";
 import { isBlockedStatus } from "../../shared/haptics";
 import { t } from "../../shared/i18n";
+import { isInternal } from "../../shared/pages";
 import { bridge, cmd } from "./bridge";
 import {
   BackIcon, CloseIcon, ForwardIcon, FullscreenIcon, GamepadIcon, HomeIcon, MenuIcon, PlusIcon, ReloadIcon,
@@ -90,7 +91,7 @@ export function App() {
             <ReloadIcon />
           </button>
 
-          <AddressBar url={state.activeUrl} focused={addressFocused} setFocused={setAddressFocused} language={state.language} />
+          <AddressBar url={state.activeUrl} focused={addressFocused} setFocused={setAddressFocused} language={state.language} keyboard={Boolean(state.keyboard?.target === "address")} />
 
           <button
             class={`icon-btn ${state.isFavorite ? "on" : ""}`}
@@ -149,10 +150,15 @@ export function App() {
   );
 }
 
-function AddressBar({ url, focused, setFocused, language }: { url: string; focused: boolean; setFocused: (v: boolean) => void; language: string }) {
+function AddressBar({ url, focused, setFocused, language, keyboard }: { url: string; focused: boolean; setFocused: (v: boolean) => void; language: string; keyboard: boolean }) {
   const input = useRef<HTMLInputElement>(null);
-  const [value, setValue] = useState(url);
-  useEffect(() => { if (!focused) setValue(url); }, [url, focused]);
+  // The controller keyboard starts a search, not an edit: an internal URL is not something a viewer types, and
+  // appending the query to "joychromium://newtab" would search for a string nobody asked for. On a web page the current
+  // address stays, so Y still edits it; a field focused with the mouse keeps showing the URL too.
+  const fresh = keyboard && isInternal(url);
+  const shown = fresh ? "" : url;
+  const [value, setValue] = useState(shown);
+  useEffect(() => { if (!focused) setValue(shown); }, [shown, focused]);
 
   const submit = () => cmd({ type: "search-or-navigate", text: value });
   return (

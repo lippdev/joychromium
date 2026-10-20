@@ -6,7 +6,7 @@ import { commandForShortcut, type ShortcutInput } from "../../src/shared/shortcu
 import { activateIntent, mediaActionForKey, mediaCommandForKey } from "../../src/shared/media";
 import { decideDownload, downloadStatus, nextAvailablePath } from "../../src/main/services/downloads";
 import { tabViewBounds } from "../../src/main/services/layout";
-import { describePermission, PermissionQueue } from "../../src/main/services/permissions";
+import { describePermission, permissionNeedsPrompt, PermissionQueue } from "../../src/main/services/permissions";
 import { isShellCommand } from "../../src/shared/commands";
 import { migrateSettings, parseSettings, SETTINGS_SCHEMA_VERSION } from "../../src/shared/settings";
 import { SettingsStore } from "../../src/main/store";
@@ -104,6 +104,13 @@ describe("permission prompts", () => {
     expect(queue.settle(true)).toBeUndefined();
     expect(describePermission("media")).toBe("your camera or microphone");
     expect(describePermission("something-new")).toBe("something-new");
+  });
+
+  it("grants fullscreen without a prompt and asks for everything that exposes the user", () => {
+    expect(permissionNeedsPrompt("fullscreen")).toBe(false);
+    for (const kind of ["media", "geolocation", "notifications", "clipboard-read", "display-capture", "midi"]) {
+      expect(permissionNeedsPrompt(kind)).toBe(true);
+    }
   });
 });
 

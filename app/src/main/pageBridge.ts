@@ -50,6 +50,8 @@ export class PageBridge {
       sitePermissions: s.sitePermissions,
       defaultInputMode: s.defaultInputMode,
       siteInputModes: s.siteInputModes,
+      controllerConnected: this.shell.controllerConnected,
+      controllerFamily: this.shell.controllerFamily,
       runtimeVersion: process.versions.chrome,
       widevine: globalThis.joy?.widevine,
       shortcutMod: currentShortcutMod(),

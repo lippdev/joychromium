@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer, webFrame } from "electron";
-import { isDesignPage } from "../shared/pages";
 import { SPATIAL_WORLD } from "../shared/spatial";
 
 // One preload for every tab, in every frame. Sandboxed preloads cannot require other modules, so the channel names are
@@ -12,11 +11,9 @@ const Channels = {
 } as const;
 
 // Spatial focus navigation and the virtual cursor, in this frame's isolated world: the page cannot read, replace or
-// break them. Web pages get them everywhere; among the internal pages only the design catalog, which proves the D-pad.
-// Every frame gets the script, so a player inside an iframe is navigable too.
+// break them. Every frame gets the script, the shell's own pages included: a TV browser whose start screen or
+// onboarding needed a mouse would fail its first acceptance scenario. A player inside an iframe is navigable too.
 function injectSpatial(): void {
-  const url = window.location.href;
-  if (url.startsWith("joychromium:") && !isDesignPage(url)) return;
   void ipcRenderer
     .invoke(Channels.spatialScript)
     .then((code) => (typeof code === "string" ? webFrame.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code }]) : undefined))

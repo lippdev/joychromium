@@ -488,6 +488,8 @@ gantt
 | Usuários na versão mais nova 7 dias após a release | > 80% (estimado pelos downloads dos artefatos de update) |
 | Crashes por sessão (com opt-in) | < 0,5% |
 
+Os cenários 1 a 5 da seção 3 têm um roteiro de ponta a ponta em `app/tests/e2e/journeys.spec.ts`, um teste por cenário e um perfil temporário por teste. Cada passo que o roteiro manual descreve é uma pressão de controle sintético — o `navigator.getGamepads` substituído, o laço de polling real do shell, o roteador de entrada e o `spatial.js` — sem clique nem comando de shell no meio: primeiro boot em tela cheia com onboarding, teste do controle, idioma e buscador; tela inicial, YouTube TV em Arrows, vídeo em tela cheia e B de volta; busca com o teclado virtual e as sugestões, resultado aberto e navegação Spatial; três abas com o seletor em grade e uma fechada; e o prompt de microfone com "permitir sempre". O cenário 6 não fecha sem uma release publicada: o e2e cobre o que é decidível (um app fora de pacote recusa fingir que se atualiza) e a rota de instalação (`updateInstallRoute`/`canInstallNow`) tem teste unitário; baixar, aplicar ao fechar e reabrir na versão nova continua no roteiro manual. O e2e roda no Linux do CI com a rede desligada, então prova o fluxo do app e não o hardware: controle físico, TV, latência, pontuação real da navegação espacial, macOS e Windows seguem em `docs/CONTROLLER-TEST.md`.
+
 ## 12. Riscos
 
 | Risco | Probabilidade | Impacto | Mitigação |
