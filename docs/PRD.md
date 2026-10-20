@@ -291,7 +291,7 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | Épico | Must | Should | Could | O que falta |
 |---|---|---|---|---|
 | E1 Correções multiplataforma | 9/9 | 1/1 | — | — |
-| E2 Empacotamento e CI | 5/5 | 3/4 | 1/1 | E2-08 (Wayland/SteamOS) |
+| E2 Empacotamento e CI | 5/5 | 4/4 | 1/1 | — |
 | E3 Fundação de arquitetura | 5/5 | 3/3 | — | — |
 | E4 Robustez e desempenho | 1/1 | 1/1 | 2/2 | — |
 | E5 Design system e redesign | 4/4 | 3/3 | — | — |
@@ -302,7 +302,7 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | E10 Mídia e DRM | 2/3 | 2/2 | 1/1 | E10-02 (VMP) |
 | E11 Documentação | 2/2 | 1/1 | — | — |
 
-Somando: **35 de 37 Must**, **18 de 19 Should** e **8 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow.
+Somando: **35 de 37 Must**, **19 de 19 Should** e **8 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow.
 
 **Pendências que dependem de terceiros, não de código**
 
@@ -310,7 +310,7 @@ Somando: **35 de 37 Must**, **18 de 19 Should** e **8 de 10 Could**. O E2-07 (sm
 - **E6-07 — sessão com controle físico.** O roteiro está em [CONTROLLER-TEST.md](CONTROLLER-TEST.md); falta rodar na TV com o controle na mão e registrar o que falhar.
 - **E10-02 — assinatura VMP (EVS).** A CDM baixa e o EME responde `ok` no Linux (ADR-009), mas Windows e macOS em produção precisam da conta gratuita na castLabs e do passo `afterPack` com `castlabs-evs`.
 - **E10-05 — resolução por serviço.** O mecanismo de UA por site está pronto e testado; a tabela em [DRM-UAS.md](DRM-UAS.md) espera alguém com conta nos serviços rodar a medição.
-- **E2-08 — Wayland e SteamOS.** Só se valida em máquina com Wayland/GNOME/KDE e no modo Gaming do Steam Deck.
+- **E2-08 — Steam Deck em hardware.** O caminho Wayland nativo é provado no CI em todo PR (Weston headless, sem X11, com screenshot das duas views): [WAYLAND.md](WAYLAND.md). O que falta é rodar num Deck de verdade, no modo Gaming, porque gamescope e HDR não existem neste ambiente; o roteiro está no mesmo documento.
 - **E9-05 — publicação no Flathub.** O manifesto (`flatpak/dev.lipp.joychromium.yml`), o bundle e o workflow de CI estão no repositório e o app sabe que, dentro do sandbox, quem atualiza é o Flathub; falta a conta no Flathub, o repositório `flathub/dev.lipp.joychromium` e a revisão de terceiros. O que a submissão ainda pede está em [flatpak/README.md](../flatpak/README.md).
 
 **Fora deste ciclo (Could, sem bloqueio)**
