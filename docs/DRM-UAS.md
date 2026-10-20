@@ -1,0 +1,98 @@
+# UA de TV × DRM: resolução por serviço (E10-05)
+
+O JoyChromium se identifica como TV em toda requisição (`JoyChromiumTV/1.0 (TV; SmartTV)`, ver
+`app/src/main/tvIdentity.ts`, ADR-009). Alguns serviços escolhem o player, a variante do manifesto ou o nível de
+DRM a partir desse cabeçalho — para melhor (interface de 10 pés) ou para pior (resolução menor). Este documento
+guarda a medição e a regra que decide o UA por host.
+
+**Estado:** o mecanismo está pronto e testado; **nenhuma medição foi feita ainda** (não há conta nos serviços neste
+repositório). Toda linha da tabela está como *a medir*.
+
+## Como a regra funciona
+
+- Lista curada em `app/src/shared/streamingUa.ts` (`STREAMING_HOSTS`): host exato ou subdomínio. Um domínio que só
+  *parece* um da lista (`netflix.com.exemplo`) não casa.
+- **Configurações → Mídia e DRM → "UA de desktop nos serviços de streaming"** (`streamingDesktopUa` em
+  `settings.json`, desligado por padrão). Ligado, um host da lista carrega com o UA do Chromium **sem** o marcador de
+  TV; todo o resto continua com o UA de TV.
+- A decisão é por documento: vale para o carregamento que o shell inicia e para um link clicado dentro da página.
+  Outras abas e outros hosts da mesma sessão não mudam.
+- A lista é a política: um host só entra com uma linha desta tabela mostrando ganho, e sai se uma medição posterior
+  não confirmar.
+
+## Procedimento de medição
+
+O que se mede é a resolução que o player realmente decodifica — `video.videoWidth` × `video.videoHeight` —, não o
+que a interface do serviço anuncia. Numa stream por MSE, esses valores acompanham a representação ativa, mas um
+serviço pode decodificar abaixo do que anuncia; o número medido é o que vale.
+
+Pré-requisitos: build com Widevine instalado (ADR-009), conta no serviço e rede. O nível de DRM, o codec e o HDCP
+influenciam a resolução tanto quanto o UA, então cada linha registra os dois lados (TV e desktop) na mesma máquina,
+no mesmo dia.
+
+1. Abra o app uma vez (`cd app && npm start`), faça login no serviço e feche. A sessão fica no perfil
+   (`~/.config/JoyChromium` no Linux, `%APPDATA%\JoyChromium` no Windows, `~/Library/Application Support/JoyChromium`
+   no macOS).
+2. Com a regra **desligada**, rode o script abaixo apontando para um título do serviço e anote a maior resolução que
+   aparecer em 2 minutos. Repita para cada serviço.
+3. Ligue a regra em Configurações e repita exatamente os mesmos títulos, no mesmo horário do dia.
+4. Preencha a tabela com data, SO, versão do app (Chromium) e quem mediu.
+
+```js
+// /tmp/ua-medir.mjs — não faz parte do repositório. Rode de app/ com o perfil já logado:
+//   JOYCHROMIUM_DATA="$HOME/.config/JoyChromium" node /tmp/ua-medir.mjs "https://www.netflix.com/watch/..."
+import { _electron as electron } from "@playwright/test";
+
+const url = process.argv[2];
+const app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_START: "about:blank" } });
+await app.firstWindow();
+await app.evaluate(({}, target) => globalThis.joy.command({ type: "navigate", url: target }), url);
+const sample = () =>
+  app.evaluate(({}, code) => globalThis.joy.pageEval(code),
+    "(() => { const v = document.querySelector('video'); return v ? [v.videoWidth, v.videoHeight, v.currentTime] : null })()");
+
+let best = [0, 0];
+for (let i = 0; i < 60; i++) {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const [width, height, time] = (await sample()) ?? [0, 0, 0];
+  if (width * height > best[0] * best[1]) best = [width, height];
+  console.log(`${i * 2}s t=${time} ${width}x${height} máx=${best[0]}x${best[1]}`);
+}
+await app.close();
+```
+
+O UA que a página recebeu pode ser conferido no mesmo perfil com
+`globalThis.joy.pageEval("navigator.userAgent")`; com a regra ligada ele não contém `JoyChromiumTV/`.
+
+## Tabela de resolução por serviço
+
+Todas as linhas estão **a medir**. `—` significa que ninguém mediu ainda.
+
+| Serviço | Host | Máx. com UA de TV | Máx. com UA desktop | Ganho? | Data | Quem mediu | Notas |
+|---|---|---|---|---|---|---|---|
+| Netflix | `netflix.com` | a medir | a medir | — | — | — | |
+| Prime Video | `primevideo.com` | a medir | a medir | — | — | — | |
+| Disney+ | `disneyplus.com` | a medir | a medir | — | — | — | |
+| Max | `max.com` | a medir | a medir | — | — | — | |
+| Globoplay | `globoplay.globo.com` | a medir | a medir | — | — | — | |
+| Apple TV | `tv.apple.com` | a medir | a medir | — | — | — | |
+| Hulu | `hulu.com` | a medir | a medir | — | — | — | |
+| Paramount+ | `paramountplus.com` | a medir | a medir | — | — | — | |
+| Crunchyroll | `crunchyroll.com` | a medir | a medir | — | — | — | |
+| YouTube (controle) | `www.youtube.com` | a medir | não se aplica | — | — | — | Fora da lista de propósito: o app abre `youtube.com/tv`, que existe por causa do UA de TV. |
+
+## Decisão
+
+- Enquanto nenhuma linha mostrar ganho, `streamingDesktopUa` fica `false` (o padrão) e `STREAMING_HOSTS` não muda.
+  O UA de TV é o que entrega a interface de 10 pés e é o que os atalhos da tela inicial esperam.
+- Uma linha com ganho mantém o host na lista, com data e autor registrados. Se o ganho valer para todo mundo, o
+  padrão de `defaultSettings()` passa a `true` no mesmo PR que atualiza a tabela.
+- Um host sem ganho sai de `STREAMING_HOSTS`; a tabela registra que os dois lados empataram.
+
+## O que este item não prova
+
+Nenhuma resolução foi medida: não há conta nos serviços aqui. O teste e2e
+(`app/tests/e2e/streaming-ua.spec.ts`) prova só o mecanismo — um host da lista recebe `navigator.userAgent` sem o
+marcador de TV, um host fora dela (e um domínio que apenas imita um da lista) recebe o UA de TV, inclusive quando a
+navegação vem de um link dentro da página, e desligar a regra devolve o UA de TV ao host da lista. Se cada serviço
+ganha ou perde resolução com o UA de desktop continua em aberto até a tabela acima ser preenchida.

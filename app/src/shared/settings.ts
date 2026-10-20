@@ -122,6 +122,11 @@ export interface AppSettings {
   crashReports: boolean;
   /** host -> permission kind -> allowed */
   sitePermissions: Record<string, Record<string, boolean>>;
+  /**
+   * Loads the streaming hosts in shared/streamingUa.ts with the desktop user agent instead of the TV one, for the
+   * sites whose rendition improves without the TV marker. Off until a row in docs/DRM-UAS.md shows a gain.
+   */
+  streamingDesktopUa: boolean;
 }
 
 export function defaultSettings(): AppSettings {
@@ -150,6 +155,7 @@ export function defaultSettings(): AppSettings {
     language: "pt-BR",
     crashReports: false,
     sitePermissions: {},
+    streamingDesktopUa: false,
   };
 }
 
@@ -159,13 +165,15 @@ const bool = (value: unknown, fallback: boolean): boolean => (typeof value === "
 const webUrl = (value: unknown, fallback: string): string => (isWebUrl(value as string) ? (value as string) : fallback);
 
 /** Bumped whenever a stored file needs a new shape; migrations below bring older files forward. */
-export const SETTINGS_SCHEMA_VERSION = 2;
+export const SETTINGS_SCHEMA_VERSION = 3;
 
 /**
  * Old versions this app wrote. The file is plain JSON with every field optional, so the only migrations needed are
  * the ones that change meaning rather than presence:
  *   1 -> 2  saved passwords and autofill were removed (they never had any effect); tracking prevention started
  *           being enforced, and its default became Balanced. Nothing to rewrite — parseSettings drops the dead keys.
+ *   2 -> 3  the per-site streaming user agent was added, off for every profile until a measurement in
+ *           docs/DRM-UAS.md justifies turning it on. Nothing to rewrite — a missing key parses as off.
  */
 export function migrateSettings(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;
@@ -228,6 +236,7 @@ export function parseSettings(input: unknown): AppSettings {
     language: oneOf(["pt-BR", "en"] as const, r.language, d.language),
     crashReports: bool(r.crashReports, d.crashReports),
     sitePermissions: permissions,
+    streamingDesktopUa: bool(r.streamingDesktopUa, d.streamingDesktopUa),
   };
 }
 

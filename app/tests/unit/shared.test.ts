@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { displayUrl, errorPageFor, internalPageFile, isDesignPage, isDevOnlyFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
 import {
-  buildSearchUrl, defaultSettings, GOOGLE, isHexColor, isValidSearchTemplate, newTabTarget, parseSettings, parseShortcut,
-  parseTheme, startupTargets, THEME_PRESETS, toggleFavorite, withInputMode, withoutInputMode, withoutPermissions, withPermission,
+  buildSearchUrl, defaultSettings, GOOGLE, isHexColor, isValidSearchTemplate, migrateSettings, newTabTarget, parseSettings, parseShortcut,
+  parseTheme, SETTINGS_SCHEMA_VERSION, startupTargets, THEME_PRESETS, toggleFavorite, withInputMode, withoutInputMode, withoutPermissions, withPermission,
 } from "../../src/shared/settings";
 import {
   allowPopup, dohTemplate, hostOf, isDangerousDownload, isNavigationAllowed, isThirdPartyRequest, safeFileName,
@@ -79,6 +79,13 @@ describe("settings", () => {
     expect(startupTargets(parsed, ["https://a.example", "https://b.example"])).toHaveLength(2);
     expect(startupTargets(parsed, [])).toEqual([Pages.newtab]);
     expect(parseSettings("garbage")).toEqual(d);
+  });
+  it("parses the per-site streaming agent and migrates an older file", () => {
+    expect(defaultSettings().streamingDesktopUa).toBe(false);
+    expect(parseSettings({ schemaVersion: 2, httpsOnly: false }).streamingDesktopUa).toBe(false);
+    expect(parseSettings({ streamingDesktopUa: true }).streamingDesktopUa).toBe(true);
+    expect(parseSettings({ streamingDesktopUa: "yes" }).streamingDesktopUa).toBe(false);
+    expect(migrateSettings({ schemaVersion: 2, httpsOnly: false })).toMatchObject({ schemaVersion: SETTINGS_SCHEMA_VERSION, httpsOnly: false });
   });
   it("tracks favorites, permissions and input modes", () => {
     const fav = toggleFavorite(defaultSettings(), "https://b.example/two", "Two");

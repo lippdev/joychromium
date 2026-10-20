@@ -102,7 +102,9 @@ async function start(): Promise<void> {
   const doh = dohTemplate(settings.dnsOverHttps);
   if (doh) app.configureHostResolver({ secureDnsMode: "secure", secureDnsServers: [doh] });
 
-  session.defaultSession.setUserAgent(ensureTvIdentity(session.defaultSession.getUserAgent()));
+  // The Chrome agent without the marker is what a streaming host gets in place of the TV one (shared/streamingUa.ts).
+  const desktopUserAgent = session.defaultSession.getUserAgent();
+  session.defaultSession.setUserAgent(ensureTvIdentity(desktopUserAgent));
   globalThis.joy.userAgent = session.defaultSession.getUserAgent();
 
   try {
@@ -122,6 +124,8 @@ async function start(): Promise<void> {
     distDir,
     spatialScript,
     appVersion: app.getVersion(),
+    desktopUserAgent,
+    tvUserAgent: globalThis.joy.userAgent,
     updateStatus: () => updater.status,
     checkUpdates: async () => {
       await policy.refresh();

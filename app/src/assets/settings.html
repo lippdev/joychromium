@@ -98,6 +98,15 @@
     <div id="inputModes"></div>
   </section>
 
+  <section id="media">
+    <h2 data-i18n="settings.media">Mídia e DRM</h2>
+    <div class="row">
+      <div><span id="streamingUaLabel" data-i18n="settings.streamingUa">UA de desktop nos serviços de streaming</span><small data-i18n="settings.streamingUaHint">Usa o UA de um navegador comum onde o UA de TV pode entregar menos resolução</small></div>
+      <label class="switch"><input type="checkbox" id="streamingUa" aria-labelledby="streamingUaLabel"><span></span></label>
+    </div>
+    <div class="status" id="mediaStatus"></div>
+  </section>
+
   <section id="privacy">
     <h2 data-i18n="settings.privacy">Privacidade e segurança</h2>
     <div class="row">
@@ -274,6 +283,7 @@
     flash('privacyStatus', el.id === 'dnsOverHttps' ? 'DNS over HTTPS aplica ao reiniciar.' : i18n.t('settings.saved'));
   });
   $('adblock').addEventListener('change', (e) => { post('adblock-save', { adBlockEnabled: e.target.checked }); flash('privacyStatus', i18n.t('settings.saved')); });
+  $('streamingUa').addEventListener('change', (e) => { post('privacy-save', { streamingDesktopUa: e.target.checked }); flash('mediaStatus', i18n.t('settings.saved')); });
   $('clearData').addEventListener('click', () => { post('clear-data', {}); flash('clearStatus', 'Dados limpos.'); });
   $('exportDiag').addEventListener('click', () => post('export-diagnostics', {}));
   $('updateCheck').addEventListener('click', () => { $('appUpdate').textContent = 'Verificando…'; post('update-check', {}); });
@@ -340,6 +350,7 @@
     $('highContrast').checked = !!msg.highContrast;
     $('language').value = msg.language ?? 'pt-BR';
     $('crashReports').checked = !!msg.crashReports;
+    $('streamingUa').checked = !!msg.streamingDesktopUa;
     renderPermissions(msg.sitePermissions || {});
     $('defaultInputMode').value = msg.defaultInputMode;
     renderInputModes(msg.siteInputModes || {});

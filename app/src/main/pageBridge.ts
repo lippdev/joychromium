@@ -59,6 +59,7 @@ export class PageBridge {
       overscan: s.overscan,
       highContrast: s.highContrast,
       crashReports: s.crashReports,
+      streamingDesktopUa: s.streamingDesktopUa,
       appVersion: this.deps.appVersion,
       appUpdate: this.deps.updateStatus(),
       updateUrl: this.deps.updateUrl(),
@@ -122,7 +123,7 @@ export class PageBridge {
         break;
       case "privacy-save": {
         const patch: Partial<AppSettings> = {};
-        for (const key of ["httpsOnly", "blockDangerousDownloads"] as const) if (typeof m[key] === "boolean") patch[key] = m[key] as boolean;
+        for (const key of ["httpsOnly", "blockDangerousDownloads", "streamingDesktopUa"] as const) if (typeof m[key] === "boolean") patch[key] = m[key] as boolean;
         if (m.trackingPrevention === "Basic" || m.trackingPrevention === "Balanced" || m.trackingPrevention === "Strict") patch.trackingPrevention = m.trackingPrevention;
         if (m.dnsOverHttps === "Off" || m.dnsOverHttps === "Cloudflare" || m.dnsOverHttps === "Quad9" || m.dnsOverHttps === "Google") patch.dnsOverHttps = m.dnsOverHttps;
         store.update((s) => ({ ...s, ...patch }));
