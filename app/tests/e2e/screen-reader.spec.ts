@@ -157,6 +157,40 @@ async function installPad(): Promise<void> {
   }, XBOX);
 }
 
+/** The tab stops loading, the way every other e2e waits before reading a page. */
+const settle = () => expect.poll(async () => (await activeTab())?.isLoading, { timeout: 30_000 }).toBe(false);
+
+/**
+ * Waits for an expression to hold in the active tab. A plain `expect.poll` swallows the reason a read failed — an
+ * executeJavaScript that lands mid-navigation rejects — and reports only a timeout, which says nothing about what the
+ * page was doing. This keeps the last error and fails with it.
+ */
+async function waitForPage(expression: string): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  let detail = "never ran";
+  while (Date.now() < deadline) {
+    try {
+      const value = await pageEval<unknown>(expression);
+      if (value) return;
+      detail = `returned ${JSON.stringify(value)}`;
+    } catch (error) {
+      detail = error instanceof Error ? error.message : String(error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  // Enough state to tell "the page has no cards" from "the read is landing somewhere else".
+  const context = await pageEval<string>(`JSON.stringify({
+    href: location.href, ready: document.readyState, bridge: typeof window.joy,
+    apps: document.getElementById('apps') ? document.getElementById('apps').children.length : -1,
+    list: document.getElementById('list') ? document.getElementById('list').children.length : -1,
+    search: document.getElementById('q') ? document.getElementById('q').getAttribute('aria-label') : null,
+    cards: document.querySelectorAll('#apps .card').length,
+    items: document.querySelectorAll('[role="listitem"]').length,
+  })`).catch((error: unknown) => `unreadable: ${error instanceof Error ? error.message : String(error)}`);
+  const tabs = JSON.stringify(await activeTab());
+  throw new Error(`The active page never satisfied ${expression} (last read: ${detail}; page ${context}; tab ${tabs})`);
+}
+
 async function press(button: number): Promise<void> {
   const set = (pressed: boolean) => chrome.evaluate(([b, is]) => {
     (window as unknown as { __pads: { buttons: { pressed: boolean }[] }[] }).__pads[0].buttons[b].pressed = is;
@@ -207,7 +241,8 @@ test("the shell names its controls in the language the user picked", async () =>
 test("the new tab search field is named and its cards are a list", async () => {
   await command({ type: "navigate", url: "joychromium://newtab" });
   await expect.poll(async () => (await activeTab())?.url, { timeout: 30_000 }).toBe("joychromium://newtab");
-  await expect.poll(() => pageEval<number>("document.querySelectorAll('#apps .card').length"), { timeout: 30_000 }).toBeGreaterThan(0);
+  await settle();
+  await waitForPage("document.querySelectorAll('#apps .card').length > 0");
 
   const summary = await pageEval<{
     name: string; landmark: string; list: string; label: string; items: number; cards: string[]; badgeHidden: string;
@@ -246,7 +281,8 @@ test("the new tab search field is named and its cards are a list", async () => {
 test("the history search and its results reach a reader as a named list", async () => {
   await command({ type: "navigate", url: "joychromium://history" });
   await expect.poll(async () => (await activeTab())?.url, { timeout: 30_000 }).toBe("joychromium://history");
-  await expect.poll(() => pageEval<number>("document.querySelectorAll('#list [role=\"listitem\"]').length"), { timeout: 30_000 }).toBeGreaterThan(0);
+  await settle();
+  await waitForPage("document.querySelectorAll('#list [role=\"listitem\"]').length > 0");
 
   const summary = await pageEval<{ name: string; role: string; label: string; rows: string[] }>(`(() => {
     const list = document.getElementById('list');
@@ -268,7 +304,7 @@ test("the history search and its results reach a reader as a named list", async 
     q.value = 'nothing matches this';
     q.dispatchEvent(new Event('input', { bubbles: true }));
   })()`);
-  await expect.poll(() => pageEval<number>("document.querySelectorAll('#list [role=\"listitem\"]').length"), { timeout: 15_000 }).toBe(0);
+  await waitForPage("document.querySelectorAll('#list [role=\"listitem\"]').length === 0");
 });
 
 test("the AT-SPI tree exposes the address field, the keyboard and the card list", async () => {
