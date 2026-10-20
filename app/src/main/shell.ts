@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, powerSaveBlocker, session, type Session, type WebContents } from "electron";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { Channels, type ControllerEvent, type PermissionPrompt, type ShellCommand, type ShellState } from "../shared/ipc";
+import { Channels, type ControllerEvent, type PermissionPrompt, type ShellCommand, type ShellPreferences, type ShellState } from "../shared/ipc";
 import { diffShellState } from "../shared/statePatch";
 import { displayUrl, isInternal, isWebUrl, Pages } from "../shared/pages";
 import type { WindowMode } from "../shared/platform";
@@ -428,6 +428,10 @@ export class Shell {
         }
       }));
       return shots;
+    });
+    ipcMain.handle(Channels.shellPreferences, (event): ShellPreferences => {
+      if (event.sender !== this.window.webContents) return { vibration: false };
+      return { vibration: this.deps.store.current.vibration };
     });
   }
 

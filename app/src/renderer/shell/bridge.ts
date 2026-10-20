@@ -1,4 +1,4 @@
-import type { ControllerEvent, ShellCommand, ShellState, ShellStatePatch } from "../../shared/ipc";
+import type { ControllerEvent, ShellCommand, ShellPreferences, ShellState, ShellStatePatch } from "../../shared/ipc";
 
 /** The bridge installed by preload/chrome.ts. */
 export interface ShellBridge {
@@ -9,6 +9,7 @@ export interface ShellBridge {
   onState(callback: (state: ShellState) => void): void;
   onPatch(callback: (patch: ShellStatePatch) => void): void;
   thumbnails(): Promise<{ id: number; dataUrl: string }[]>;
+  preferences(): Promise<ShellPreferences>;
   setUi(patch: { uiScale?: number; overscan?: number; highContrast?: boolean; language?: string }): void;
 }
 

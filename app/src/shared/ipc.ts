@@ -25,7 +25,14 @@ export const Channels = {
   shellThumbnails: "shell:thumbnails",
   /** chrome renderer -> main: the chrome's height, so the tab views sit below it */
   shellLayout: "shell:layout",
+  /** chrome renderer -> main (invoke): the preferences the shell itself acts on, such as haptics */
+  shellPreferences: "shell:preferences",
 } as const;
+
+/** Read right before an action, so a switch flipped in Settings applies on the next press. */
+export interface ShellPreferences {
+  vibration: boolean;
+}
 
 export interface TabState {
   id: number;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ShellState } from "../../shared/ipc";
 import { applyShellStatePatch } from "../../shared/statePatch";
 import { buttonGlyphs } from "../../shared/controllerGlyphs";
+import { isBlockedStatus } from "../../shared/haptics";
 import { t } from "../../shared/i18n";
 import { bridge, cmd } from "./bridge";
 import {
@@ -13,6 +14,7 @@ import { QuickMenu } from "./quickmenu";
 import { TabSwitcher } from "./tabswitcher";
 import { Toasts } from "./toasts";
 import { useGamepad } from "./gamepad";
+import { vibrate } from "./haptics";
 
 const Empty: ShellState = {
   tabs: [], activeUrl: "", isFavorite: false, inputMode: "Spatial", adBlock: false, controllerConnected: false,
@@ -30,7 +32,11 @@ export function App() {
   useEffect(() => {
     // One full snapshot when the UI says it is listening, then only the areas that changed, applied over it.
     bridge().onState(setState);
-    bridge().onPatch((patch) => setState((current) => applyShellStatePatch(current, patch)));
+    bridge().onPatch((patch) => {
+      setState((current) => applyShellStatePatch(current, patch));
+      // The status line is where a refusal shows up: the pad answers it with the error cue.
+      if (patch.status !== undefined && isBlockedStatus(patch.status)) vibrate("error");
+    });
     bridge().ready();
   }, []);
 
