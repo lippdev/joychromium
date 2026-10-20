@@ -17,6 +17,7 @@ import { defaultModeFor, directionOf, nextMode, stickToScroll, stickToVelocity }
 import {
   extraDangerousExtensions, shortcutLabel, shortcutModifier, urlFromArgv, usesNativeWindowControls,
 } from "../../src/shared/platform";
+import { diagnosticsLines, formatBootLine, formatMemoryLines, formatTabsLine } from "../../src/shared/diagnostics";
 import { History } from "../../src/main/history";
 import { SettingsStore } from "../../src/main/store";
 import { readFileSync } from "node:fs";
@@ -256,5 +257,39 @@ describe("tracking prevention", () => {
     expect(isThirdPartyRequest("https://news.example/x", "https://news.example/")).toBe(false);
     expect(isThirdPartyRequest("https://cdn.news.example/x", "https://news.example/")).toBe(false);
     expect(isThirdPartyRequest("https://ads.example/x", undefined)).toBe(false);
+  });
+});
+
+describe("diagnostics", () => {
+  it("formats the boot time in whole milliseconds and never below zero", () => {
+    expect(formatBootLine(1234)).toBe("Boot to first window: 1234 ms");
+    expect(formatBootLine(1234.6)).toBe("Boot to first window: 1235 ms");
+    expect(formatBootLine(-5)).toBe("Boot to first window: 0 ms");
+  });
+  it("sums the working set and lists every process", () => {
+    expect(formatMemoryLines([
+      { type: "Browser", memoryKb: 1024 * 100 },
+      { type: "Tab", memoryKb: 1024 * 50 },
+      { type: "Tab", memoryKb: 512 },
+    ])).toEqual([
+      "Memory working set: 150.5 MiB in 3 processes",
+      "  Browser: 100.0 MiB",
+      "  Tab: 50.0 MiB",
+      "  Tab: 0.5 MiB",
+    ]);
+  });
+  it("says process in the singular and counts no fractional tabs", () => {
+    expect(formatMemoryLines([{ type: "Browser", memoryKb: 1024 }])[0]).toBe("Memory working set: 1.0 MiB in 1 process");
+    expect(formatTabsLine(3)).toBe("Tabs: 3");
+    expect(formatTabsLine(-1)).toBe("Tabs: 0");
+    expect(formatTabsLine(2.7)).toBe("Tabs: 2");
+  });
+  it("writes one diagnostics.txt line per fact", () => {
+    expect(diagnosticsLines({ bootMs: 800, processes: [{ type: "Browser", memoryKb: 1024 }], tabCount: 2 })).toEqual([
+      "Boot to first window: 800 ms",
+      "Memory working set: 1.0 MiB in 1 process",
+      "  Browser: 1.0 MiB",
+      "Tabs: 2",
+    ]);
   });
 });

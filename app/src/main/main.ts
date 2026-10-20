@@ -11,6 +11,7 @@ import { Shell } from "./shell";
 import { SettingsStore } from "./store";
 import { ensureTvIdentity } from "./tvIdentity";
 import { Updater } from "./updater";
+import { diagnosticsLines } from "../shared/diagnostics";
 import { Pages } from "../shared/pages";
 import { effectiveMinimumChromium } from "../shared/policy";
 import { dohTemplate, versionAtLeast } from "../shared/security";
@@ -43,6 +44,8 @@ export interface JoyState {
   widevine: string;
   /** Where the injected navigation script lives: "object" in its own world, "undefined" in the page's. */
   spatialWorld: () => Promise<{ isolated: string; page: string }>;
+  /** Writes the diagnostics zip and returns its path (tests only; the settings page reaches the same function). */
+  exportDiagnostics: () => Promise<string>;
 }
 
 declare global {
@@ -78,7 +81,11 @@ globalThis.joy = {
   dataDir,
   widevine: "starting",
   spatialWorld: async () => ({ isolated: "unavailable", page: "unavailable" }),
+  exportDiagnostics: async () => "",
 };
+
+/** Process start, so the boot time in the diagnostics covers Electron's own start and not just this file. */
+const startedAt = Date.now() - process.uptime() * 1000;
 
 process.on("uncaughtException", (error) => log.error("Uncaught exception", error));
 process.on("unhandledRejection", (reason) => log.error("Unhandled rejection", reason));
@@ -115,6 +122,19 @@ async function start(): Promise<void> {
   globalThis.joy.adblockReady = adblock.isReady;
 
   const spatialScript = readFileSync(join(distDir, "assets", "spatial.js"), "utf8");
+  /** The bug-report zip: environment, settings, logs, and what the app knows about its own boot, memory and tabs. */
+  const exportDiagnosticsReport = (): Promise<string> =>
+    exportDiagnostics(join(app.getPath("downloads"), "JoyChromium"), log, store, [
+      `JoyChromium ${app.getVersion()} · Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,
+      `Ad blocking ${adblock.status}`,
+      `Policy ${policy.status}`,
+      `App update ${updater.status}`,
+    ], crashes.files(), diagnosticsLines({
+      bootMs,
+      processes: app.getAppMetrics().map((process) => ({ type: process.type, memoryKb: process.memory.workingSetSize })),
+      tabCount: shellRef?.tabs.tabs.length ?? 0,
+    }));
+
   const shell = new Shell({
     store,
     history,
@@ -136,15 +156,10 @@ async function start(): Promise<void> {
     canInstallUpdate: () => updater.canInstallNow,
     installUpdate: () => updater.installPending(),
     openUpdatePage: () => updater.openDownloadPage(),
-    exportDiagnostics: () =>
-      exportDiagnostics(join(app.getPath("downloads"), "JoyChromium"), log, store, [
-        `JoyChromium ${app.getVersion()} · Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,
-        `Ad blocking ${adblock.status}`,
-        `Policy ${policy.status}`,
-        `App update ${updater.status}`,
-      ], crashes.files()),
+    exportDiagnostics: exportDiagnosticsReport,
   });
   shellRef = shell;
+  globalThis.joy.exportDiagnostics = exportDiagnosticsReport;
   globalThis.joy.tabs = () =>
     shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active, isLoading: t.isLoading, isPlayingAudio: t.isPlayingAudio }));
   globalThis.joy.command = (command) => shell.handle(command as never);
@@ -175,6 +190,8 @@ async function start(): Promise<void> {
         ? lastSession
         : startupTargets(settings, lastSession);
   await shell.start(targets);
+  // The first window is shown: the boot time the diagnostics report stops here.
+  bootMs = Date.now() - startedAt;
   if (crashed && !startUrl) shell.setStatus("RESTORED AFTER AN UNEXPECTED CLOSE");
 
   // Background maintenance: remote policy, block lists, app update. Never blocks the UI.
@@ -190,6 +207,7 @@ async function start(): Promise<void> {
 }
 
 let shellRef: Shell | undefined;
+let bootMs = 0;
 
 app.on("second-instance", (_event, argv) => {
   shellRef?.focusFromSecondInstance(urlFromArgv(argv));
