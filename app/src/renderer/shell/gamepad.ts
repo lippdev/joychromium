@@ -2,7 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { controllerFamily, type ControllerFamily } from "../../shared/controllerGlyphs";
 import { directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
 import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
-import { GAMEPAD_POLL_MS, gamepadPoll } from "../../shared/gamepadLoop";
+import { GAMEPAD_POLL_MS, gamepadPoll, STICK_INTERVAL_MS } from "../../shared/gamepadLoop";
 import type { ShellState } from "../../shared/ipc";
 import { bridge, cmd } from "./bridge";
 import { trackActivePad, vibrate } from "./haptics";
@@ -32,6 +32,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
   const inUse = useRef<number[]>([]);
   const family = useRef<ControllerFamily | undefined>(undefined);
   const lastDirection = useRef(0);
+  const lastStick = useRef(0);
   const lastTick = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -138,7 +139,9 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const dpad = { up: down(Button.DpadUp), down: down(Button.DpadDown), left: down(Button.DpadLeft), right: down(Button.DpadRight) };
       const cursorMode = s.inputMode === "Cursor" && !overlayOpen;
 
-      if (cursorMode) {
+      // Buttons follow the poll rate; the stick keeps its own, slower cadence so the cursor moves at the same speed.
+      if (cursorMode && now - lastStick.current >= STICK_INTERVAL_MS) {
+        lastStick.current = now;
         const velocity = stickToVelocity(lx, ly);
         if (velocity.dx !== 0 || velocity.dy !== 0) bridge().controller({ type: "cursor-move", dx: velocity.dx, dy: velocity.dy });
         const notches = stickToScroll(ry);
