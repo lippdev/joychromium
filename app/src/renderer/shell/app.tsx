@@ -164,7 +164,7 @@ function AddressBar({ url, focused, setFocused, language }: { url: string; focus
       <input
         ref={input}
         id="address"
-        aria-label="Endereço"
+        aria-label={t(language, "a11y.address")}
         placeholder={t(language, "nav.address")}
         autocomplete="off"
         spellcheck={false}

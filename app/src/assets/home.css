@@ -76,6 +76,7 @@ main {
   text-align: left;
   transition: border-color var(--duration) var(--ease), transform var(--duration) var(--ease);
 }
+.card-item { display: contents; }
 .card.big { padding: var(--space-4); font-size: var(--text-lg); }
 .card:hover,
 .card:focus-visible { border-color: var(--accent); transform: translateY(calc(-2 * var(--u))); }
