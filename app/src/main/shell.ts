@@ -75,7 +75,6 @@ export class Shell {
     this.window = new BrowserWindow(browserWindowOptions(deps.store.current.theme.background, join(deps.distDir, "preload", "chrome.js")));
     this.tabs = new TabManager({
       preloadDir: join(deps.distDir, "preload"),
-      spatialScript: deps.spatialScript,
       httpsOnly: () => deps.store.current.httpsOnly,
       httpAllowedHosts: this.httpAllowedHosts,
       hostBlocked: (host) => deps.policy.current.blockedHosts.some((b) => host === b || host?.endsWith(`.${b}`) === true),
@@ -360,6 +359,10 @@ export class Shell {
     });
     ipcMain.on(Channels.pageFocusIn, (event) => {
       if (this.tabs.active && event.sender === this.tabs.active.webContents) this.openKeyboard("page");
+    });
+    // Every frame of a tab asks for the script with its own preload; the page cannot call this channel itself.
+    ipcMain.handle(Channels.spatialScript, (event) => {
+      return this.tabs.tabs.some((t) => t.webContents === event.sender) ? this.deps.spatialScript : undefined;
     });
     ipcMain.on(Channels.pageMessage, (event, message: unknown) => {
       const tab = this.tabs.tabs.find((t) => t.webContents === event.sender);

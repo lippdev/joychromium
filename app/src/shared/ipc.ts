@@ -9,6 +9,8 @@ export const Channels = {
   pageReply: "page:reply",
   /** web page preload -> main: a text field received focus */
   pageFocusIn: "page:focusin",
+  /** web page preload -> main (invoke): the spatial navigation and cursor script, for the frame's isolated world */
+  spatialScript: "page:spatial",
   /** chrome renderer -> main: a shell command */
   shellCommand: "shell:command",
   /** main -> chrome renderer: full state snapshot */

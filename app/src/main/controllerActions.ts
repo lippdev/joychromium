@@ -1,6 +1,7 @@
 import type { WebContents } from "electron";
 import type { Direction } from "../shared/controllerInput";
 import { activateIntent, type ActivateIntent, type MediaAction } from "../shared/media";
+import { SPATIAL_WORLD } from "../shared/spatial";
 
 /** Turns controller intents into page input. Everything here goes through Chromium's input pipeline, so it is cross-platform. */
 
@@ -15,12 +16,7 @@ export function sendArrow(wc: WebContents, direction: Direction): void {
   sendKey(wc, ARROW_KEYS[direction]);
 }
 
-/**
- * The injected scripts live in their own world, so the page cannot see or replace `window.__joy`. Every interaction
- * with them has to run in that same world.
- */
-export const SPATIAL_WORLD = 73;
-
+/** The injected scripts live in `SPATIAL_WORLD`, out of the page's reach, so every interaction has to run there. */
 export async function runInPageWorld<T>(wc: WebContents, code: string): Promise<T | undefined> {
   try {
     return (await wc.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code }])) as T;

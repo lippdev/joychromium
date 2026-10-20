@@ -1,14 +1,12 @@
 import { session, WebContentsView, type Session, type WebContents } from "electron";
 import { EventEmitter } from "node:events";
 import { join } from "node:path";
-import { displayUrl, errorPageFor, isDesignPage, isInternal, isWebUrl, Pages } from "../shared/pages";
+import { displayUrl, errorPageFor, isInternal, isWebUrl, Pages } from "../shared/pages";
 import { hostOf, isHttp, isNavigationAllowed, upgradeToHttps } from "../shared/security";
-import { SPATIAL_WORLD } from "./controllerActions";
 import type { TabState } from "../shared/ipc";
 
 export interface TabEnvironment {
   preloadDir: string;
-  spatialScript: string;
   httpsOnly: () => boolean;
   httpAllowedHosts: Set<string>;
   hostBlocked: (host: string | undefined) => boolean;
@@ -43,7 +41,12 @@ export class Tab {
 
   private static createView(ses: Session, preload: string): WebContentsView {
     const view = new WebContentsView({
-      webPreferences: { session: ses, preload, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: true },
+      // nodeIntegrationInSubFrames is what runs the preload in every frame, which is how the spatial script reaches an
+      // embedded player. Node itself stays off; a sandboxed preload only gets the electron module.
+      webPreferences: {
+        session: ses, preload, sandbox: true, contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: true,
+        backgroundThrottling: true,
+      },
     });
     view.setBackgroundColor("#0C0E13");
     return view;
@@ -265,13 +268,6 @@ export class TabManager extends EventEmitter<TabEvents> {
       .filter((u) => u !== Pages.welcome && u !== Pages.settings && !u.startsWith(Pages.error));
   }
 
-  /** Puts the spatial navigation script in the page's isolated world, where the page itself cannot see or replace it. */
-  private injectSpatial(wc: WebContents): void {
-    // Web pages get it everywhere; among the internal pages only the design catalog, which exists to prove the D-pad.
-    if (isInternal(wc.getURL()) && !isDesignPage(wc.getURL())) return;
-    wc.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code: this.env.spatialScript }]).catch(() => undefined);
-  }
-
   private wire(tab: Tab): void {
     const wc = tab.webContents;
     wc.setWindowOpenHandler(({ url }) => {
@@ -339,11 +335,6 @@ export class TabManager extends EventEmitter<TabEvents> {
     wc.on("audio-state-changed", () => this.emit("changed"));
     wc.on("enter-html-full-screen", () => this.emit("fullscreen", tab, true));
     wc.on("leave-html-full-screen", () => this.emit("fullscreen", tab, false));
-    wc.on("dom-ready", () => {
-      // Spatial focus navigation plus the virtual cursor overlay, injected into every web document in the isolated
-      // world: the page's own scripts cannot read, replace or break them.
-      this.injectSpatial(wc);
-    });
     wc.on("render-process-gone", (_event, details) => {
       this.env.log.error(`Renderer gone for ${tab.url}: ${details.reason} (${details.exitCode})`);
       if (details.reason === "killed" || details.reason === "clean-exit") return;
