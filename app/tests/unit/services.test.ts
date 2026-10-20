@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { commandForShortcut, type ShortcutInput } from "../../src/shared/shortcuts";
 import { activateIntent, mediaActionForKey, mediaCommandForKey } from "../../src/shared/media";
-import { decideDownload, downloadStatus, nextAvailablePath } from "../../src/main/services/downloads";
+import { decideDownload, downloadDetail, nextAvailablePath } from "../../src/main/services/downloads";
 import { tabViewBounds } from "../../src/main/services/layout";
 import { describePermission, permissionNeedsPrompt, PermissionQueue } from "../../src/main/services/permissions";
 import { isShellCommand } from "../../src/shared/commands";
@@ -79,8 +79,9 @@ describe("downloads", () => {
     expect(decideDownload("setup.exe", { ...policy, blockDangerous: false }, () => false).action).toBe("allow");
   });
   it("describes progress", () => {
-    expect(downloadStatus("a.zip", 50, 200)).toBe("DOWNLOADING · a.zip · 25%");
-    expect(downloadStatus("a.zip", 1, 0)).toBe("DOWNLOADING · a.zip");
+    // The progress line is the translated "downloading" message plus this detail.
+    expect(downloadDetail("a.zip", 50, 200)).toBe("a.zip · 25%");
+    expect(downloadDetail("a.zip", 1, 0)).toBe("a.zip");
   });
 });
 
