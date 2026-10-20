@@ -70,7 +70,7 @@ jobs:
           $installer = Get-ChildItem release/*-x64.exe | Select-Object -First 1
           Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
           $app = Join-Path $env:LOCALAPPDATA 'Programs\JoyChromium\JoyChromium.exe'
-          if (-not (Test-Path $app)) { Write-Error "The installer did not create $app"; exit 1 }
+          if (-not (Test-Path $app)) { Write-Error "The installer did not create $app"; exit 1; }
           $profile = Join-Path $env:RUNNER_TEMP "smoke-joychromium"
           New-Item -ItemType Directory -Force -Path $profile | Out-Null
           '{"onboardingCompleted":true,"startup":"NewTab","windowMode":"window"}' | Set-Content (Join-Path $profile 'settings.json')
@@ -84,7 +84,7 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           Get-ChildItem (Join-Path $profile 'logs') -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object { Get-Content $_.FullName -TotalCount 1 }
-          if (-not $started) { Write-Error 'The installed app never started'; exit 1 }
+          if (-not $started) { Write-Error 'The installed app never started'; exit 1; }
       - name: Smoke test the installed package (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -104,7 +104,7 @@ jobs:
           done
           kill "$app" 2>/dev/null || true
           grep -h "starting" "$profile"/logs/*.log || true
-          [ "$started" = yes ] || { echo "The installed app never started"; exit 1 }
+          [ "$started" = yes ] || { echo "The installed app never started"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.os }}
