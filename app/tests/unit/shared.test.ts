@@ -14,6 +14,7 @@ import {
 import { effectiveMinimumChromium, parsePolicy, policyBlocksHost, verifyPolicy } from "../../src/shared/policy";
 import { buildSuggestions } from "../../src/shared/suggestion";
 import { defaultModeFor, directionOf, nextMode, stickToScroll, stickToVelocity } from "../../src/shared/controllerInput";
+import { activePad, padInUse, padsInUse, startedUsing, type PadSample } from "../../src/shared/controllerSelection";
 import {
   extraDangerousExtensions, shortcutLabel, shortcutModifier, urlFromArgv, usesNativeWindowControls,
 } from "../../src/shared/platform";
@@ -218,6 +219,47 @@ describe("controller input", () => {
     expect(directionOf({ up: false, down: false, left: false, right: false }, 0, 0.9)).toBe("down");
     expect(directionOf({ up: true, down: false, left: false, right: false }, 0, 0)).toBe("up");
     expect(directionOf({ up: false, down: false, left: false, right: false }, 0, 0)).toBeUndefined();
+  });
+});
+
+describe("controller selection", () => {
+  const pad = (index: number, standard = true, pressed = false, axis = 0): PadSample => ({
+    index, standard,
+    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed && i === 0 })),
+    axes: [axis, 0, 0, 0],
+  });
+
+  it("counts a held button or a pushed stick as use", () => {
+    expect(padInUse(pad(0))).toBe(false);
+    expect(padInUse(pad(0, true, true))).toBe(true);
+    expect(padInUse(pad(0, true, false, 0.2))).toBe(false);
+    expect(padInUse(pad(0, true, false, -0.9))).toBe(true);
+    expect(padsInUse([pad(0), pad(1, true, true), pad(2, true, false, 0.8)])).toEqual([1, 2]);
+  });
+
+  it("only counts a pad that starts being used", () => {
+    expect(startedUsing([], [0])).toEqual([0]);
+    expect(startedUsing([0], [0, 1])).toEqual([1]);
+    expect(startedUsing([0, 1], [1])).toEqual([]);
+  });
+
+  it("keeps the pad in hand and hands over to the next one used", () => {
+    const pads = [pad(0), pad(1)];
+    expect(activePad(null, [], [])).toBeNull();
+    expect(activePad(null, pads, [])).toBe(0);
+    expect(activePad(1, pads, [])).toBe(1);
+    expect(activePad(0, pads, [1])).toBe(1);
+    expect(activePad(1, pads, [1])).toBe(1);
+    // A finger resting on a button of the other pad keeps it there: only a new press moves the input.
+    expect(activePad(1, pads, [])).toBe(1);
+    expect(activePad(1, pads, [0, 1])).toBe(1);
+  });
+
+  it("falls back to a standard mapping and survives a disconnect", () => {
+    const odd = [pad(3, false), pad(4, true)];
+    expect(activePad(null, odd, [])).toBe(4);
+    expect(activePad(null, [pad(3, false), pad(5, false)], [])).toBe(3);
+    expect(activePad(9, odd, [])).toBe(4);
   });
 });
 
