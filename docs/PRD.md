@@ -302,7 +302,7 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | E10 Mídia e DRM | 2/3 | 2/2 | 1/1 | E10-02 (VMP) |
 | E11 Documentação | 2/2 | 1/1 | — | — |
 
-Somando: **35 de 37 Must**, **19 de 19 Should** e **8 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow.
+Somando: **35 de 37 Must**, **19 de 19 Should** e **9 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow. O E9-05 conta como entregue pelo que é código (manifesto, bundle construído no CI e updater que defere ao Flathub); o que falta nele é a publicação, que depende de conta e revisão do Flathub.
 
 **Pendências que dependem de terceiros, não de código**
 
