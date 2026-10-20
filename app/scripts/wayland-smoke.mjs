@@ -6,7 +6,7 @@
  * themselves to it, and both paint real pixels. Run it after `npm run build`, with `weston` installed.
  */
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,13 +26,29 @@ writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted:
 const env = { ...process.env, XDG_RUNTIME_DIR: runtime, WAYLAND_DISPLAY: "wayland-1", JOYCHROMIUM_DATA: data, XDG_SESSION_TYPE: "wayland" };
 delete env.DISPLAY;
 
+const westonLog = join(root, "weston.log");
+const appLog = join(root, "app.log");
 const weston = spawn("weston", ["--backend=headless-backend.so", `--width=${WIDTH}`, `--height=${HEIGHT}`, "--idle-time=0"], {
   env,
-  stdio: ["ignore", "ignore", "ignore"],
+  stdio: ["ignore", "pipe", "pipe"],
 });
+weston.stdout.on("data", (chunk) => appendFileSync(westonLog, chunk));
+weston.stderr.on("data", (chunk) => appendFileSync(westonLog, chunk));
 let app;
+/** Both logs travel with a failure: a compositor that did not start and an app that did not start look alike otherwise. */
+function tail(file, lines = 25) {
+  try {
+    return readFileSync(file, "utf8").trim().split("\n").slice(-lines).join("\n");
+  } catch {
+    return "(no output)";
+  }
+}
 const finish = (code, message) => {
   console.log(message);
+  if (code !== 0) {
+    console.log(`--- weston\n${tail(westonLog)}`);
+    console.log(`--- app\n${tail(appLog)}`);
+  }
   app?.kill("SIGTERM");
   weston.kill("SIGKILL");
   rmSync(root, { recursive: true, force: true });
@@ -95,7 +111,12 @@ async function inspect(targets) {
 }
 
 await sleep(2000);
-app = spawn(join("node_modules", ".bin", "electron"), [".", "--ozone-platform=wayland", `--remote-debugging-port=${PORT}`], { env, stdio: ["ignore", "ignore", "ignore"] });
+app = spawn(join("node_modules", ".bin", "electron"), [".", "--ozone-platform=wayland", `--remote-debugging-port=${PORT}`], {
+  env,
+  stdio: ["ignore", "pipe", "pipe"],
+});
+app.stdout.on("data", (chunk) => appendFileSync(appLog, chunk));
+app.stderr.on("data", (chunk) => appendFileSync(appLog, chunk));
 
 const started = await waitForStart();
 if (!started) finish(1, "FAIL: the app never started on Wayland");
