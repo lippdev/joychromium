@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { commandForShortcut, type ShortcutInput } from "../../src/shared/shortcuts";
 import { decideDownload, downloadStatus, nextAvailablePath } from "../../src/main/services/downloads";
 import { tabViewBounds } from "../../src/main/services/layout";
@@ -37,16 +37,17 @@ describe("keyboard shortcuts", () => {
 });
 
 describe("downloads", () => {
-  const policy = { folder: "/downloads", blockDangerous: true, extraDangerous: [".dmg"] };
+  const folder = join(sep, "downloads");
+  const policy = { folder, blockDangerous: true, extraDangerous: [".dmg"] };
   it("never overwrites an existing file", () => {
-    const taken = new Set(["/downloads/a.zip", "/downloads/a (1).zip"]);
-    expect(nextAvailablePath("/downloads", "a.zip", (p) => taken.has(p))).toBe("/downloads/a (2).zip");
-    expect(nextAvailablePath("/downloads", "../../etc/passwd", () => false)).toBe("/downloads/passwd");
+    const taken = new Set([join(folder, "a.zip"), join(folder, "a (1).zip")]);
+    expect(nextAvailablePath(folder, "a.zip", (p) => taken.has(p))).toBe(join(folder, "a (2).zip"));
+    expect(nextAvailablePath(folder, "../../etc/passwd", () => false)).toBe(join(folder, "passwd"));
   });
   it("refuses installers, including the platform-specific ones", () => {
     expect(decideDownload("setup.exe", policy, () => false).action).toBe("block");
     expect(decideDownload("App.dmg", policy, () => false).action).toBe("block");
-    expect(decideDownload("photo.jpg", policy, () => false)).toEqual({ action: "allow", path: "/downloads/photo.jpg" });
+    expect(decideDownload("photo.jpg", policy, () => false)).toEqual({ action: "allow", path: join(folder, "photo.jpg") });
     expect(decideDownload("setup.exe", { ...policy, blockDangerous: false }, () => false).action).toBe("allow");
   });
   it("describes progress", () => {
