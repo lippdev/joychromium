@@ -107,3 +107,22 @@ jobs:
         run: npm run build && npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notes:
+    needs: [decide, build]
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Compose the release notes from the commits since the previous tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: v${{ needs.decide.outputs.version }}
+        run: |
+          previous=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v "^$VERSION$" | head -n1)
+          echo "Notas de ${previous:-o começo} até $VERSION"
+          git log --no-merges --pretty=format:%s "${previous:+$previous..}$VERSION" \
+            | node app/scripts/release-notes.mjs "${previous:-}" "${VERSION#v}" > notes.md
+          gh release edit "$VERSION" --notes-file notes.md
