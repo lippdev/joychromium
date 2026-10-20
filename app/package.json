@@ -21,7 +21,7 @@
     "electron": "github:castlabs/electron-releases#v44.5.1+wvcus",
     "electron-builder": "26.15.3",
     "esbuild": "^0.28.2",
-    "preact": "^10.29.8",
+    "preact": "^11.0.1",
     "typescript": "5.9.3",
     "vitest": "5.0.5"
   },
