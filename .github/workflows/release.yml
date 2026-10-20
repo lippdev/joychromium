@@ -6,7 +6,8 @@ name: Release
 #   2. A manual dispatch with a bump level, for feature releases.
 # The version is derived from the latest v* tag (main is protected, so nothing is committed back to it); only the new
 # tag is pushed. Both OSes build with that version injected, then installers + update metadata go to a GitHub Release
-# and installed apps pick it up through electron-updater.
+# and installed apps pick it up through electron-updater. Anything below 1.0 is published as a pre-release: 0.x builds
+# are for trying out, not for the `latest` channel an installed app follows.
 on:
   push:
     branches: [main]
@@ -125,4 +126,10 @@ jobs:
           echo "Notas de ${previous:-o começo} até $VERSION"
           git log --no-merges --pretty=format:%s "${previous:+$previous..}$VERSION" \
             | node app/scripts/release-notes.mjs "${previous:-}" "${VERSION#v}" > notes.md
-          gh release edit "$VERSION" --notes-file notes.md
+          # No installed app should pick up a pre-1.0 build through the update channel.
+          major=$(printf '%s' "${VERSION#v}" | cut -d. -f1)
+          if [ "$major" = "0" ]; then
+            gh release edit "$VERSION" --notes-file notes.md --prerelease --latest=false
+          else
+            gh release edit "$VERSION" --notes-file notes.md
+          fi
