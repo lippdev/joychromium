@@ -38,28 +38,20 @@ no mesmo dia.
 3. Ligue a regra em Configurações e repita exatamente os mesmos títulos, no mesmo horário do dia.
 4. Preencha a tabela com data, SO, versão do app (Chromium) e quem mediu.
 
-```js
-// /tmp/ua-medir.mjs — não faz parte do repositório. Rode de app/ com o perfil já logado:
-//   JOYCHROMIUM_DATA="$HOME/.config/JoyChromium" node /tmp/ua-medir.mjs "https://www.netflix.com/watch/..."
-import { _electron as electron } from "@playwright/test";
+O script fica no repositório e imprime, no fim, a linha pronta para a tabela:
 
-const url = process.argv[2];
-const app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_START: "about:blank" } });
-await app.firstWindow();
-await app.evaluate(({}, target) => globalThis.joy.command({ type: "navigate", url: target }), url);
-const sample = () =>
-  app.evaluate(({}, code) => globalThis.joy.pageEval(code),
-    "(() => { const v = document.querySelector('video'); return v ? [v.videoWidth, v.videoHeight, v.currentTime] : null })()");
-
-let best = [0, 0];
-for (let i = 0; i < 60; i++) {
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  const [width, height, time] = (await sample()) ?? [0, 0, 0];
-  if (width * height > best[0] * best[1]) best = [width, height];
-  console.log(`${i * 2}s t=${time} ${width}x${height} máx=${best[0]}x${best[1]}`);
-}
-await app.close();
+```sh
+cd app
+npm run build
+npm run measure:ua -- --url "https://www.netflix.com/watch/<id>" --seconds 120
 ```
+
+Ele abre o app, navega até o título, amostra `video.videoWidth × video.videoHeight` a cada 2 s durante o tempo pedido,
+mostra o maior valor e o UA que a página recebeu (`JoyChromiumTV/` presente = identidade de TV), e termina com a linha
+de markdown preenchida com o lado medido, a data e o host. Em Windows e macOS rode com o mesmo perfil do app
+(`JOYCHROMIUM_DATA` é herdado do ambiente quando definido).
+
+Se o progresso parar de andar, o script avisa: dê play pelo controle (A) e a medição continua.
 
 O UA que a página recebeu pode ser conferido no mesmo perfil com
 `globalThis.joy.pageEval("navigator.userAgent")`; com a regra ligada ele não contém `JoyChromiumTV/`.
