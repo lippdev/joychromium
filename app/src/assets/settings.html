@@ -141,7 +141,7 @@
     <div class="row">
       <div>JoyChromium <small id="appUpdate"></small></div>
       <div class="inline">
-        <button class="ghost" id="updateDownload" data-i18n="settings.download" hidden>Baixar</button>
+        <button class="ghost" id="updateDownload" hidden>Baixar</button>
         <button class="ghost" id="updateCheck" data-i18n="settings.check">Verificar agora</button>
       </div>
     </div>
@@ -277,7 +277,7 @@
   $('clearData').addEventListener('click', () => { post('clear-data', {}); flash('clearStatus', 'Dados limpos.'); });
   $('exportDiag').addEventListener('click', () => post('export-diagnostics', {}));
   $('updateCheck').addEventListener('click', () => { $('appUpdate').textContent = 'Verificando…'; post('update-check', {}); });
-  $('updateDownload').addEventListener('click', () => post('update-download', {}));
+  $('updateDownload').addEventListener('click', () => post($('updateDownload').dataset.i18n === 'settings.install' ? 'update-install' : 'update-download', {}));
 
   const sendUi = () => {
     post('ui-settings', {
@@ -290,7 +290,12 @@
 
   function showUpdate(msg) {
     $('appUpdate').textContent = msg.appUpdate || '';
-    $('updateDownload').hidden = !msg.updateUrl;
+    const button = $('updateDownload');
+    // A downloaded deb/rpm installs itself while the window can still ask for the system password.
+    const install = Boolean(msg.updateInstall);
+    button.hidden = !msg.updateUrl && !install;
+    button.dataset.i18n = install ? 'settings.install' : 'settings.download';
+    button.textContent = i18n.t(button.dataset.i18n);
     $('adBlockUpdate').textContent = msg.adBlockUpdate || '';
     $('policy').textContent = msg.policy || '';
   }

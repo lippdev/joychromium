@@ -62,6 +62,7 @@ export class PageBridge {
       appVersion: this.deps.appVersion,
       appUpdate: this.deps.updateStatus(),
       updateUrl: this.deps.updateUrl(),
+      updateInstall: this.deps.canInstallUpdate(),
       adBlockVersion: this.deps.adblock.listsVersion,
       adBlockUpdate: this.deps.adblock.status,
       policy: this.deps.policy.status,
@@ -167,7 +168,14 @@ export class PageBridge {
         break;
       case "update-check":
         await this.deps.checkUpdates();
-        this.reply(tab, { type: "update-status", appUpdate: this.deps.updateStatus(), updateUrl: this.deps.updateUrl(), adBlockUpdate: this.deps.adblock.status, policy: this.deps.policy.status });
+        this.reply(tab, {
+          type: "update-status", appUpdate: this.deps.updateStatus(), updateUrl: this.deps.updateUrl(),
+          updateInstall: this.deps.canInstallUpdate(), adBlockUpdate: this.deps.adblock.status, policy: this.deps.policy.status,
+        });
+        break;
+      case "update-install":
+        // Falls back to the release page when the download is not there (an AppImage, a mac build, nothing downloaded).
+        if (!this.deps.installUpdate()) await this.deps.openUpdatePage();
         break;
       case "update-download":
         await this.deps.openUpdatePage();
