@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { Channels } from "../shared/ipc";
-import type { ControllerEvent, ShellCommand, ShellPreferences, ShellState, ShellStatePatch } from "../shared/ipc";
+import type { ControllerEvent, ShellActivity, ShellCommand, ShellPreferences, ShellState, ShellStatePatch } from "../shared/ipc";
 
 // Bundled by esbuild, so this sandboxed preload can import the shared contract instead of repeating channel names.
 contextBridge.exposeInMainWorld("shell", {
@@ -21,6 +21,11 @@ contextBridge.exposeInMainWorld("shell", {
   },
   thumbnails(): Promise<{ id: number; dataUrl: string }[]> {
     return ipcRenderer.invoke(Channels.shellThumbnails);
+  },
+  onActivity(callback: (activity: ShellActivity) => void): () => void {
+    const listener = (_event: unknown, activity: ShellActivity): void => callback(activity);
+    ipcRenderer.on(Channels.shellActivity, listener);
+    return () => ipcRenderer.removeListener(Channels.shellActivity, listener);
   },
   preferences(): Promise<ShellPreferences> {
     return ipcRenderer.invoke(Channels.shellPreferences);

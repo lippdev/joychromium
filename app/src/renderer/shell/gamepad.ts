@@ -2,6 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { controllerFamily, type ControllerFamily } from "../../shared/controllerGlyphs";
 import { directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
 import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
+import { gamepadPoll } from "../../shared/gamepadLoop";
 import type { ShellState } from "../../shared/ipc";
 import { bridge, cmd } from "./bridge";
 import { trackActivePad, vibrate } from "./haptics";
@@ -16,7 +17,8 @@ type Overlay = "none" | "tabs" | "menu";
 /**
  * Gamepad handling for the shell. The tab of a web page owns the focus while the user reads it, so the shell keeps
  * polling with requestAnimationFrame and only acts when it is visible; a page that needs the D-pad in Arrows mode gets
- * it through the main process.
+ * it through the main process. A minimized window stops the loop instead of letting it run on frames nobody sees: the
+ * main process reports the window state, and `gamepadPoll` decides per frame.
  */
 export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: Overlay) => void): void {
   const pressed = useRef(new Set<number>());
@@ -28,12 +30,27 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
   const lastTick = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
+  // Read through a ref so the loop below is created once and keeps a single activity subscription for its lifetime.
+  const overlayRef = useRef(overlay);
+  overlayRef.current = overlay;
 
   useEffect(() => {
     let frame = 0;
-    const tick = (now: number) => {
+    let parked = false;
+    const windowActive = { current: true };
+    const resume = (): void => {
+      if (!parked) return;
+      parked = false;
       frame = requestAnimationFrame(tick);
-      if (document.hidden || now - lastTick.current < 50) return;
+    };
+    const tick = (now: number) => {
+      const decision = gamepadPoll(now, lastTick.current, { hidden: document.hidden, active: windowActive.current });
+      if (decision === "park") {
+        parked = true;
+        return;
+      }
+      frame = requestAnimationFrame(tick);
+      if (decision === "wait") return;
       lastTick.current = now;
       const pads = [...navigator.getGamepads()].filter((p): p is Gamepad => Boolean(p));
       const samples: PadSample[] = pads.map((p) => ({ index: p.index, standard: p.mapping === "standard", buttons: p.buttons, axes: p.axes }));
@@ -74,9 +91,10 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       }
 
       const s = stateRef.current;
-      const overlayOpen = overlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);
+      const openOverlay = overlayRef.current;
+      const overlayOpen = openOverlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);
       if (justPressed(Button.Start)) {
-        setOverlay(overlay === "menu" ? "none" : "menu");
+        setOverlay(openOverlay === "menu" ? "none" : "menu");
         return;
       }
       if (justPressed(Button.Back)) {
@@ -85,14 +103,14 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         return;
       }
       if (justPressed(Button.B)) {
-        if (overlay !== "none") setOverlay("none");
+        if (openOverlay !== "none") setOverlay("none");
         else if (s.permission) cmd({ type: "permission", allow: false, remember: false });
         else if (s.keyboard) cmd({ type: "keyboard-close" });
         else cmd({ type: "back" });
         return;
       }
       if (justPressed(Button.A)) {
-        if (overlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
+        if (openOverlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
         else bridge().controller({ type: "activate" });
         vibrate("confirm");
         return;
@@ -124,13 +142,25 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const direction: Direction | undefined = cursorMode ? directionOf(dpad, 0, 0) : directionOf(dpad, lx, ly);
       if (direction && now - lastDirection.current >= 180) {
         lastDirection.current = now;
-        if (overlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
+        if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
         else bridge().controller({ type: "direction", direction });
       }
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [overlay, setOverlay]);
+    const visibility = (): void => {
+      if (!document.hidden) resume();
+    };
+    document.addEventListener("visibilitychange", visibility);
+    const stopActivity = bridge().onActivity(({ active }) => {
+      windowActive.current = active;
+      if (active) resume();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", visibility);
+      stopActivity();
+    };
+  }, [setOverlay]);
 }
 
 /** Spatial focus among the shell's own buttons, used while a dialog or the keyboard is open. */

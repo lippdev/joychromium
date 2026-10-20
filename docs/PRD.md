@@ -293,7 +293,7 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | E1 Correções multiplataforma | 9/9 | 1/1 | — | — |
 | E2 Empacotamento e CI | 5/5 | 3/4 | 1/1 | E2-08 (Wayland/SteamOS) |
 | E3 Fundação de arquitetura | 5/5 | 3/3 | — | — |
-| E4 Robustez e desempenho | 1/1 | 1/1 | 1/2 | E4-03 (Could) |
+| E4 Robustez e desempenho | 1/1 | 1/1 | 2/2 | — |
 | E5 Design system e redesign | 4/4 | 3/3 | — | — |
 | E6 Experiência com controle | 4/5 | 2/2 | 2/2 | E6-07 (controle físico) |
 | E7 Internacionalização e a11y | 1/1 | 1/1 | 0/1 | E7-03 (leitor de tela) |
@@ -302,7 +302,7 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | E10 Mídia e DRM | 2/3 | 2/2 | 1/1 | E10-02 (VMP) |
 | E11 Documentação | 2/2 | 1/1 | — | — |
 
-Somando: **35 de 37 Must**, **18 de 19 Should** e **7 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow.
+Somando: **35 de 37 Must**, **18 de 19 Should** e **8 de 10 Could**. O E2-07 (smoke do pacote instalado) está entregue para Linux e Windows; o passo de macOS saiu do CI porque o app instalado a partir do dmg roda no runner sem escrever a primeira linha do log, e isso está documentado no workflow.
 
 **Pendências que dependem de terceiros, não de código**
 

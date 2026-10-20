@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, powerSaveBlocker, session, type Session, type WebContents } from "electron";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { Channels, type ControllerEvent, type PermissionPrompt, type ShellCommand, type ShellPreferences, type ShellState } from "../shared/ipc";
+import { Channels, type ControllerEvent, type PermissionPrompt, type ShellActivity, type ShellCommand, type ShellPreferences, type ShellState } from "../shared/ipc";
 import { diffShellState } from "../shared/statePatch";
 import { displayUrl, isInternal, isWebUrl, Pages } from "../shared/pages";
 import type { WindowMode } from "../shared/platform";
@@ -79,6 +79,8 @@ export class Shell {
   private chromeReady = false;
   /** The state the chrome UI already has; undefined until it asks for the first full snapshot. */
   private sentState: ShellState | undefined;
+  /** The shell left fullscreen to minimize a TV-mode window, and restores it when the window comes back. */
+  private returnToFullScreen = false;
 
   constructor(private readonly deps: ShellDeps) {
     this.window = new BrowserWindow(browserWindowOptions(deps.store.current.theme.background, join(deps.distDir, "preload", "chrome.js")));
@@ -250,6 +252,18 @@ export class Shell {
     this.window.on("resize", () => this.layout.apply());
     this.window.on("maximize", () => this.layout.apply());
     this.window.on("unmaximize", () => this.layout.apply());
+    const onActivity = (): void => this.broadcastActivity();
+    this.window.on("minimize", onActivity);
+    this.window.on("show", onActivity);
+    this.window.on("hide", onActivity);
+    this.window.on("restore", () => {
+      // TV mode comes back the way it went: fullscreen, and only when the shell left it to minimize.
+      if (this.returnToFullScreen) {
+        this.returnToFullScreen = false;
+        this.window.setFullScreen(true);
+      }
+      this.broadcastActivity();
+    });
     this.window.on("close", () => this.deps.store.saveSession(this.tabs.sessionUrls()));
     this.window.webContents.on("before-input-event", (event, input) => this.handleShortcut(event, input));
     // The UI is gone or reloading: nothing can apply a patch until it asks for a fresh snapshot again.
@@ -300,6 +314,17 @@ export class Shell {
     this.broadcast();
   }
 
+  /**
+   * Leaves fullscreen before minimizing and comes back to it on restore (E4-03). A fullscreen window is not
+   * minimizable on Linux — the window manager ignores the request, nothing is reported to the page, and the shell keeps
+   * reading the controller for a window nobody can see.
+   */
+  minimizeWindow(): void {
+    this.returnToFullScreen = this.window.isFullScreen();
+    if (this.returnToFullScreen) this.window.setFullScreen(false);
+    this.window.minimize();
+  }
+
   /** A second launch focuses this window instead of opening another copy of the profile. */
   focusFromSecondInstance(url?: string): void {
     if (this.window.isMinimized()) this.window.restore();
@@ -343,6 +368,17 @@ export class Shell {
       if (patch) this.window.webContents.send(Channels.shellPatch, patch);
     }
     this.sentState = state;
+  }
+
+  /**
+   * Tells the UI whether the window is on screen (E4-03). A frameless window keeps its renderer "visible" while the
+   * window manager has it minimized, so the shell cannot learn this from the document and an idle controller loop
+   * would keep running; the main process is the one that knows.
+   */
+  private broadcastActivity(): void {
+    if (!this.chromeReady || this.window.isDestroyed()) return;
+    const activity: ShellActivity = { active: !this.window.isMinimized() && this.window.isVisible() };
+    this.window.webContents.send(Channels.shellActivity, activity);
   }
 
   private forgetChrome(): void {
@@ -389,6 +425,7 @@ export class Shell {
       this.chromeReady = true;
       this.sentState = undefined;
       this.broadcast();
+      this.broadcastActivity();
     });
     ipcMain.on(Channels.shellCommand, (event, command: unknown) => {
       if (event.sender !== this.window.webContents) return;

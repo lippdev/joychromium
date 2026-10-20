@@ -27,7 +27,14 @@ export const Channels = {
   shellLayout: "shell:layout",
   /** chrome renderer -> main (invoke): the preferences the shell itself acts on, such as haptics */
   shellPreferences: "shell:preferences",
+  /** main -> chrome renderer: whether the window is on screen, so idle loops can park while it is minimized */
+  shellActivity: "shell:activity",
 } as const;
+
+/** Whether the window is on screen: sent when it is minimized, hidden, restored or shown. */
+export interface ShellActivity {
+  active: boolean;
+}
 
 /** Read right before an action, so a switch flipped in Settings applies on the next press. */
 export interface ShellPreferences {
