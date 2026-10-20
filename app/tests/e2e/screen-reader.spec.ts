@@ -161,34 +161,21 @@ async function installPad(): Promise<void> {
 const settle = () => expect.poll(async () => (await activeTab())?.isLoading, { timeout: 30_000 }).toBe(false);
 
 /**
- * Waits for an expression to hold in the active tab. A plain `expect.poll` swallows the reason a read failed — an
- * executeJavaScript that lands mid-navigation rejects — and reports only a timeout, which says nothing about what the
- * page was doing. This keeps the last error and fails with it.
+ * Waits for an expression to hold in the active tab. A bare `expect.poll` reports "timeout" whatever went wrong, and
+ * an executeJavaScript that lands while the page is navigating rejects instead of counting: the last address the page
+ * had is what tells those apart.
  */
 async function waitForPage(expression: string): Promise<void> {
   const deadline = Date.now() + 30_000;
-  let detail = "never ran";
+  let last = "never read";
   while (Date.now() < deadline) {
-    try {
-      const value = await pageEval<unknown>(expression);
-      if (value) return;
-      detail = `returned ${JSON.stringify(value)}`;
-    } catch (error) {
-      detail = error instanceof Error ? error.message : String(error);
-    }
+    const read = await pageEval<{ ok: boolean; href: string }>(`({ ok: Boolean(${expression}), href: location.href })`)
+      .catch((error: unknown) => ({ ok: false, href: error instanceof Error ? error.message : String(error) }));
+    if (read.ok) return;
+    last = read.href;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  // Enough state to tell "the page has no cards" from "the read is landing somewhere else".
-  const context = await pageEval<string>(`JSON.stringify({
-    href: location.href, ready: document.readyState, bridge: typeof window.joy,
-    apps: document.getElementById('apps') ? document.getElementById('apps').children.length : -1,
-    list: document.getElementById('list') ? document.getElementById('list').children.length : -1,
-    search: document.getElementById('q') ? document.getElementById('q').getAttribute('aria-label') : null,
-    cards: document.querySelectorAll('#apps .card').length,
-    items: document.querySelectorAll('[role="listitem"]').length,
-  })`).catch((error: unknown) => `unreadable: ${error instanceof Error ? error.message : String(error)}`);
-  const tabs = JSON.stringify(await activeTab());
-  throw new Error(`The active page never satisfied ${expression} (last read: ${detail}; page ${context}; tab ${tabs})`);
+  throw new Error(`The active page never satisfied ${expression} (last read at ${last})`);
 }
 
 async function press(button: number): Promise<void> {
