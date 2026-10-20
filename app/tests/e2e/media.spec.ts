@@ -52,6 +52,24 @@ async function press(button: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 150));
 }
 
+/** Walks the quick menu with the D-pad the way a controller does, and activates the item whose label matches. */
+async function runMenuItem(label: RegExp): Promise<void> {
+  await press(Button.Start);
+  const menu = chrome.locator(".overlay .menu");
+  await expect(menu).toBeVisible();
+  const focusedItem = () => chrome.evaluate(() => {
+    const element = document.activeElement as HTMLElement | null;
+    return element?.classList.contains("menu-item") ? element.textContent?.trim() ?? "" : "";
+  });
+  for (let i = 0; i < 12 && !label.test(await focusedItem()); i++) await press(Button.DpadDown);
+  expect(await focusedItem()).toMatch(label);
+  await press(Button.A);
+  await expect(menu).toHaveCount(0);
+}
+
+/** The element the browser put in its picture-in-picture window, read from the injected script's world. */
+const pipElement = () => spatialEval("document.pictureInPictureElement ? document.pictureInPictureElement.id : null");
+
 const sendMediaKey = (keyCode: string) => app.evaluate(({ webContents }, code) => {
   const wc = webContents.getAllWebContents().find((w) => w.getURL() === "about:blank");
   wc?.sendInputEvent({ type: "keyDown", keyCode: code });
@@ -105,6 +123,21 @@ const focusedButton = `(() => {
   document.body.appendChild(button);
   button.focus();
   return document.activeElement === button;
+})()`;
+
+/** A video with real frames, from a canvas capture stream: a picture-in-picture window needs video, not just audio. */
+const CANVAS_VIDEO = `(() => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 180;
+  canvas.getContext('2d').fillRect(0, 0, 320, 180);
+  const video = document.createElement('video');
+  video.id = 'video';
+  video.muted = true;
+  video.srcObject = canvas.captureStream(10);
+  document.body.appendChild(video);
+  void video.play();
+  return 'ok';
 })()`;
 
 const TRACK_BUTTONS = `(() => {
@@ -190,18 +223,32 @@ test("the quick menu skips tracks from the controller", async () => {
   await pageEval(video(false));
   await pageEval(TRACK_BUTTONS);
 
-  await press(Button.Start);
-  const menu = chrome.locator(".overlay .menu");
-  await expect(menu).toBeVisible();
-
-  const focusedItem = () => chrome.evaluate(() => {
-    const element = document.activeElement as HTMLElement | null;
-    return element?.classList.contains("menu-item") ? element.textContent?.trim() ?? "" : "";
-  });
-  for (let i = 0; i < 12 && !/Next track|Próxima faixa/.test(await focusedItem()); i++) await press(Button.DpadDown);
-  expect(await focusedItem()).toMatch(/Next track|Próxima faixa/);
-
-  await press(Button.A);
+  await runMenuItem(/Next track|Próxima faixa/);
   await expect.poll(() => pageEval("window.skipped.next"), { timeout: 5_000 }).toBe(1);
-  await expect(menu).toHaveCount(0);
+});
+
+test("the quick menu opens and closes picture-in-picture", async () => {
+  await installPad();
+  await pageEval(CANVAS_VIDEO);
+  await expect.poll(() => pageEval("document.getElementById('video').readyState"), { timeout: 10_000 }).toBeGreaterThanOrEqual(2);
+  expect(await pipElement()).toBeNull();
+
+  await runMenuItem(/Picture-in-picture/);
+  await expect.poll(pipElement, { timeout: 10_000 }).toBe("video");
+
+  // The same item closes the window that is already open, instead of asking the page for a second one.
+  await runMenuItem(/Picture-in-picture/);
+  await expect.poll(pipElement, { timeout: 10_000 }).toBeNull();
+});
+
+test("picture-in-picture on a page with no video changes nothing", async () => {
+  await installPad();
+  await pageEval(focusedButton);
+
+  expect(await spatialEval("window.__joy.mediaPictureInPicture()")).toBe(false);
+  await runMenuItem(/Picture-in-picture/);
+
+  expect(await pipElement()).toBeNull();
+  expect(await pageEval("document.activeElement.tagName")).toBe("BUTTON");
+  expect(await spatialEval("typeof window.__joy")).toBe("object");
 });
