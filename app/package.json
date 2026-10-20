@@ -154,5 +154,8 @@
     "name": "lippdev",
     "email": "alyxmedical@gmail.com"
   },
-  "homepage": "https://github.com/lippdev/joychromium"
+  "homepage": "https://github.com/lippdev/joychromium",
+  "overrides": {
+    "http-cache-semantics": "^4.3.0"
+  }
 }
