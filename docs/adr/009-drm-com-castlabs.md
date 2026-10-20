@@ -25,3 +25,7 @@ A ressalva do spike caiu em parte: a CDM **baixa e o EME funciona** numa máquin
 - A primeira execução baixa a CDM em segundo plano; o EME só a enxerga a partir da execução seguinte. O status em Configurações → Sobre é atualizado quando a versão aparece.
 
 O que continua em aberto: VMP (EVS) para produção no Windows e no macOS, e a mesma verificação nessas duas plataformas. No Linux não há VMP.
+
+## Adendo (20/10/2026)
+
+O lado de código da assinatura VMP está no repositório: `app/scripts/after-pack.mjs` chama o cliente EVS em todo build empacotado de Windows e macOS, `app/scripts/evs.mjs` decide quando fazê-lo (e o teste unitário cobre os três casos), o `release.yml` instala o cliente e passa a conta por segredo, e um workflow dedicado cria a conta. O que falta é só a conta gratuita na castLabs, que é do dono do repositório; até ela existir, os builds de Windows e macOS saem com a CDM sem assinatura e assim o dizem no log. Procedimento em [DRM-EVS.md](../DRM-EVS.md).

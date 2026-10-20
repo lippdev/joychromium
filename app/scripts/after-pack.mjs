@@ -3,6 +3,7 @@
 // On other platforms this hook does nothing.
 import { execFileSync } from "node:child_process";
 import { flipFuses, FuseVersion, FuseV1Options } from "@electron/fuses";
+import { evsPlan, vmpCommand } from "./evs.mjs";
 
 /** @param {import("electron-builder").AfterPackContext} context */
 export default async function afterPack(context) {
@@ -14,11 +15,29 @@ export default async function afterPack(context) {
     [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
     [FuseV1Options.OnlyLoadAppFromAsar]: true,
   });
+  vmpSign(context);
   if (context.electronPlatformName !== "darwin") return;
   const appName = `${context.packager.appInfo.productFilename}.app`;
   const appPath = `${context.appOutDir}/${appName}`;
   execFileSync("codesign", ["--force", "--deep", "--sign", "-", appPath], { stdio: "inherit" });
   console.log(`Ad-hoc signed ${appName}`);
+}
+
+/**
+ * Sign the CDM through castLabs EVS, when this platform needs it and an account is present. A failure here is fatal:
+ * a build that claims Widevine but ships an unverifiable CDM is worse than a build that stops.
+ * @param {import("electron-builder").AfterPackContext} context
+ */
+function vmpSign(context) {
+  const { electronPlatformName, appOutDir } = context;
+  const plan = evsPlan(electronPlatformName, process.env);
+  if (!plan.sign) {
+    console.log(`VMP signing skipped: ${plan.reason}`);
+    return;
+  }
+  const { command, args } = vmpCommand(electronPlatformName, appOutDir);
+  execFileSync(command, args, { stdio: "inherit" });
+  console.log(`VMP signed ${appOutDir} with the EVS account ${plan.account}`);
 }
 
 /** Where the packaged executable sits for each platform. */

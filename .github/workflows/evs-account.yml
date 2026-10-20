@@ -1,0 +1,70 @@
+# Criação da conta castLabs EVS (a assinatura VMP do Widevine) sem instalar nada na sua máquina.
+#
+# O E10-02 depende de uma conta gratuita na castLabs: sem ela, os builds de Windows e macOS saem com uma CDM que os
+# serviços de streaming não verificam. Este workflow existe para que criar essa conta custe dois cliques e nenhum
+# Python local. O passo a passo está em docs/DRM-EVS.md.
+#
+# Três segredos precisam existir no repositório (Settings → Secrets and variables → Actions):
+#   EVS_ACCOUNT_NAME  — o nome da conta, o mesmo que vai no afterPack
+#   EVS_PASSWD        — a senha dessa conta
+#   EVS_EMAIL         — o e-mail que recebe o código de confirmação
+#
+# 1. Rode com mode=help para ver os argumentos exatos do cliente instalado.
+# 2. Rode com mode=signup: a castLabs manda um código para EVS_EMAIL.
+# 3. Rode com mode=confirm e o código.
+# Depois disso, a próxima release assina a CDM sozinha.
+name: EVS account
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "help · signup · confirm"
+        type: choice
+        options: [help, signup, confirm]
+        default: help
+      code:
+        description: "Código de confirmação (só no mode=confirm)"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  evs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Cliente EVS
+        run: python -m pip install --upgrade castlabs-evs
+      - name: Mostrar a interface do cliente
+        if: inputs.mode == 'help'
+        run: |
+          python -m castlabs_evs.account --help
+          python -m castlabs_evs.account signup --help
+      - name: Criar a conta
+        if: inputs.mode == 'signup'
+        env:
+          EVS_ACCOUNT_NAME: ${{ secrets.EVS_ACCOUNT_NAME }}
+          EVS_PASSWD: ${{ secrets.EVS_PASSWD }}
+          EVS_EMAIL: ${{ secrets.EVS_EMAIL }}
+          EVS_FIRST_NAME: ${{ secrets.EVS_FIRST_NAME }}
+          EVS_LAST_NAME: ${{ secrets.EVS_LAST_NAME }}
+          EVS_ORGANIZATION: ${{ secrets.EVS_ORGANIZATION }}
+        run: |
+          set +e
+          python -m castlabs_evs.account -n signup -A "$EVS_ACCOUNT_NAME" -P "$EVS_PASSWD" -E "$EVS_EMAIL"
+          echo "signup exit: $?"
+          echo "Se o código chegou por e-mail, rode de novo com mode=confirm e o código."
+      - name: Confirmar a conta
+        if: inputs.mode == 'confirm'
+        env:
+          EVS_ACCOUNT_NAME: ${{ secrets.EVS_ACCOUNT_NAME }}
+          EVS_PASSWD: ${{ secrets.EVS_PASSWD }}
+        run: |
+          python -m castlabs_evs.account -n confirm-signup \
+            -A "$EVS_ACCOUNT_NAME" -P "$EVS_PASSWD" -C "${{ inputs.code }}"
+          echo "Conta confirmada. A próxima release assina a CDM nos builds de Windows e macOS."
