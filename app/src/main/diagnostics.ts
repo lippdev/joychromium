@@ -4,13 +4,14 @@ import { arch, platform, release } from "node:os";
 import type { Log } from "./log";
 import type { SettingsStore } from "./store";
 
-/** Zips logs plus settings (site permissions stripped) for a bug report. Returns the zip path. */
+/** Zips logs, settings (site permissions stripped) and the boot/memory metrics for a bug report. Returns the zip path. */
 export async function exportDiagnostics(
   targetFolder: string,
   log: Log,
   store: SettingsStore,
   environmentLines: string[],
   crashFiles: readonly string[] = [],
+  metricsLines: readonly string[] = [],
 ): Promise<string> {
   mkdirSync(targetFolder, { recursive: true });
   const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
@@ -24,6 +25,7 @@ export async function exportDiagnostics(
   }
   entries.push({ name: "settings.json", data: Buffer.from(JSON.stringify({ ...store.current, sitePermissions: {} }, null, 2)) });
   entries.push({ name: "environment.txt", data: Buffer.from([`OS ${platform()} ${release()} ${arch()}`, `Node ${process.versions.node}`, ...environmentLines].join("\n")) });
+  entries.push({ name: "diagnostics.txt", data: Buffer.from(`${metricsLines.join("\n")}\n`) });
   await new Promise<void>((resolve, reject) => {
     const out = createWriteStream(zipPath);
     out.on("finish", resolve);
