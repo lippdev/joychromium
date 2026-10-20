@@ -1,6 +1,7 @@
 {
   "name": "joychromium",
   "productName": "JoyChromium",
+  "desktopName": "joychromium.desktop",
   "version": "0.1.0",
   "description": "Controller-first browser for the TV, built on Electron.",
   "license": "MIT",
@@ -102,7 +103,8 @@
           "Name": "JoyChromium",
           "Categories": "Network;WebBrowser;"
         }
-      }
+      },
+      "syncDesktopName": true
     },
     "deb": {
       "depends": [
