@@ -6,7 +6,7 @@ O critério do item é o fluxo de busca utilizável com leitor de tela — Orca 
 
 `app/tests/e2e/screen-reader.spec.ts` roda junto com o resto do e2e e verifica duas camadas:
 
-- **Papéis e nomes na DOM**, pelo Playwright, na janela do shell e, pelo bridge de teste, nas páginas internas: o campo de endereço é um `textbox` chamado "Endereço" (e "Address" em inglês), o teclado do controle é um `dialog` chamado "Teclado do controle" com as teclas como botões, o campo de busca da nova aba se chama "Pesquisar" e está dentro de uma região de busca, e os cards de aplicativos, favoritos e histórico são listas com itens nomeados.
+- **Papéis e nomes na DOM**, pelo Playwright, na janela do shell e, pelo bridge de teste, nas páginas internas: o campo de endereço é um `textbox` chamado "Endereço" (e "Address" em inglês), o teclado do controle é um `dialog` chamado "Teclado do controle" com as teclas como botões, as sugestões da barra de endereço são um `listbox` chamado "SUGESTÕES" com `option` selecionável, o campo de busca da nova aba se chama "Pesquisar" e está dentro de uma região de busca, e os cards de aplicativos, favoritos e histórico são listas com itens nomeados.
 - **A árvore AT-SPI**, no Linux, que é exatamente o que o Orca lê: `app/tests/e2e/atspi-tree.py` fala D-Bus com o app e devolve o que ele publica. É essa camada que pega um nome que a DOM inventa e a tecnologia assistiva não vê.
 
 Para rodar a camada AT-SPI fora do CI são precisos os pacotes e um barramento de sessão; o teste sobe um `dbus-daemon` próprio e se marca como *skipped* com o motivo quando não consegue:
@@ -37,7 +37,9 @@ Para cada cenário: **passou / falhou**, o que o leitor falou (texto literal, en
    Deve ser anunciado: o teclado **não** deve roubar a fala do campo; o foco tem de continuar no endereço.
 3. Feche o teclado, aperte **Y** no controle (ou Tab até o teclado, sem focar o campo).
    Deve ser anunciado: **"Teclado do controle, diálogo"** e, ao percorrer com Tab, cada tecla pelo próprio nome ("q, botão", "espaço, botão", "apagar, botão", "OK, botão").
-4. Digite uma busca com acento — "ação", por exemplo — usando só o teclado do controle e confirme com OK.
+4. Digite algo que exista no histórico ou nos favoritos — "exam", por exemplo — e pare antes de confirmar.
+   Deve ser anunciado: **"SUGESTÕES, caixa de lista"** e, ao descer com o D-pad ou com a seta para baixo a partir do campo, cada item pelo título e pela URL ("Example, item de lista"). O item em foco tem de ser anunciado como selecionado, e o A (ou Enter) abre o item em foco.
+5. Digite uma busca com acento — "ação", por exemplo — usando só o teclado do controle e confirme com OK.
    Deve ser anunciado: o resultado da navegação e o novo título da página.
 
 ## Cenário 2 — busca na tela inicial
@@ -56,10 +58,6 @@ Para cada cenário: **passou / falhou**, o que o leitor falou (texto literal, en
 2. Filtre por uma palavra e percorra os resultados.
    Deve ser anunciado: **"Histórico, lista"** com a posição de cada item ("1 de 3"), o título, a URL e o botão de remover com nome próprio.
 3. Repita nos favoritos: o campo deve ser anunciado como "Pesquisar nos favoritos" e a lista como "Favoritos".
-
-## O que ainda não existe
-
-As **sugestões de busca** da barra de endereço são calculadas no processo principal (`src/shared/suggestion.ts`) e chegam ao shell no estado, mas nenhuma tela as desenha: não há lista para o leitor anunciar. O roteiro registra isso como falha conhecida, e o item que fecha o buraco é a parte de "sugestões navegáveis" do E6-05.
 
 ## Por leitor
 

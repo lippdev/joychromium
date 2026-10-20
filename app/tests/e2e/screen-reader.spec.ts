@@ -13,8 +13,8 @@ import { join } from "node:path";
  *   reads it here, so a name or a role that the DOM only claims to have is caught. The reader's speech itself is not
  *   automated: a human pass over docs/SCREEN-READER.md stays the only way to hear it.
  *
- * The address bar's suggestion list is not in either check: the shell state carries suggestions, but nothing renders
- * them, so there is nothing for a reader to announce yet.
+ * The address bar's suggestions are here too: they are a list box of options, and a reader has to hear the list and the
+ * item it is on, not a row of bare buttons.
  */
 
 const ATSPI = join(__dirname, "atspi-tree.py");
@@ -225,6 +225,24 @@ test("the shell names its controls in the language the user picked", async () =>
   await expect(chrome.getByRole("dialog", { name: "Controller keyboard" })).toBeVisible();
 });
 
+test("the address suggestions are a named list the field can enter", async () => {
+  await chrome.locator("#address").click();
+  await expect.poll(() => chrome.locator("#keyboard").isVisible(), { timeout: 15_000 }).toBe(true);
+  await chrome.locator("#address").fill("exam");
+
+  const list = chrome.getByRole("listbox", { name: "SUGESTÕES" });
+  await expect(list).toBeVisible();
+  const options = list.getByRole("option");
+  await expect.poll(() => options.count(), { timeout: 15_000 }).toBeGreaterThan(0);
+  await expect(options.first()).toContainText("Example");
+  await expect(options.first()).toHaveAttribute("aria-selected", "false");
+
+  // Down from the field lands on the first option, which is the one A or Enter opens.
+  await chrome.locator("#address").press("ArrowDown");
+  await expect(options.first()).toBeFocused();
+  await expect(options.first()).toHaveAttribute("aria-selected", "true");
+});
+
 test("the new tab search field is named and its cards are a list", async () => {
   await command({ type: "navigate", url: "joychromium://newtab" });
   await expect.poll(async () => (await activeTab())?.url, { timeout: 30_000 }).toBe("joychromium://newtab");
@@ -294,7 +312,7 @@ test("the history search and its results reach a reader as a named list", async 
   await waitForPage("document.querySelectorAll('#list [role=\"listitem\"]').length === 0");
 });
 
-test("the AT-SPI tree exposes the address field, the keyboard and the card list", async () => {
+test("the AT-SPI tree exposes the address field, the keyboard, the suggestions and the card list", async () => {
   test.skip(Boolean(busProblem), busProblem ?? "");
 
   // The shell: an entry named for the address bar, inside a form, in the shell's own document.
@@ -312,6 +330,16 @@ test("the AT-SPI tree exposes the address field, the keyboard and the card list"
   const dialog = find(readTree(), (n) => n.role === "dialog" && n.name === "Teclado do controle");
   expect(dialog).toBeDefined();
   expect(flatten(dialog!).some((n) => n.role === "push button" && n.name === "q")).toBe(true);
+
+  // Typing in the address turns the shell's suggestions into a named list box of list items, not loose buttons.
+  await chrome.locator("#address").fill("exam");
+  await expect
+    .poll(async () => (await flatTree()).some((n) => n.role === "list box" && n.name === "SUGESTÕES"), { timeout: 15_000 })
+    .toBe(true);
+  const box = find(readTree(), (n) => n.role === "list box" && n.name === "SUGESTÕES");
+  const options = (box?.children ?? []).filter((n) => n.role === "list item");
+  expect(options.length).toBeGreaterThan(0);
+  expect(options[0]?.name).toContain("Example");
   await command({ type: "keyboard-close" });
 
   // The new tab page: the search field is named, the search form is a landmark, and the apps are a list of buttons.
