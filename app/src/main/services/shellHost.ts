@@ -5,6 +5,7 @@ import type { WindowMode } from "../../shared/platform";
 import type { History } from "../history";
 import type { SettingsStore } from "../store";
 import type { Tab, TabManager } from "../tabs";
+import type { StatusId } from "../../shared/status";
 import type { PermissionQueue } from "./permissions";
 
 /**
@@ -28,6 +29,8 @@ export interface ShellHost {
   readonly inputMode: InputMode;
 
   status(text: string): void;
+  /** One of the shell's short messages, translated for the language in effect. */
+  notify(id: StatusId, detail?: string): void;
   broadcast(): void;
   syncViews(): void;
   setLayout(top: number, bottom: number): void;

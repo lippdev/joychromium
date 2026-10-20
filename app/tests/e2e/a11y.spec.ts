@@ -32,7 +32,10 @@ test.beforeEach(async () => {
   writeFileSync(
     join(data, "settings.json"),
     JSON.stringify({
-      onboardingCompleted: true, startup: "NewTab", windowMode: "window",
+      onboardingCompleted: true,
+      startup: "NewTab",
+      windowMode: "window",
+      language: "pt-BR",
       favorites: [{ name: "Example", url: "https://example.com/" }],
     }),
   );

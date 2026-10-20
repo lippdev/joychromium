@@ -12,7 +12,7 @@ let thirdParty: string;
 
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-e2e-spatial-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window" }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
   // A frame from another origin, served locally: the cross-origin case of a third-party player without needing the network.
   server = createServer((_request, response) => {

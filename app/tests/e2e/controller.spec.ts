@@ -16,7 +16,7 @@ const DUALSENSE = "DualSense Wireless Controller";
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-controller-"));
   // TV mode keeps the controller hints in the bar, which is where the glyphs show up.
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab" }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "pt-BR" }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
   chrome = await app.firstWindow();
   await expect.poll(tabs, { timeout: 30_000 }).toHaveLength(1);

@@ -39,7 +39,7 @@ export class CommandRouter {
         if (tab) {
           const muted = !tab.isMuted;
           tab.webContents.setAudioMuted(muted);
-          h.status(muted ? "TAB MUTED" : "TAB UNMUTED");
+          h.notify(muted ? "tabMuted" : "tabUnmuted");
           h.syncViews();
         }
         break;
@@ -55,7 +55,7 @@ export class CommandRouter {
         if (wc) {
           const z = command.delta === 0 ? 1 : Math.min(3, Math.max(0.5, wc.getZoomFactor() + command.delta));
           wc.setZoomFactor(z);
-          h.status(`ZOOM ${Math.round(z * 100)}%`);
+          h.notify("zoom", `${Math.round(z * 100)}%`);
         }
         break;
       case "fullscreen-toggle": h.setChromeVisible(!h.chromeVisible); break;

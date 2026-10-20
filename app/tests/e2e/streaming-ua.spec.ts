@@ -13,7 +13,7 @@ let app: ElectronApplication;
 
 async function launch(settings: Record<string, unknown>): Promise<void> {
   data = mkdtempSync(join(tmpdir(), "joychromium-ua-"));
-  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window", ...settings }));
+  writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "en", windowMode: "window", ...settings }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data, JOYCHROMIUM_START: "about:blank" } });
   await app.firstWindow();
   await expect.poll(() => app.evaluate(() => globalThis.joy.tabs().length), { timeout: 30_000 }).toBe(1);
