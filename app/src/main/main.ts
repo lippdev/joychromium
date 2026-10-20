@@ -20,6 +20,7 @@ import { installApplicationMenu } from "./platform";
 import { CrashReporting } from "./services/crashReporting";
 import { watchWidevine } from "./services/widevine";
 import { runInPageWorld } from "./controllerActions";
+import type { ControllerEvent } from "../shared/ipc";
 
 /** Oldest Chromium the shell should run on; the remote policy can raise it. */
 export const MINIMUM_CHROMIUM = "150.0.0.0";
@@ -31,6 +32,8 @@ export interface JoyState {
   wouldBlock: (url: string) => boolean;
   tabs: () => { url: string; title: string; isActive: boolean; isLoading: boolean }[];
   command: (command: unknown) => Promise<void>;
+  /** Sends a controller event through the same router a gamepad uses (tests only). */
+  controller: (input: ControllerEvent) => Promise<void>;
   /** Evaluates JavaScript in the active tab (tests only; tab views are not reachable through Playwright). */
   pageEval: (script: string) => Promise<unknown>;
   dataDir: string;
@@ -67,6 +70,7 @@ globalThis.joy = {
   wouldBlock: (url) => adblock.wouldBlock(url),
   tabs: () => [],
   command: async () => undefined,
+  controller: async () => undefined,
   pageEval: async () => undefined,
   dataDir,
   widevine: "starting",
@@ -135,6 +139,7 @@ async function start(): Promise<void> {
   globalThis.joy.tabs = () =>
     shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active, isLoading: t.isLoading }));
   globalThis.joy.command = (command) => shell.handle(command as never);
+  globalThis.joy.controller = (input) => shell.handleController(input);
   globalThis.joy.pageEval = (script) => shell.activeWebContents?.executeJavaScript(script, true) ?? Promise.resolve(undefined);
   globalThis.joy.spatialWorld = async () => {
     const wc = shell.activeWebContents;

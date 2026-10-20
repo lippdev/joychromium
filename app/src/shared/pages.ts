@@ -8,12 +8,19 @@ export const Pages = {
   error: `${SCHEME}://error`,
   favorites: `${SCHEME}://favorites`,
   history: `${SCHEME}://history`,
+  design: `${SCHEME}://design`,
 } as const;
 
 export type InternalPage = keyof typeof Pages;
 
+/** Pages that belong to the development tooling and are never served from a packaged build. */
+const DEV_ONLY_PAGES: ReadonlySet<string> = new Set<InternalPage>(["design"]);
+
+/** Asset files behind those pages, so an explicit file path cannot reach them either. */
+const DEV_ONLY_FILES: ReadonlySet<string> = new Set(["design.html"]);
+
 /** Which asset file backs an internal URL, or undefined for anything else. */
-export function internalPageFile(url: string): string | undefined {
+export function internalPageFile(url: string, allowDevOnly = true): string | undefined {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -22,7 +29,19 @@ export function internalPageFile(url: string): string | undefined {
   }
   if (parsed.protocol !== `${SCHEME}:`) return undefined;
   const name = parsed.hostname || parsed.pathname.replace(/^\/+/, "");
-  return name in Pages ? `${name === "welcome" ? "onboarding" : name}.html` : undefined;
+  if (!(name in Pages)) return undefined;
+  if (!allowDevOnly && DEV_ONLY_PAGES.has(name)) return undefined;
+  return `${name === "welcome" ? "onboarding" : name}.html`;
+}
+
+/** The design catalog: a development screen that also needs the spatial navigation web pages get. */
+export function isDesignPage(url: string): boolean {
+  return internalPageFile(url) === "design.html";
+}
+
+/** Whether a path names an asset of a development-only page, whatever separators it uses. */
+export function isDevOnlyFile(path: string): boolean {
+  return DEV_ONLY_FILES.has(path.split(/[\\/]/).pop() ?? "");
 }
 
 export function isInternal(url: string): boolean {

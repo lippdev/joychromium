@@ -190,6 +190,8 @@ describe("translations", () => {
     expect(t("pt-BR", "menu.title")).toBe("Menu rápido");
     expect(dictionary("en")["settings.title"]).toBe("Settings");
     expect(dictionary("pt-BR")["settings.title"]).toBe("Configurações");
+    expect(dictionary("en")["design.title"]).toBe("Design system");
+    expect(dictionary("pt-BR")["design.name.button"]).toBe("Botão");
     expect(t("en", "no.such.key")).toBe("no.such.key");
   });
 });

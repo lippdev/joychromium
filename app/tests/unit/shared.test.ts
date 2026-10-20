@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { displayUrl, errorPageFor, internalPageFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
+import { displayUrl, errorPageFor, internalPageFile, isDesignPage, isDevOnlyFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
 import {
   buildSearchUrl, defaultSettings, GOOGLE, isHexColor, isValidSearchTemplate, newTabTarget, parseSettings, parseShortcut,
   parseTheme, startupTargets, THEME_PRESETS, toggleFavorite, withInputMode, withoutInputMode, withoutPermissions, withPermission,
@@ -28,6 +28,18 @@ describe("pages", () => {
     expect(internalPageFile("joychromium://error/?url=x")).toBe("error.html");
     expect(internalPageFile("https://x.example")).toBeUndefined();
     expect(internalPageFile("joychromium://nope")).toBeUndefined();
+  });
+  it("keeps the design catalog out of packaged builds", () => {
+    expect(internalPageFile("joychromium://design")).toBe("design.html");
+    expect(internalPageFile("joychromium://design", true)).toBe("design.html");
+    expect(internalPageFile("joychromium://design", false)).toBeUndefined();
+    expect(internalPageFile("joychromium://settings", false)).toBe("settings.html");
+    expect(isDesignPage("joychromium://design")).toBe(true);
+    expect(isDesignPage(Pages.settings)).toBe(false);
+    expect(isDevOnlyFile("/design.html")).toBe(true);
+    expect(isDevOnlyFile("C:\\dist\\assets\\design.html")).toBe(true);
+    expect(isDevOnlyFile("/settings.html")).toBe(false);
+    expect(isDevOnlyFile("/design/tokens.css")).toBe(false);
   });
   it("classifies urls", () => {
     expect(isInternal(Pages.newtab)).toBe(true);

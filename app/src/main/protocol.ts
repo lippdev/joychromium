@@ -1,8 +1,8 @@
-import { net, protocol } from "electron";
+import { app, net, protocol } from "electron";
 import { existsSync } from "node:fs";
 import { join, normalize } from "node:path";
 import { pathToFileURL } from "node:url";
-import { internalPageFile, SCHEME } from "../shared/pages";
+import { internalPageFile, isDevOnlyFile, SCHEME } from "../shared/pages";
 
 /** Must run before app.whenReady(): makes joychromium:// behave like https for the pages we serve. */
 export function registerScheme(): void {
@@ -25,11 +25,16 @@ export function installProtocolHandler(distDir: string): void {
       const rel = url.pathname === "/" ? "/assets/chrome/index.html" : url.pathname;
       file = join(root, normalize(rel));
     } else if (url.pathname === "/" || url.pathname === "") {
-      const page = internalPageFile(request.url);
+      // The design catalog is a development tool: a packaged build has no such page.
+      const page = internalPageFile(request.url, !app.isPackaged);
       if (page) file = join(root, "assets", page);
     } else {
       // Internal pages live in dist/assets; a path that starts with /assets already points inside it.
       const path = normalize(url.pathname);
+      // A packaged build never serves a development page, not even through its explicit file path.
+      if (app.isPackaged && isDevOnlyFile(path)) {
+        return new Response("Not found", { status: 404, headers: { "content-type": "text/plain" } });
+      }
       const candidate = path.startsWith("/assets/") ? join(root, path) : join(root, "assets", path);
       file = existsSync(candidate) ? candidate : join(root, "assets", path);
     }

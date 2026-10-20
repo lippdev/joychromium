@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Design system</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="design/tokens.css">
+<link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="list.css">
+<link rel="stylesheet" href="design.css">
+</head>
+<body>
+<main class="catalog">
+  <header class="page-head">
+    <div>
+      <h1 data-i18n="design.title">Design system</h1>
+      <p class="lead" data-i18n="design.lead">Every controller-first component on the real tokens, with its live focus state.</p>
+      <p class="lead catalog-hint" data-i18n="design.hint">D-pad moves · A presses · focus stays in the DOM</p>
+    </div>
+    <span class="badge-main" data-i18n="design.devOnly">Development only</span>
+  </header>
+
+  <section class="demo" data-component="focus-ring">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.focusRing">FocusRing</h2>
+      <span class="demo-note" data-i18n="design.focusRing.note">The ring comes from --focus-ring and --accent</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="focus-ring-button" data-state-default="idle">
+        <button class="primary" data-i18n="design.focusRing.text">Focus me</button>
+        <span class="demo-meta"><code>focus-ring</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="button">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.button">Button</h2>
+      <span class="demo-note" data-i18n="design.button.note">Primary, ghost and disabled</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="button-primary" data-state-default="idle">
+        <button class="primary" data-i18n="design.button.save">Save</button>
+        <span class="demo-meta"><code>primary</code><span class="demo-state" data-state></span></span>
+      </div>
+      <div class="demo-item" data-demo="button-ghost" data-state-default="idle">
+        <button class="ghost" data-i18n="design.button.cancel">Cancel</button>
+        <span class="demo-meta"><code>ghost</code><span class="demo-state" data-state></span></span>
+      </div>
+      <div class="demo-item" data-demo="button-disabled" data-state-default="disabled">
+        <button class="primary" disabled data-i18n="design.button.disabled">Disabled</button>
+        <span class="demo-meta"><code>disabled</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="icon-button">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.iconButton">IconButton</h2>
+      <span class="demo-note" data-i18n="design.iconButton.note">Icon only, labelled for screen readers</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="icon-button" data-state-default="idle">
+        <button class="icon-btn" data-i18n-aria="design.iconButton.label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <span class="demo-meta"><code>icon-only</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="card">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.card">Card / Tile</h2>
+      <span class="demo-note" data-i18n="design.card.note">The tiles on the start screen</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="card-youtube" data-state-default="idle">
+        <button class="card big">
+          <i>Y</i><span>YouTube TV</span>
+        </button>
+        <span class="demo-meta"><code>card.big</code><span class="demo-state" data-state></span></span>
+      </div>
+      <div class="demo-item" data-demo="card-news" data-state-default="idle">
+        <button class="card">
+          <i>N</i><span data-i18n="design.card.channel">News</span>
+        </button>
+        <span class="demo-meta"><code>card</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="list-item">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.list">List / ListItem</h2>
+      <span class="demo-note" data-i18n="design.list.note">A row from history or favorites</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="list-item" data-state-default="idle">
+        <div class="item">
+          <button class="open">
+            <span class="t">Wikipedia — JoyChromium</span>
+            <span class="u">https://pt.wikipedia.org/wiki/JoyChromium</span>
+          </button>
+          <button class="del" data-i18n-aria="design.list.remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <span class="demo-meta"><code>list-item</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="text-field">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.textField">Text field</h2>
+      <span class="demo-note" data-i18n="design.textField.note">The search field and its action</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="text-field" data-state-default="idle">
+        <div class="bar">
+          <input type="text" id="demoField" autocomplete="off" spellcheck="false" data-i18n-placeholder="design.textField.placeholder" data-i18n-aria="design.textField.placeholder" placeholder="Search or type an address">
+          <button class="ghost" data-i18n="design.textField.go">OK</button>
+        </div>
+        <span class="demo-meta"><code>text-field</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="toggle">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.toggle">Toggle</h2>
+      <span class="demo-note" data-i18n="design.toggle.note">A switch with its label</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="toggle" data-state-default="idle">
+        <div class="inline">
+          <label class="switch"><input type="checkbox" checked data-i18n-aria="design.toggle.label"><span></span></label>
+          <div>
+            <span data-i18n="design.toggle.label">High contrast</span>
+            <small data-i18n="design.toggle.hint">Same tokens, stronger contrast</small>
+          </div>
+        </div>
+        <span class="demo-meta"><code>toggle</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="select">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.select">Select</h2>
+      <span class="demo-note" data-i18n="design.select.note">Native select, D-pad friendly</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="select" data-state-default="idle">
+        <div class="inline">
+          <label for="demoSelect" data-i18n="design.select.label">Theme</label>
+          <select id="demoSelect">
+            <option>Mint</option>
+            <option>Ocean</option>
+            <option>Ember</option>
+            <option>Violet</option>
+            <option>Light</option>
+          </select>
+        </div>
+        <span class="demo-meta"><code>select</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="tabs">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.tabs">Tabs</h2>
+      <span class="demo-note" data-i18n="design.tabs.note">Side tabs, one selected</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="tabs" data-state-default="selected">
+        <div class="tabs" role="tablist" data-i18n-aria="design.name.tabs">
+          <button class="tab" role="tab" aria-selected="true" data-i18n="design.tabs.general">General</button>
+          <button class="tab" role="tab" aria-selected="false" data-i18n="design.tabs.appearance">Appearance</button>
+          <button class="tab" role="tab" aria-selected="false" data-i18n="design.tabs.controller">Controller</button>
+        </div>
+        <span class="demo-meta"><code>tabs</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="keyboard">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.keyboard">Keyboard</h2>
+      <span class="demo-note" data-i18n="design.keyboard.note">D-pad walks the keys, A types</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="keyboard" data-state-default="idle">
+        <div class="keyboard">
+          <div class="keyboard-head">
+            <span class="label" data-i18n="design.keyboard.label">ADDRESS</span>
+            <span class="hint" data-i18n="design.keyboard.hint">A types · B closes</span>
+          </div>
+          <div class="keyboard-rows">
+            <div class="key-row">
+              <button class="key" data-char="q">q</button><button class="key" data-char="w">w</button><button class="key" data-char="e">e</button><button class="key" data-char="r">r</button><button class="key" data-char="t">t</button><button class="key" data-char="y">y</button><button class="key" data-char="u">u</button><button class="key" data-char="i">i</button><button class="key" data-char="o">o</button><button class="key" data-char="p">p</button>
+            </div>
+            <div class="key-row">
+              <button class="key" data-char="a">a</button><button class="key" data-char="s">s</button><button class="key" data-char="d">d</button><button class="key" data-char="f">f</button><button class="key" data-char="g">g</button><button class="key" data-char="h">h</button><button class="key" data-char="j">j</button><button class="key" data-char="k">k</button><button class="key" data-char="l">l</button>
+            </div>
+            <div class="key-row">
+              <button class="key" data-char="z">z</button><button class="key" data-char="x">x</button><button class="key" data-char="c">c</button><button class="key" data-char="v">v</button><button class="key" data-char="b">b</button><button class="key" data-char="n">n</button><button class="key" data-char="m">m</button><button class="key" data-char="á">á</button><button class="key" data-char="ç">ç</button>
+            </div>
+            <div class="key-row url-keys">
+              <button class="key small" data-char=".com">.com</button><button class="key small" data-char=".br">.br</button><button class="key small" data-char="www.">www.</button><button class="key small" data-char="https://">https://</button>
+            </div>
+          </div>
+          <output class="keyboard-output" id="keyboardOutput" data-empty="true" data-i18n="design.keyboard.output">Typed text appears here</output>
+        </div>
+        <span class="demo-meta"><code>keyboard</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="toast">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.toast">Toast</h2>
+      <span class="demo-note" data-i18n="design.toast.note">Short message, announced politely</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="toast-message" data-state-default="visible">
+        <div class="toast-box" id="toastBox" role="status" aria-live="polite">
+          <div class="toast" data-i18n="design.toast.message">Added to favorites</div>
+        </div>
+        <span class="demo-meta"><code>toast</code><span class="demo-state" data-state></span></span>
+      </div>
+      <div class="demo-item" data-demo="toast-show" data-state-default="idle">
+        <button class="ghost" id="toastShow" data-i18n="design.toast.show">Show toast</button>
+        <span class="demo-meta"><code>toast.show</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="dialog">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.dialog">Dialog / prompt</h2>
+      <span class="demo-note" data-i18n="design.dialog.note">Centered prompt with large actions</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="dialog" data-state-default="idle">
+        <div class="dialog" role="dialog" aria-modal="false" aria-labelledby="dialogTitle">
+          <h2 id="dialogTitle" data-i18n="design.dialog.title">Allow the camera?</h2>
+          <p data-i18n="design.dialog.body">example.com wants to use the camera.</p>
+          <div class="dialog-actions">
+            <button class="ghost" data-i18n="design.dialog.deny">Deny</button>
+            <button class="primary" data-i18n="design.dialog.allow">Allow</button>
+          </div>
+        </div>
+        <span class="demo-meta"><code>dialog</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="button-hint">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.hint">ButtonHint</h2>
+      <span class="demo-note" data-i18n="design.hint.note">Controller glyph plus text</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="button-hint" data-state-default="static">
+        <div class="hint-row">
+          <span class="hint-item"><span class="hint-glyph">A</span><span data-i18n="design.hint.select">Select</span></span>
+          <span class="hint-item"><span class="hint-glyph">B</span><span data-i18n="design.hint.back">Back</span></span>
+        </div>
+        <span class="demo-meta"><code>button-hint</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" data-component="settings-card">
+    <header class="demo-head">
+      <h2 data-i18n="design.name.settings">Settings card</h2>
+      <span class="demo-note" data-i18n="design.settings.note">One decision per row</span>
+    </header>
+    <div class="demo-body">
+      <div class="demo-item" data-demo="settings-card" data-state-default="idle">
+        <div class="config-card">
+          <div class="row">
+            <div><span data-i18n="design.settings.label">Block ads and trackers</span><small data-i18n="design.settings.hint">Settings keeps this shape</small></div>
+            <label class="switch"><input type="checkbox" checked data-i18n-aria="design.settings.label"><span></span></label>
+          </div>
+          <div class="row">
+            <div><span data-i18n="design.select.label">Theme</span></div>
+            <select data-i18n-aria="design.select.label">
+              <option>Mint</option>
+              <option>Ocean</option>
+              <option>Ember</option>
+              <option>Violet</option>
+              <option>Light</option>
+            </select>
+          </div>
+        </div>
+        <span class="demo-meta"><code>settings-card</code><span class="demo-state" data-state></span></span>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="i18n.js"></script>
+<script src="design.js"></script>
+</body>
+</html>

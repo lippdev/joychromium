@@ -1,7 +1,7 @@
 import { session, WebContentsView, type Session, type WebContents } from "electron";
 import { EventEmitter } from "node:events";
 import { join } from "node:path";
-import { displayUrl, errorPageFor, isInternal, isWebUrl, Pages } from "../shared/pages";
+import { displayUrl, errorPageFor, isDesignPage, isInternal, isWebUrl, Pages } from "../shared/pages";
 import { hostOf, isHttp, isNavigationAllowed, upgradeToHttps } from "../shared/security";
 import { SPATIAL_WORLD } from "./controllerActions";
 import type { TabState } from "../shared/ipc";
@@ -267,7 +267,8 @@ export class TabManager extends EventEmitter<TabEvents> {
 
   /** Puts the spatial navigation script in the page's isolated world, where the page itself cannot see or replace it. */
   private injectSpatial(wc: WebContents): void {
-    if (isInternal(wc.getURL())) return;
+    // Web pages get it everywhere; among the internal pages only the design catalog, which exists to prove the D-pad.
+    if (isInternal(wc.getURL()) && !isDesignPage(wc.getURL())) return;
     wc.executeJavaScriptInIsolatedWorld(SPATIAL_WORLD, [{ code: this.env.spatialScript }]).catch(() => undefined);
   }
 
