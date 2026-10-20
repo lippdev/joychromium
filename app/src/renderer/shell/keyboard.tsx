@@ -9,12 +9,18 @@ const ABC = ["abcdefg", "hijklmn", "opqrstu", "vwxyz"];
 const ACCENTS = "áàâãäéèêëíìîïóòôõöúùûüçñ";
 const URL_KEYS = [".com", ".br", "www.", "https://", "/", "-"];
 
-/** The controller keyboard: D-pad moves, A types, B closes. Two layouts and a row of accented letters. */
+/**
+ * The controller keyboard: D-pad moves, A types, B closes. Two layouts and a row of accented letters. While the
+ * address field is being typed, what the shell knows of the typed text comes back as suggestions: D-pad up leaves the
+ * keys for them, and A on one opens it instead of typing another letter.
+ */
 export function Keyboard({ state }: { state: ShellState }) {
   const [layout, setLayout] = useState<"qwerty" | "abc">("qwerty");
   const [row, setRow] = useState<"letters" | "accents">("letters");
   const [shift, setShift] = useState(false);
+  const [selected, setSelected] = useState(-1);
   const target = state.keyboard?.target ?? "address";
+  const suggestions = target === "address" ? state.suggestions : [];
   const rows = row === "accents" ? [ACCENTS.slice(0, 14), ACCENTS.slice(14)] : layout === "qwerty" ? QWERTY : ABC;
 
   const type = (text: string) => {
@@ -46,6 +52,26 @@ export function Keyboard({ state }: { state: ShellState }) {
           <span class="hint">{t(state.language, "input.hint")}</span>
           <button class="icon-btn" aria-label={t(state.language, "nav.close")} onClick={() => cmd({ type: "keyboard-close" })}><CloseIcon /></button>
         </div>
+
+        {suggestions.length > 0 && (
+          <div class="suggestions" role="listbox" aria-label={t(state.language, "input.suggestions")}>
+            {suggestions.map((suggestion, index) => (
+              <button
+                class="chip"
+                role="option"
+                aria-selected={index === selected}
+                onFocus={() => setSelected(index)}
+                onClick={() => {
+                  cmd({ type: "search-or-navigate", text: suggestion.url });
+                  cmd({ type: "keyboard-close" });
+                }}
+              >
+                <span class="chip-title">{suggestion.title || suggestion.url}</span>
+                {suggestion.title && suggestion.title !== suggestion.url && <span class="chip-url">{suggestion.url}</span>}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div class="keyboard-rows">
           {rows.map((letters) => (

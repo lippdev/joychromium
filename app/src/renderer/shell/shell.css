@@ -281,6 +281,32 @@ body[data-mode="tv"] .status-line { display: none; }
 .keyboard-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .keyboard-head .label { font-weight: 700; color: var(--accent); font-size: var(--text-sm); letter-spacing: 0.06em; }
 .keyboard-head .hint { flex: 1; color: var(--faint); font-size: var(--text-xs); }
+.suggestions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.chip {
+  display: grid;
+  gap: 2px;
+  flex: 0 0 auto;
+  max-width: calc(320 * var(--u));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+}
+
+.chip:focus-visible { background: var(--hover); border-color: var(--accent); }
+.chip-title { font-size: var(--text-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-url { font-size: var(--text-xs); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .keyboard-rows { display: grid; gap: var(--space-1); }
 
 .key-row { display: flex; gap: var(--space-1); justify-content: center; }
