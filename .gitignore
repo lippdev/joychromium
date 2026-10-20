@@ -4,3 +4,6 @@ app/release/
 app/test-results/
 app/playwright-report/
 .vs/
+flatpak/build/
+flatpak/repo/
+flatpak/state/

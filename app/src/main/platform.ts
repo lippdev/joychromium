@@ -1,6 +1,8 @@
 import { app, Menu, type BrowserWindowConstructorOptions } from "electron";
 import { join } from "node:path";
-import { extraDangerousExtensions, shortcutModifier, usesNativeWindowControls, type ShortcutMod } from "../shared/platform";
+import {
+  extraDangerousExtensions, shortcutModifier, updateInstaller, usesNativeWindowControls, type ShortcutMod, type UpdateInstaller,
+} from "../shared/platform";
 
 /** The only module that reads `process.platform`. */
 export function platformId(): string {
@@ -22,6 +24,11 @@ export function platformDangerousExtensions(): readonly string[] {
 /** deb and rpm are installed by the system package manager; the AppImage replaces itself. */
 export function installsUpdatesWithPackageManager(): boolean {
   return platformId() === "linux" && !process.env.APPIMAGE;
+}
+
+/** Who installs updates here: the Flatpak sandbox is updated by the host, the other installs by electron-updater. */
+export function currentUpdateInstaller(): UpdateInstaller {
+  return updateInstaller(platformId(), process.env.FLATPAK_ID);
 }
 
 export function downloadsFolder(): string {

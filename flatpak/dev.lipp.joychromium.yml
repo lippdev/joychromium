@@ -1,0 +1,73 @@
+# JoyChromium as a Flatpak. The app is built here from source and runs on the castLabs Electron for Content Security
+# build the other installers use (ADR-009), so Widevine and the rest of the engine are the same everywhere.
+#
+# Electron comes from node_modules, not from the BaseApp: org.electronjs.Electron2.BaseApp ships zypak (the helper that
+# makes Chromium's sandbox work inside the Flatpak sandbox) and the system libraries Electron links against, but no
+# electron binary. Building it ourselves is also the only way to pin the ECS build the app targets.
+app-id: dev.lipp.joychromium
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '26.08'
+command: joychromium
+separate-locales: false
+finish-args:
+  # A browser is its network access; without this there is no page to load.
+  - --share=network
+  # Chromium's renderer talks to the browser process over shared memory, and X11 needs the same socket.
+  - --share=ipc
+  # TV boxes run X11 (with XWayland) or Wayland; both are accepted instead of forcing one.
+  - --socket=fallback-x11
+  - --socket=wayland
+  # Audio for video playback; without it the app opens silent.
+  - --socket=pulseaudio
+  # Hardware video decoding and compositing. This grants the DRM render nodes, not every device.
+  - --device=dri
+  # Downloads and the diagnostics zip go to app.getPath("downloads")/JoyChromium, so only ~/Downloads is shared. The
+  # home directory stays invisible. Controllers are what this leaves out: /dev/input needs --device=input (Flatpak
+  # 1.15.6+) or --device=all, and neither a TV browser nor a Flatpak 1.14 builder should carry either, so
+  # docs/INSTALL.md documents the per-user override.
+  - --filesystem=xdg-download
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node24
+build-options:
+  # npm ci fetches the dependency tree and the Electron install script fetches the ECS build, so the build sandbox
+  # needs the network. A Flathub submission replaces both with offline sources generated from the lockfile.
+  build-args:
+    - --share=network
+  append-path: /usr/lib/sdk/node24/bin
+modules:
+  - name: joychromium
+    buildsystem: simple
+    build-commands:
+      # esbuild bundles the main process, the preloads, the shell UI and copies the internal pages into app/dist.
+      - npm --prefix app ci --no-audit --no-fund
+      # npm 11 holds back install scripts it has not been told to run; the Electron binary is the one that matters.
+      - node app/node_modules/electron/install.js
+      - npm --prefix app run build
+      # The Electron distribution is the runtime: binary, locales, .pak files and resources/.
+      - install -d /app/main/resources/app
+      - cp -a app/node_modules/electron/dist/. /app/main/
+      # electron-updater and the adblocker are external in the bundle, so they ship beside the app instead of inside it.
+      # The electron package itself is dev-only once its dist is in /app/main, and dropping it saves ~287 MB.
+      - (cd app && npm prune --omit=dev --no-audit --no-fund && rm -rf node_modules/electron)
+      - cp -a app/dist app/package.json app/node_modules /app/main/resources/app/
+      - install -Dm755 flatpak/run.sh /app/bin/joychromium
+      - install -Dm644 flatpak/dev.lipp.joychromium.desktop /app/share/applications/dev.lipp.joychromium.desktop
+      - install -Dm644 flatpak/dev.lipp.joychromium.metainfo.xml /app/share/metainfo/dev.lipp.joychromium.metainfo.xml
+      - install -Dm644 flatpak/dev.lipp.joychromium.png /app/share/icons/hicolor/512x512/apps/dev.lipp.joychromium.png
+    sources:
+      # The working tree. A Flathub submission swaps this for a `git` source pinned to the release commit.
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - app/node_modules
+          - app/dist
+          - app/release
+          - app/test-results
+          - app/playwright-report
+          - flatpak/build
+          - flatpak/repo
+          - flatpak/state

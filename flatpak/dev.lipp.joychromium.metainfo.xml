@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.lipp.joychromium</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>JoyChromium</name>
+  <summary>Controller-first browser for the TV</summary>
+  <developer id="dev.lipp">
+    <name>lippdev</name>
+  </developer>
+  <description>
+    <p>
+      JoyChromium is a browser built for a television and a controller: it opens fullscreen in TV mode, moves the focus
+      with the D-pad, and pages the on-screen keyboard with the same buttons.
+    </p>
+    <ul>
+      <li>TV mode by default, with a window mode for the desktop</li>
+      <li>Controller navigation across the shell, the pages and the tab switcher</li>
+      <li>Ad and tracker blocking by level, HTTPS-only browsing and per-site permissions</li>
+      <li>Widevine DRM through the castLabs Electron engine</li>
+      <li>Portuguese (Brazil) and English, following the system language</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">dev.lipp.joychromium.desktop</launchable>
+  <url type="homepage">https://github.com/lippdev/joychromium</url>
+  <url type="bugtracker">https://github.com/lippdev/joychromium/issues</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2026-10-20"/>
+  </releases>
+  <categories>
+    <category>Network</category>
+    <category>WebBrowser</category>
+  </categories>
+</component>
