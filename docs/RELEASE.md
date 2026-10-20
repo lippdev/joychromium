@@ -16,6 +16,7 @@ Qualquer outro commit na `main` roda o CI e para por aí: nada é publicado.
 1. `decide` lê a última tag `v*`, aplica o bump e calcula a versão (nada é commitado de volta na `main`, que é protegida).
 2. `tag` cria e envia a tag anotada.
 3. `build` roda nos três runners com a tag marcada, roda os testes unitários, carimba a versão no `package.json` (`npm version`, sem commit) e chama `electron-builder --publish always`.
+4. `notes` gera as notas da release a partir dos Conventional Commits entre a tag anterior e esta (`app/scripts/release-notes.mjs`, com teste unitário) e substitui o corpo da release: novidades, correções, desempenho, por dentro, documentação, empacotamento, CI e manutenção, com as mudanças que quebram na frente. `chore(deps): bump …` e merges ficam de fora — quem lê a release quer saber o que mudou no app, não que o motor subiu de versão.
 
 Os artefatos publicados na release:
 

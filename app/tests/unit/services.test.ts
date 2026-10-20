@@ -246,3 +246,30 @@ describe("update notice", () => {
     expect(updateInstallRoute(false, false)).toBe("release-page");
   });
 });
+
+describe("release notes", () => {
+  it("groups the commits by type, breaking changes first, and hides dependency bumps", async () => {
+    const { groupCommits } = await import("../../scripts/release-notes.mjs");
+    const notes = groupCommits(
+      [
+        "feat(build): arm64 installers for Windows and Linux",
+        "fix(tabs): queue navigations so the newest one wins",
+        "feat(api)!: drop the old IPC channel",
+        "chore(deps): bump electron from 44.5.1 to 44.8.0",
+        "Merge pull request #46 from docs",
+        "a commit without the convention",
+        "docs: the release, the signing key and the TV checklist",
+      ],
+      { previousTag: "v1.2.0", version: "1.3.0" },
+    );
+    expect(notes).toContain("## JoyChromium 1.3.0");
+    expect(notes).toContain("Mudanças desde `v1.2.0`");
+    expect(notes.indexOf("### Mudanças que quebram")).toBeLessThan(notes.indexOf("### Novidades"));
+    expect(notes).toContain("- **build**: arm64 installers for Windows and Linux");
+    expect(notes).toContain("### Correções\n\n- **tabs**: queue navigations so the newest one wins");
+    expect(notes).toContain("### Outros\n\n- a commit without the convention");
+    expect(notes).not.toContain("bump electron");
+    expect(notes).not.toContain("Merge pull request");
+    expect(notes).toContain("docs/INSTALL.md");
+  });
+});
