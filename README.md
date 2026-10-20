@@ -13,6 +13,8 @@ A controller-first browser for the TV, built on Electron (Chromium). Windows, ma
 | DRM (Netflix, Prime Video) | Widevine from the castLabs build | same | same, without VMP |
 | Shortcuts | `Ctrl+…` | `Cmd+…` | `Ctrl+…` |
 
+The first launch downloads the Widevine module in the background; playback of DRM services works from the next launch, and the version shows up in Settings → About. Windows and macOS builds still need the castLabs EVS signature (VMP) before paid streaming works reliably there; the Linux module does not use VMP.
+
 Builds are not signed with a paid certificate yet ([PRD](docs/PRD.md), ADR-010). The app works, but the operating system warns the first time:
 
 - **macOS**: open the `.dmg`, drag JoyChromium to Applications, then right-click the app → *Open* → *Open*. On recent versions, use *System Settings → Privacy & Security → Open Anyway*. Apple Silicon refuses a completely unsigned app, so every build gets an ad-hoc signature; that is enough to launch, but not enough for automatic updates.

@@ -193,3 +193,12 @@ describe("translations", () => {
     expect(t("en", "no.such.key")).toBe("no.such.key");
   });
 });
+
+describe("widevine component status", () => {
+  it("reads the version out of the component registry", async () => {
+    const { widevineVersion } = await import("../../src/main/services/widevine");
+    expect(widevineVersion({ oimompecagnajdejgnnjijobebaeigek: { status: "updated", title: "Widevine Content Decryption Module", version: "4.10.3112.0" } })).toBe("4.10.3112.0");
+    expect(widevineVersion({})).toBeUndefined();
+    expect(widevineVersion({ other: { status: "updated", version: "1.0" } })).toBeUndefined();
+  });
+});

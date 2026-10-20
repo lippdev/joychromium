@@ -1,6 +1,6 @@
 # ADR-009: DRM (Widevine) com castLabs Electron for Content Security
 
-**Status:** aceito (out/2026), decidido pelo dono do produto. Implementação com uma ressalva de verificação.
+**Status:** aceito (out/2026), decidido pelo dono do produto. Implementado e verificado no Linux; VMP no Windows e no macOS em aberto.
 
 ## Contexto
 Electron padrão não inclui a CDM do Widevine, então Netflix, Prime Video e Disney+ — atalhos padrão da tela inicial — não tocam.
@@ -14,5 +14,11 @@ Trocar `electron` pelo build **ECS** da castLabs (`github:castlabs/electron-rele
 ## VMP
 Widevine de produção no Windows e no macOS exige assinatura VMP pelo serviço EVS (gratuito, com conta castLabs). O Linux não usa VMP. Um passo de `afterPack` com `castlabs-evs` entra quando a conta existir; até lá os builds servem para desenvolvimento.
 
-## Ressalva verificada no spike
-Neste ambiente de CI o `components.whenReady()` resolve sem baixar a CDM (`components.status()` vazio) e `requestMediaKeySystemAccess('com.widevine.alpha')` responde *Unsupported keySystem*. Ou seja: **a troca do motor está feita e o app roda igual, mas a instalação da CDM não pôde ser confirmada aqui** (o download depende de um serviço do Google que não respondeu). O status aparece em Configurações → Sobre, na linha “Widevine (DRM)”, para ser conferido numa máquina com rede aberta antes de prometer streaming pago.
+## Verificação (20/10/2026, Linux x64)
+A ressalva do spike caiu em parte: a CDM **baixa e o EME funciona** numa máquina com rede aberta.
+
+- `components.whenReady()` resolve e, em menos de um segundo, `components.status()` traz o componente `oimompecagnajdejgnnjijobebaeigek` com a versão `4.10.3112.0`; os arquivos ficam em `<userData>/WidevineCdm/<versão>/_platform_specific/linux_x64/libwidevinecdm.so`.
+- Com a CDM instalada, `navigator.requestMediaKeySystemAccess("com.widevine.alpha", …)` responde **ok** num contexto seguro (`https://`), com `SW_SECURE_DECODE`.
+- A primeira execução baixa a CDM em segundo plano; o EME só a enxerga a partir da execução seguinte. O status em Configurações → Sobre é atualizado quando a versão aparece.
+
+O que continua em aberto: VMP (EVS) para produção no Windows e no macOS, e a mesma verificação nessas duas plataformas. No Linux não há VMP.

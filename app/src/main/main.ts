@@ -18,7 +18,7 @@ import { urlFromArgv } from "../shared/platform";
 import { startupTargets } from "../shared/settings";
 import { installApplicationMenu } from "./platform";
 import { CrashReporting } from "./services/crashReporting";
-import { prepareWidevine } from "./services/widevine";
+import { watchWidevine } from "./services/widevine";
 import { runInPageWorld } from "./controllerActions";
 
 /** Oldest Chromium the shell should run on; the remote policy can raise it. */
@@ -87,7 +87,10 @@ async function start(): Promise<void> {
   const minimum = effectiveMinimumChromium(policy.current, MINIMUM_CHROMIUM);
   if (!versionAtLeast(process.versions.chrome, minimum)) log.warn(`Chromium ${process.versions.chrome} is below the minimum ${minimum}`);
 
-  globalThis.joy.widevine = await prepareWidevine(log);
+  // The CDM download runs in the background, so this never delays the first window; the value is updated when it lands.
+  void watchWidevine(log, (status) => {
+    globalThis.joy.widevine = status;
+  });
 
   const doh = dohTemplate(settings.dnsOverHttps);
   if (doh) app.configureHostResolver({ secureDnsMode: "secure", secureDnsServers: [doh] });
