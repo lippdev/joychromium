@@ -14,6 +14,7 @@ import {
   trackingPolicy, upgradeToHttps, versionAtLeast,
 } from "../../src/shared/security";
 import { effectiveMinimumChromium, parsePolicy, policyBlocksHost, verifyPolicy } from "../../src/shared/policy";
+import { TRACKER_LISTS, trackerGroupsFor, trackerListsFor } from "../../src/shared/trackerLists";
 import { buildSuggestions } from "../../src/shared/suggestion";
 import { defaultModeFor, directionOf, nextMode, stickToScroll, stickToVelocity } from "../../src/shared/controllerInput";
 import { activePad, padInUse, padsInUse, startedUsing, type PadSample } from "../../src/shared/controllerSelection";
@@ -337,6 +338,33 @@ describe("tracking prevention", () => {
     expect(isThirdPartyRequest("https://news.example/x", "https://news.example/")).toBe(false);
     expect(isThirdPartyRequest("https://cdn.news.example/x", "https://news.example/")).toBe(false);
     expect(isThirdPartyRequest("https://ads.example/x", undefined)).toBe(false);
+  });
+  it("feeds a different list set to each level", () => {
+    // Every level is a strict superset of the one below it: Basic blocks ads, Balanced adds the tracking
+    // lists and Strict adds the social-widget list on top.
+    expect(trackerGroupsFor("Basic")).toEqual(["ads"]);
+    expect(trackerGroupsFor("Balanced")).toEqual(["ads", "tracking"]);
+    expect(trackerGroupsFor("Strict")).toEqual(["ads", "tracking", "social"]);
+    const basic = new Set(trackerListsFor("Basic"));
+    const balanced = new Set(trackerListsFor("Balanced"));
+    const strict = new Set(trackerListsFor("Strict"));
+    expect(basic.size).toBe(TRACKER_LISTS.ads.length);
+    expect([...basic].every((url) => balanced.has(url))).toBe(true);
+    expect([...balanced].every((url) => strict.has(url))).toBe(true);
+    expect(balanced.size).toBeGreaterThan(basic.size);
+    expect(strict.size).toBeGreaterThan(balanced.size);
+    expect(new Set(trackerListsFor("Strict")).size).toBe(trackerListsFor("Strict").length);
+  });
+  it("keeps each level on Ghostery's own list assets", () => {
+    const assets = "https://raw.githubusercontent.com/ghostery/adblocker/master/packages/adblocker/assets";
+    for (const level of ["Basic", "Balanced", "Strict"] as const) {
+      for (const url of trackerListsFor(level)) expect(url.startsWith(`${assets}/`)).toBe(true);
+    }
+    expect(trackerListsFor("Basic")).toContain(`${assets}/easylist/easylist.txt`);
+    expect(trackerListsFor("Basic")).not.toContain(`${assets}/easylist/easyprivacy.txt`);
+    expect(trackerListsFor("Balanced")).toContain(`${assets}/easylist/easyprivacy.txt`);
+    expect(trackerListsFor("Strict")).toContain(`${assets}/easylist/easyprivacy.txt`);
+    expect(trackerListsFor("Strict")).toContain(`${assets}/fanboy/annoyance.txt`);
   });
 });
 

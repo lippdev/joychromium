@@ -476,9 +476,13 @@ export class Shell {
     this.broadcast();
   }
 
-  /** Settings that apply immediately; DNS-over-HTTPS needs a restart (host resolver is configured at start). */
-  applyPrivacy(): void {
+  /**
+   * Settings that apply immediately: the tracking level swaps the block lists on the live sessions.
+   * DNS-over-HTTPS needs a restart (the host resolver is configured at start).
+   */
+  async applyPrivacy(): Promise<void> {
     this.httpAllowedHosts.clear();
+    await this.deps.adblock.setLevel(this.deps.store.current.trackingPrevention);
     this.broadcast();
   }
 
