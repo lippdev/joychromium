@@ -1,5 +1,7 @@
 /** IPC channel names and payload shapes shared by main, preloads and the chrome renderer. */
 
+import type { MediaAction } from "./media";
+
 export const Channels = {
   /** internal page -> main: { type, ...payload } */
   pageMessage: "page:message",
@@ -96,7 +98,7 @@ export type ShellCommand =
   | { type: "keyboard-submit" }
   | { type: "address-input"; text: string }
   | { type: "cycle-input-mode" }
-  | { type: "media"; action: "toggle" | "next" | "previous" }
+  | { type: "media"; action: MediaAction }
   | { type: "chrome-height"; height: number }
   | { type: "ui-settings"; uiScale?: number; overscan?: number; highContrast?: boolean; language?: "pt-BR" | "en"; crashReports?: boolean }
   | { type: "escape" };

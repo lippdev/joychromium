@@ -39,19 +39,3 @@ export async function submitPage(wc: WebContents | undefined): Promise<void> {
   await wc.executeJavaScript(SUBMIT_SCRIPT, true);
 }
 
-const MEDIA_SCRIPT: Record<string, string> = {
-  toggle: `(() => {
-    const media = [...document.querySelectorAll('video,audio')].filter((m) => !m.paused || m.readyState > 0);
-    const target = media[0];
-    if (!target) return;
-    if (target.paused) void target.play(); else target.pause();
-  })()`,
-  next: `(() => { const next = document.querySelector('[aria-label*="ext"], .ytp-next-button'); if (next) next.click(); })()`,
-  previous: `(() => { const back = document.querySelector('[aria-label*="revious"], .ytp-prev-button'); if (back) back.click(); })()`,
-};
-
-/** Play/pause and track skipping through the page's own media element and controls. */
-export async function mediaControl(wc: WebContents | undefined, action: "toggle" | "next" | "previous"): Promise<void> {
-  if (!wc) return;
-  await wc.executeJavaScript(MEDIA_SCRIPT[action] ?? "", true).catch(() => undefined);
-}

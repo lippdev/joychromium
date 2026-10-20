@@ -470,6 +470,10 @@ export class Shell {
     this.broadcast();
   }
 
+  isPlayingMedia(): boolean {
+    return this.tabs.active?.isPlayingAudio ?? false;
+  }
+
   pageSize(): { width: number; height: number } {
     const bounds = this.tabs.active?.view.getBounds();
     return { width: bounds?.width ?? 0, height: bounds?.height ?? 0 };

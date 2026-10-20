@@ -29,6 +29,12 @@ export function QuickMenu({ state, onClose, onTabs }: { state: ShellState; onClo
         <button class="menu-item" onClick={() => run({ type: "media", action: "toggle" })}>
           <TvIcon /> {tr("menu.playPause")}
         </button>
+        <button class="menu-item" onClick={() => run({ type: "media", action: "previous" })}>
+          <TvIcon /> {tr("menu.previousTrack")}
+        </button>
+        <button class="menu-item" onClick={() => run({ type: "media", action: "next" })}>
+          <TvIcon /> {tr("menu.nextTrack")}
+        </button>
         <button class="menu-item" onClick={() => run({ type: "mute-tab" })}>
           <VolumeIcon /> {tr("menu.mute")}
         </button>
