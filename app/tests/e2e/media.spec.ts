@@ -33,23 +33,55 @@ const spatialEval = (script: string) => app.evaluate(({}, code) => globalThis.jo
 const settle = () => expect.poll(async () => (await tabs()).find((t) => t.isActive)?.isLoading, { timeout: 30_000 }).toBe(false);
 const playingAudio = () => expect.poll(async () => (await tabs()).find((t) => t.isActive)?.isPlayingAudio, { timeout: 10_000 });
 
-/** Replaces the gamepad the shell polls, so the real controller path runs without hardware. */
+/**
+ * Replaces the gamepad the shell polls, so the real controller path runs without hardware. The counter is what makes a
+ * press reliable: the shell reads the pad on animation frames, and a press that lasts a fixed number of milliseconds can
+ * begin and end between two of them — it is then lost without a trace, and the test fails later at whatever the press
+ * was supposed to open. `press` below waits for the read instead of hoping for it.
+ */
 async function installPad(): Promise<void> {
   await chrome.evaluate(() => {
     const pad = {
       id: "Xbox Wireless Controller", mapping: "standard", connected: true, axes: [0, 0, 0, 0],
       buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0, touched: false })),
     };
-    (window as unknown as { __pad: typeof pad }).__pad = pad;
-    (navigator as unknown as { getGamepads: () => unknown[] }).getGamepads = () => [pad];
+    const host = window as unknown as { __pad: typeof pad; __polls: number };
+    host.__pad = pad;
+    host.__polls = 0;
+    (navigator as unknown as { getGamepads: () => unknown[] }).getGamepads = () => {
+      host.__polls += 1;
+      return [pad];
+    };
   });
 }
 
+const polls = () => chrome.evaluate(() => (window as unknown as { __polls: number }).__polls);
+
+/** The shell ignores a second direction for 180 ms, so presses keep the spacing the old fixed sleep happened to give them. */
+const PRESS_GAP_MS = 200;
+let lastPress = 0;
+
+/**
+ * Holds the button until the loop has read the pad, then releases it and waits for the release to be read as well: only
+ * then has the press reached the shell, whatever the frame rate was. A loop that never reads the pad fails here, with
+ * the reason, instead of leaving the next assertion to report "element(s) not found".
+ */
 async function press(button: number): Promise<void> {
-  await chrome.evaluate((index) => { (window as unknown as { __pad: { buttons: { pressed: boolean }[] } }).__pad.buttons[index].pressed = true; }, button);
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  await chrome.evaluate((index) => { (window as unknown as { __pad: { buttons: { pressed: boolean }[] } }).__pad.buttons[index].pressed = false; }, button);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  const wait = lastPress + PRESS_GAP_MS - Date.now();
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastPress = Date.now();
+  const set = (pressed: boolean) => chrome.evaluate(([index, is]) => {
+    (window as unknown as { __pad: { buttons: { pressed: boolean }[] } }).__pad.buttons[index]!.pressed = is;
+  }, [button, pressed] as const);
+  // The counter is read after the button moves, never before: a poll that happened while the pad was still up must not
+  // count as the loop having seen the press.
+  await set(true);
+  const down = await polls();
+  await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the pressed pad (hidden or occluded window?)" }).toBeGreaterThan(down);
+  await set(false);
+  // `justPressed` fires again only after the loop has seen the button up, so the release has to land in a frame too.
+  const up = await polls();
+  await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the release, so the next press would count as a hold" }).toBeGreaterThan(up);
 }
 
 /** Walks the quick menu with the D-pad the way a controller does, and activates the item whose label matches. */

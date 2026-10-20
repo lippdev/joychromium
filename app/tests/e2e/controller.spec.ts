@@ -30,7 +30,12 @@ test.afterEach(async () => {
 const tabs = () => app.evaluate(() => globalThis.joy.tabs());
 const hints = () => chrome.locator(".pad-hints").textContent();
 
-/** Synthetic pads in the slots the Gamepad API would use, so the real polling loop runs without hardware. */
+/**
+ * Synthetic pads in the slots the Gamepad API would use, so the real polling loop runs without hardware. The counter is
+ * what makes a press reliable: the shell reads the pad on animation frames, and a press held for a fixed number of
+ * milliseconds can begin and end between two of them — it is then lost without a trace, and the test fails later at
+ * whatever the press was supposed to do. `press` below waits for the read instead of hoping for it.
+ */
 async function installPads(ids: readonly string[]): Promise<void> {
   await chrome.evaluate((names) => {
     const make = (index: number, id: string) => ({
@@ -38,19 +43,36 @@ async function installPads(ids: readonly string[]): Promise<void> {
       buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0, touched: false })),
     });
     const list = names.map((id, index) => make(index, id));
-    (window as unknown as { __pads: typeof list }).__pads = list;
-    (navigator as unknown as { getGamepads: () => unknown[] }).getGamepads = () => list;
+    const host = window as unknown as { __pads: typeof list; __polls: number };
+    host.__pads = list;
+    host.__polls = 0;
+    (navigator as unknown as { getGamepads: () => unknown[] }).getGamepads = () => {
+      host.__polls += 1;
+      return list;
+    };
   }, [...ids]);
 }
 
+const polls = () => chrome.evaluate(() => (window as unknown as { __polls: number }).__polls);
+
+/**
+ * Holds the button until the loop has read the pad, then releases it and waits for the release to be read as well: only
+ * then has the press reached the shell, whatever the frame rate was. A loop that never reads the pad fails here, with
+ * the reason, instead of leaving the next assertion to report the wrong thing.
+ */
 async function press(pad: number, button: number): Promise<void> {
   const set = (pressed: boolean) => chrome.evaluate(([p, b, is]) => {
-    (window as unknown as { __pads: { buttons: { pressed: boolean }[] }[] }).__pads[p].buttons[b].pressed = is;
-  }, [pad, button, pressed]);
+    (window as unknown as { __pads: { buttons: { pressed: boolean }[] }[] }).__pads[p]!.buttons[b]!.pressed = is;
+  }, [pad, button, pressed] as const);
+  // The counter is read after the button moves, never before: a poll that happened while the pad was still up must not
+  // count as the loop having seen the press.
   await set(true);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  const down = await polls();
+  await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the pressed pad (hidden or occluded window?)" }).toBeGreaterThan(down);
   await set(false);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  // `justPressed` fires again only after the loop has seen the button up, so the release has to land in a frame too.
+  const up = await polls();
+  await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the release, so the next press would count as a hold" }).toBeGreaterThan(up);
 }
 
 test("the pad last used owns the input and the hints follow it", async () => {
