@@ -43,7 +43,11 @@ interface Effect {
   weakMagnitude: number;
 }
 
-/** A synthetic pad whose vibration actuator records every effect the shell asks for. */
+/**
+ * A synthetic pad whose vibration actuator records every effect the shell asks for. The counter is what makes a press
+ * reliable: the shell reads the pad on animation frames, and a press held for a fixed number of milliseconds can begin
+ * and end between two of them — it is then lost without a trace, and the cue the test waits for never happens.
+ */
 async function installPad(): Promise<void> {
   await chrome.evaluate(() => {
     const effects: unknown[] = [];
@@ -58,19 +62,35 @@ async function installPad(): Promise<void> {
         },
       },
     };
-    (window as unknown as { __pad: typeof pad }).__pad = pad;
-    (navigator as unknown as { getGamepads: () => unknown[] }).getGamepads = () => [pad];
+    const host = window as unknown as { __pad: typeof pad; __polls: number };
+    host.__pad = pad;
+    host.__polls = 0;
+    (navigator as unknown as { getGamepads: () => unknown[] }).getGamepads = () => {
+      host.__polls += 1;
+      return [pad];
+    };
   });
 }
 
+const polls = () => chrome.evaluate(() => (window as unknown as { __polls: number }).__polls);
+
+/**
+ * Holds the button until the loop has read the pad, then releases it and waits for the release to be read as well: only
+ * then has the press reached the shell, whatever the frame rate was.
+ */
 async function press(button: number): Promise<void> {
   const set = (pressed: boolean) => chrome.evaluate(([index, is]) => {
-    (window as unknown as { __pad: { buttons: { pressed: boolean }[] } }).__pad.buttons[index].pressed = is;
-  }, [button, pressed]);
+    (window as unknown as { __pad: { buttons: { pressed: boolean }[] } }).__pad.buttons[index]!.pressed = is;
+  }, [button, pressed] as const);
+  // The counter is read after the button moves, never before: a poll that happened while the pad was still up must not
+  // count as the loop having seen the press.
   await set(true);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  const down = await polls();
+  await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the pressed pad (hidden or occluded window?)" }).toBeGreaterThan(down);
   await set(false);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  // `justPressed` fires again only after the loop has seen the button up, so the release has to land in a frame too.
+  const up = await polls();
+  await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the release, so the next press would count as a hold" }).toBeGreaterThan(up);
 }
 
 /** Effects the pad received so far. */
