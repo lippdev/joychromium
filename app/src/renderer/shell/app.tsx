@@ -171,6 +171,14 @@ function AddressBar({ url, focused, setFocused, language }: { url: string; focus
         value={value}
         onFocus={() => { setFocused(true); cmd({ type: "keyboard-open", target: "address" }); (input.current as HTMLInputElement).select(); }}
         onBlur={() => setFocused(false)}
+        onKeyDown={(e) => {
+          // Down leaves the field for the suggestions the controller keyboard shows, so both inputs reach them.
+          if (e.key !== "ArrowDown") return;
+          const first = document.querySelector<HTMLElement>(".suggestions .chip");
+          if (!first) return;
+          e.preventDefault();
+          first.focus();
+        }}
         onInput={(e) => {
           const text = (e.target as HTMLInputElement).value;
           setValue(text);

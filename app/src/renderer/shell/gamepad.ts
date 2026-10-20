@@ -142,7 +142,8 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const direction: Direction | undefined = cursorMode ? directionOf(dpad, 0, 0) : directionOf(dpad, lx, ly);
       if (direction && now - lastDirection.current >= 180) {
         lastDirection.current = now;
-        if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
+        if (moveSuggestionFocus(direction)) { /* the D-pad walked the address suggestions */ }
+        else if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
         else bridge().controller({ type: "direction", direction });
       }
     };
@@ -161,6 +162,26 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       stopActivity();
     };
   }, [setOverlay]);
+}
+
+/**
+ * The D-pad inside the address suggestions: down from the field enters the list, and once inside it the D-pad walks it
+ * and leaves at one of its ends for the rest of the overlay. Returns whether the list took the press.
+ */
+function moveSuggestionFocus(direction: Direction): boolean {
+  const chips = [...document.querySelectorAll<HTMLElement>(".suggestions .chip")];
+  if (chips.length === 0) return false;
+  const current = document.activeElement as HTMLElement | null;
+  const index = current ? chips.indexOf(current) : -1;
+  if (index < 0) {
+    if (direction !== "down") return false;
+    chips[0].focus();
+    return true;
+  }
+  const next = direction === "left" || direction === "up" ? index - 1 : index + 1;
+  if (next < 0 || next >= chips.length) return false;
+  chips[next].focus();
+  return true;
 }
 
 /** Spatial focus among the shell's own buttons, used while a dialog or the keyboard is open. */
