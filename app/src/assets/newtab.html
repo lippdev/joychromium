@@ -11,8 +11,8 @@
 <main>
   <section class="hero">
     <div class="logo"><b>J</b><span>JOYCHROMIUM</span></div>
-    <form id="search" class="search">
-      <input id="q" autofocus autocomplete="off" spellcheck="false" data-i18n-placeholder="home.search" placeholder="Pesquisar ou digitar um endereço">
+    <form id="search" class="search" role="search" data-i18n-aria-label="a11y.search" aria-label="Pesquisar">
+      <input id="q" autofocus autocomplete="off" spellcheck="false" data-i18n-placeholder="home.search" data-i18n-aria-label="a11y.search" aria-label="Pesquisar" placeholder="Pesquisar ou digitar um endereço">
       <button class="go" type="submit" data-i18n="input.ok">OK</button>
     </form>
     <p class="engine" id="engine"></p>
@@ -20,17 +20,17 @@
 
   <section class="block" id="continueBlock" hidden>
     <h2 data-i18n="home.continue">Continuar assistindo</h2>
-    <div class="cards" id="recent"></div>
+    <div class="cards" id="recent" role="list" data-i18n-aria-label="home.continue" aria-label="Continuar assistindo"></div>
   </section>
 
   <section class="block" id="favoritesBlock" hidden>
     <h2 data-i18n="home.favorites">Favoritos</h2>
-    <div class="cards" id="favorites"></div>
+    <div class="cards" id="favorites" role="list" data-i18n-aria-label="home.favorites" aria-label="Favoritos"></div>
   </section>
 
   <section class="block">
     <h2 data-i18n="home.apps">Aplicativos</h2>
-    <div class="cards" id="apps"></div>
+    <div class="cards" id="apps" role="list" data-i18n-aria-label="home.apps" aria-label="Aplicativos"></div>
   </section>
 
   <footer>
@@ -59,12 +59,18 @@
     b.className = big ? 'card big' : 'card';
     b.title = url;
     const badge = document.createElement('i');
+    // The initial is decoration: the button is named by the title alone, not "Y YouTube TV".
+    badge.setAttribute('aria-hidden', 'true');
     badge.textContent = name.trim()[0]?.toUpperCase() ?? '?';
     const label = document.createElement('span');
     label.textContent = name;
     b.append(badge, label);
     b.addEventListener('click', () => post('navigate', { url }));
-    return b;
+    const item = document.createElement('div');
+    item.className = 'card-item';
+    item.setAttribute('role', 'listitem');
+    item.append(b);
+    return item;
   }
 
   window.joy.onMessage((msg) => {

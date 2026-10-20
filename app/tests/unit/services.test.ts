@@ -221,6 +221,11 @@ describe("translations", () => {
     expect(dictionary("en")["design.title"]).toBe("Design system");
     expect(dictionary("pt-BR")["design.name.button"]).toBe("Botão");
     expect(t("en", "no.such.key")).toBe("no.such.key");
+    // The accessible names a screen reader reads follow the language like everything else.
+    expect(t("en", "a11y.address")).toBe("Address");
+    expect(t("pt-BR", "a11y.address")).toBe("Endereço");
+    expect(t("en", "a11y.keyboard")).toBe("Controller keyboard");
+    expect(t("pt-BR", "a11y.keyboard")).toBe("Teclado do controle");
   });
 });
 

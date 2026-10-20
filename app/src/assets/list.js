@@ -9,9 +9,14 @@ function paint(t) {
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function renderList(box, items, { removeType, emptyText }) {
-  if (!items.length) { box.innerHTML = `<p class="empty">${esc(emptyText)}</p>`; return; }
+  if (!items.length) {
+    box.removeAttribute('role');
+    box.innerHTML = `<p class="empty">${esc(emptyText)}</p>`;
+    return;
+  }
+  box.setAttribute('role', 'list');
   box.replaceChildren(...items.map(item => {
-    const row = document.createElement('div'); row.className = 'item';
+    const row = document.createElement('div'); row.className = 'item'; row.setAttribute('role', 'listitem');
     const open = document.createElement('button'); open.className = 'open';
     open.innerHTML = `<span class="t">${esc(item.title || item.url)}</span><span class="u">${esc(item.url)}</span>` + (item.when ? `<span class="w">${esc(item.when)}</span>` : '');
     open.addEventListener('click', () => post('navigate', { url: item.url }));

@@ -296,7 +296,7 @@ Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregu
 | E4 Robustez e desempenho | 1/1 | 1/1 | 2/2 | — |
 | E5 Design system e redesign | 4/4 | 3/3 | — | — |
 | E6 Experiência com controle | 4/5 | 2/2 | 2/2 | E6-07 (controle físico) |
-| E7 Internacionalização e a11y | 1/1 | 1/1 | 0/1 | E7-03 (leitor de tela) |
+| E7 Internacionalização e a11y | 1/1 | 1/1 | 0/1 | E7-03 (passada manual) |
 | E8 Privacidade e observabilidade | 2/2 | 1/1 | 1/1 | — |
 | E9 Distribuição | — | — | 2/2 | — |
 | E10 Mídia e DRM | 2/3 | 2/2 | 1/1 | E10-02 (VMP) |
@@ -308,6 +308,7 @@ Somando: **35 de 37 Must**, **19 de 19 Should** e **8 de 10 Could**. O E2-07 (sm
 
 - **E2-03 — proteção da `main` com `electron (macos-latest)`.** O token de automação não tem permissão de administrador na API de branch protection (403). Fica em Settings → Branches, com o nome exato do check.
 - **E6-07 — sessão com controle físico.** O roteiro está em [CONTROLLER-TEST.md](CONTROLLER-TEST.md); falta rodar na TV com o controle na mão e registrar o que falhar.
+- **E7-03 — passada com leitores de tela.** O e2e já verifica os nomes e papéis na DOM e, no Linux, a árvore AT-SPI que o Orca lê; falta ouvir Orca, Narrator e VoiceOver pelo roteiro em [SCREEN-READER.md](SCREEN-READER.md) e registrar o que falhar.
 - **E10-02 — assinatura VMP (EVS).** A CDM baixa e o EME responde `ok` no Linux (ADR-009), mas Windows e macOS em produção precisam da conta gratuita na castLabs e do passo `afterPack` com `castlabs-evs`.
 - **E10-05 — resolução por serviço.** O mecanismo de UA por site está pronto e testado; a tabela em [DRM-UAS.md](DRM-UAS.md) espera alguém com conta nos serviços rodar a medição.
 - **E2-08 — Steam Deck em hardware.** O caminho Wayland nativo é provado no CI em todo PR (Weston headless, sem X11, com screenshot das duas views): [WAYLAND.md](WAYLAND.md). O que falta é rodar num Deck de verdade, no modo Gaming, porque gamescope e HDR não existem neste ambiente; o roteiro está no mesmo documento.
@@ -315,7 +316,7 @@ Somando: **35 de 37 Must**, **19 de 19 Should** e **8 de 10 Could**. O E2-07 (sm
 
 **Fora deste ciclo (Could, sem bloqueio)**
 
-- **E4-03** pausar o polling do controle com a janela minimizada e **E7-03** teste com leitor de tela (Narrator, VoiceOver, Orca): ambos pequenos, nenhum bloqueia a distribuição.
+- **E4-03** pausar o polling do controle com a janela minimizada: pequeno e não bloqueia a distribuição.
 - **E9-01 a E9-03** seguem congelados pelo ADR-010: sem assinatura de código até a decisão mudar.
 
 **O que o app faz hoje, em uma frase:** navegador de TV multiplataforma com tela cheia por padrão, controle como entrada principal (incluindo iframes e mídia), PT-BR e EN, bloqueio de anúncios e rastreadores por nível, DRM Widevine no Linux, atualização automática nos instaladores, e CI nos três sistemas que instala e abre o pacote de cada um.

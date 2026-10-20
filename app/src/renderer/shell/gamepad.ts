@@ -186,7 +186,7 @@ function moveSuggestionFocus(direction: Direction): boolean {
 
 /** Spatial focus among the shell's own buttons, used while a dialog or the keyboard is open. */
 function moveOverlayFocus(direction: Direction): void {
-  const group = (document.querySelector('.overlay[aria-modal="true"]') as HTMLElement | null) ?? document.body;
+  const group = (document.querySelector('.overlay[role="dialog"]') as HTMLElement | null) ?? document.body;
   const buttons = [...group.querySelectorAll<HTMLElement>("button:not([disabled])")];
   const current = document.activeElement as HTMLElement | null;
   const index = current ? buttons.indexOf(current) : -1;

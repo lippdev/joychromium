@@ -28,6 +28,11 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y rpm
         working-directory: .
+      # The AT-SPI half of tests/e2e/screen-reader.spec.ts reads the tree Orca reads; without these it skips.
+      - name: Screen reader bridge (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y python3-pyatspi python3-gi gir1.2-atspi-2.0 at-spi2-core dbus
+        working-directory: .
       - run: npm ci
       - run: npm run typecheck
       - name: Unit tests

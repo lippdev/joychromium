@@ -21,6 +21,8 @@ Para cada cenário: **passou / falhou**, quantos segundos demorou a primeira res
 6. **Atualização.** Em Windows/Linux: com uma versão nova publicada, deixe o download acontecer, feche o app e reabra; no `.deb`/`.rpm` use **Reiniciar e instalar** em Configurações → Sobre e confirme o pedido de senha. No macOS, o app deve avisar e abrir a página da release.
 7. **Streaming com DRM.** Abra a Netflix, entre na conta e toque um título. Registre a resolução que o player mostra e o que a linha "Widevine (DRM)" diz em Configurações → Sobre.
 
+Leitor de tela é o outro lado da mesma sessão: o roteiro de Orca, Narrator e VoiceOver está em [SCREEN-READER.md](SCREEN-READER.md).
+
 ## Onde ajustar o quê
 
 - **Foco pulando ou preso:** a pontuação está em `spatial.js` (`score`), injetado em toda página; o ajuste vale para o app inteiro, então anote o site e o elemento.

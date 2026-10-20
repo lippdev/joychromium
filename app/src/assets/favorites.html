@@ -10,8 +10,8 @@
 <main>
   <h1 data-i18n="home.favorites">Favoritos</h1>
   <p class="lead">Use o botão ★ (ou <kbd data-i18n="shortcut.favorite">Ctrl+D</kbd>, ou segure <kbd>LB</kbd> e aperte <kbd>Y</kbd>) em qualquer página. Os favoritos também aparecem na tela inicial.</p>
-  <div class="bar"><input id="q" placeholder="Filtrar favoritos" autofocus autocomplete="off"></div>
-  <div id="list"></div>
+  <div class="bar"><input id="q" placeholder="Filtrar favoritos" data-i18n-aria-label="a11y.searchFavorites" aria-label="Pesquisar nos favoritos" autofocus autocomplete="off"></div>
+  <div id="list" data-i18n-aria-label="home.favorites" aria-label="Favoritos"></div>
 </main>
 <script src="i18n.js"></script>
 <script src="list.js"></script>

@@ -15,6 +15,10 @@
       const text = table[el.dataset.i18nTitle];
       if (text !== undefined) el.title = text;
     }
+    for (const el of (root || document).querySelectorAll("[data-i18n-aria-label]")) {
+      const text = table[el.dataset.i18nAriaLabel];
+      if (text !== undefined) el.setAttribute("aria-label", text);
+    }
   };
   window.i18n = {
     set(dict, lang) {

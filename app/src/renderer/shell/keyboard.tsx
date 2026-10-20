@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { ShellState } from "../../shared/ipc";
 import { t } from "../../shared/i18n";
 import { cmd } from "./bridge";
@@ -19,6 +19,12 @@ export function Keyboard({ state }: { state: ShellState }) {
   const [row, setRow] = useState<"letters" | "accents">("letters");
   const [shift, setShift] = useState(false);
   const [selected, setSelected] = useState(-1);
+  const dialog = useRef<HTMLDivElement>(null);
+  // Opened from the controller (Y) the dialog takes focus so the screen reader announces it; opened by focusing the
+  // address field the field keeps it, because that is where the physical keyboard types.
+  useEffect(() => {
+    if (document.activeElement?.id !== "address") dialog.current?.focus();
+  }, []);
   const target = state.keyboard?.target ?? "address";
   const suggestions = target === "address" ? state.suggestions : [];
   const rows = row === "accents" ? [ACCENTS.slice(0, 14), ACCENTS.slice(14)] : layout === "qwerty" ? QWERTY : ABC;
@@ -45,7 +51,7 @@ export function Keyboard({ state }: { state: ShellState }) {
   };
 
   return (
-    <div class="overlay bottom" id="keyboard" role="dialog" aria-modal="true" aria-label="Teclado do controle">
+    <div ref={dialog} tabindex={-1} class="overlay bottom" id="keyboard" role="dialog" aria-label={t(state.language, "a11y.keyboard")}>
       <div class="keyboard">
         <div class="keyboard-head">
           <span class="label">{target === "address" ? t(state.language, "input.address") : t(state.language, "input.page")}</span>
