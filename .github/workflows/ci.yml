@@ -61,6 +61,17 @@ jobs:
         run: npm run build && npx electron-builder --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # A Mac tells ad-hoc from broken by verifying the seal; the second half prints what Gatekeeper says, since a
+      # build without a Developer ID is expected to be rejected there.
+      - name: Check the macOS bundle (signature valid, notarization absent)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          app=$(ls -d release/mac*/JoyChromium.app | head -1)
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv --verbose=2 "$app" 2>&1 | grep -E "Identifier|Signature|TeamIdentifier"
+          echo "--- Gatekeeper (ad-hoc build, not notarized: rejection here is expected)"
+          spctl -a -vvv -t exec "$app" 2>&1 || true
       # The installers build; this proves one of them installs and the installed app actually starts.
       - name: Smoke test the installed package (Linux)
         if: runner.os == 'Linux'

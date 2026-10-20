@@ -17,7 +17,7 @@ The first launch downloads the Widevine module in the background; playback of DR
 
 Builds are not signed with a paid certificate yet ([PRD](docs/PRD.md), ADR-010). The app works, but the operating system warns the first time:
 
-- **macOS**: open the `.dmg`, drag JoyChromium to Applications, then right-click the app → *Open* → *Open*. On recent versions, use *System Settings → Privacy & Security → Open Anyway*. Apple Silicon refuses a completely unsigned app, so every build gets an ad-hoc signature; that is enough to launch, but not enough for automatic updates.
+- **macOS**: the `.dmg` refuses its one-click install on macOS 15 with *"This Mac could not verify the app, so nothing was installed"* — the bundle's ad-hoc signature is intact (`codesign --verify --deep --strict` passes), what is missing is the Developer ID and notarization. Drag JoyChromium to Applications (or double-click `install-macos.command` inside the disk image) and open it once with right-click → *Open*; if that option is not offered, run `xattr -dr com.apple.quarantine /Applications/JoyChromium.app`. After that it opens normally. Apple Silicon refuses a completely unsigned app, so every build gets the ad-hoc signature; that is enough to launch, but not enough for automatic updates.
 - **Windows**: SmartScreen shows *Windows protected your PC*; choose *More info → Run anyway*. The warning fades as the build gains reputation.
 - **Linux**: AppImage needs `chmod +x JoyChromium-*.AppImage`; if your distribution blocks the sandbox (Ubuntu 24.04 restricts user namespaces), install the `.deb` or the Flatpak bundle instead.
 
