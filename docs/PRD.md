@@ -130,34 +130,38 @@ flowchart TB
   Main -->|"preload isolado"| Web["Abas web: spatial + cursor em mundo isolado"]
 ```
 
-### 5.3 Estrutura de pastas proposta
+### 5.3 Estrutura de pastas
 
 ```
 app/
-  electron.vite.config.ts
+  scripts/           # build.mjs (esbuild), after-pack.mjs, copy-assets.mjs, policy-sign.mjs
   src/
-    core/            # puro: settings, segurança, policy, controle, sugestões, páginas, i18n (teste unitário)
+    shared/          # puro, com teste unitário: settings, segurança, policy, páginas, controle, i18n, plataforma
     main/
-      bootstrap.ts   # instância única, ciclo de vida, wiring
-      platform/      # index.ts + win32.ts / darwin.ts / linux.ts
-      services/      # window, tabs, permissions, downloads, navigation, input, store, update, adblock, crash
-      ipc/           # contrato, roteador de comandos e emissor de eventos
-    preload/         # shell.ts, pages.ts, web.ts (bundlados: podem importar o contrato de IPC)
-    renderer/
-      design/        # tokens.css, tipografia, ícones, componentes de foco
-      shell/         # UI do navegador
-      pages/         # home, settings, history, favorites, onboarding, error
-    inject/          # spatial e cursor, compilados para o mundo isolado das abas
+      main.ts        # instância única, ciclo de vida, wiring
+      platform.ts    # único módulo que lê process.platform
+      shell.ts       # janela, layout das views, comandos, permissões, downloads
+      tabs.ts        # uma WebContentsView por aba + hooks de segurança
+      pageBridge.ts  # mensagens das páginas internas
+      protocol.ts    # esquema joychromium://
+      services/      # commandRouter, inputRouter, navigation, keyboard, layout, permissions, downloads,
+                     # crashReporting, privacy, widevine
+      adblock.ts, policyService.ts, updater.ts, history.ts, store.ts, atomicFile.ts, log.ts, diagnostics.ts,
+      controllerActions.ts, tvIdentity.ts, zip.ts
+    preload/         # chrome.ts e web.ts, empacotados: importam o contrato de src/shared
+    renderer/shell/  # UI do navegador em Preact: app, tabswitcher, keyboard, quickmenu, toasts, gamepad
+    assets/          # páginas internas em HTML, design tokens, i18n.js e spatial.js
+  tests/unit, tests/e2e
   resources/         # ícones por SO, entitlements do mac
 ```
 
-### 5.4 Decisões técnicas (ADRs a registrar em `docs/adr/`)
+### 5.4 Decisões técnicas (ADRs em `docs/adr/`)
 
-- **ADR-002: build com `electron-vite`.** Hoje é `tsc` mais um script que copia arquivos. O `electron-vite` empacota main, preloads e renderer. Isso resolve o D14, porque o preload empacotado pode importar o contrato de IPC, e dá hot reload na UI.
+- **ADR-002: build com `esbuild` (decidido).** Um script (`app/scripts/build.mjs`) empacota o processo principal, os preloads e o shell, e copia as páginas internas para `dist/assets`; `tsc --noEmit` continua sendo o typecheck. O preload empacotado importa o contrato de IPC de `src/shared`, o que resolve o D14, e o renderer pode usar Preact. Não há servidor de desenvolvimento: `npm start` recompila em menos de um segundo. O `electron-vite` previsto no início do PRD ficou de fora porque assume um `index.html` por bundle, e o app serve vários HTMLs independentes por `joychromium://`.
 - **ADR-003: framework de UI — Preact (decidido).** **Preact + TypeScript** no renderer, com `@preact/signals` para o estado vindo do main e uma navegação por foco própria derivada do `spatial` atual (bibliotecas de foco para React, como a Norigin, só entram via `preact/compat` se valerem a pena). O redesign cria muitas telas com componentes repetidos (cards, listas focáveis, diálogos, teclado), e HTML com script inline não escala; o Preact resolve isso com ~4 KB, o que pesa num shell que fica sempre aberto.
-- **ADR-004: contrato de IPC tipado.** Um módulo `ipc/contract.ts` com os comandos (renderer → main) e os eventos (main → renderer), validados com `zod` na entrada do main. O estado sai como snapshot inicial mais patches por área (`tabs`, `overlay`, `theme`, `status`), e não como o estado inteiro a cada mudança (D15).
-- **ADR-005: persistência.** Continua em JSON (`settings.json`, `session.json`, `history.jsonl`), agora com escrita atômica (temporário mais `rename`), debounce, `schemaVersion` e migrações puras em `core/settings`. SQLite fica fora porque exigiria módulo nativo recompilado por SO e por arquitetura.
-- **ADR-006: injeção em mundo isolado.** `spatial` e cursor rodam via preload ou `executeJavaScriptInIsolatedWorld`, também nos subframes (via `webFrameMain`). Assim a página não acessa `window.__joy` (D16).
+- **ADR-004: contrato de IPC tipado e validado (decidido).** `src/shared/ipc.ts` declara os canais e os tipos, `src/shared/commands.ts` valida cada comando na entrada do main (comando malformado é logado e descartado) e o preload empacotado importa o contrato em vez de repetir nomes. O estado ainda sai como snapshot completo; patches por área ficam para o E3-03, quando o volume justificar (D15).
+- **ADR-005: persistência (decidido).** Continua em JSON (`settings.json`, `session.json`, `history.jsonl`), agora com escrita atômica (temporário mais `rename`), `schemaVersion` e migrações puras em `src/shared/settings`. SQLite fica fora porque exigiria módulo nativo recompilado por SO e por arquitetura.
+- **ADR-006: injeção em mundo isolado (decidido).** `spatial` e cursor rodam em `executeJavaScriptInIsolatedWorld` (world 73) e o shell conversa com esse mundo por `runInPageWorld`, então a página não lê nem substitui `window.__joy` (D16). Os subframes ficam para o E3-06, quando um player embutido precisar.
 - **ADR-007: adaptador de plataforma.** Toda decisão por SO passa por `platform/`: opções da janela, menu de aplicação, modificador de atalho e rótulo, caminhos, extensões perigosas extras, comportamento ao fechar a última janela e integração de mídia. O resto do código não testa `process.platform`.
 - **ADR-008: modo TV como padrão (decidido).** O app abre em **tela cheia, no modo TV**, desenhado para o controle. O **modo Janela** (mouse e teclado) é secundário: entra-se nele por F11/Esc ou pelas configurações, e ele reaproveita os mesmos serviços e componentes com outra escala e densidade. Toda tela nova é desenhada e aceita primeiro no modo TV.
 - **ADR-009: DRM com castLabs ECS (decidido).** O pacote `electron` é trocado pelo Electron for Content Security da castLabs, que instala a CDM Widevine no primeiro uso. A assinatura VMP do serviço EVS (gratuito, conta na castLabs) é necessária para Widevine de produção no Windows e no macOS; ela é independente da assinatura de código da Apple e da Microsoft, que continua fora do escopo. No Linux a CDM não usa VMP. O ECS é distribuído pelo GitHub da castLabs e não pelo registro do npm, então o Dependabot deixa de cobrir o motor e um workflow agendado assume essa função (E10-03).
@@ -314,7 +318,7 @@ Regras de escopo:
 
 | ID | História | MoSCoW | Tamanho | Critérios de aceite |
 |---|---|---|---|---|
-| E3-01 | Migrar o build para `electron-vite` (ADR-002) mantendo o comportamento | Must | M | `npm start`, `dist` e e2e iguais; hot reload no renderer |
+| E3-01 | Migrar o build para `esbuild` (ADR-002) mantendo o comportamento | Must | M | `npm start`, `dist` e e2e iguais; preloads importam o contrato de IPC; build completo abaixo de 1 s |
 | E3-02 | Contrato de IPC tipado com validação (ADR-004); preloads importam o contrato | Must | M | Nenhum nome de canal duplicado; mensagem inválida é rejeitada e logada (D14) |
 | E3-03 | Estado por patches em vez de snapshot completo | Should | M | Com 30 abas, o tráfego de IPC cai para menos de 10% do atual (D15) |
 | E3-04 | Quebrar o `shell.ts` nos serviços da seção 5.2 | Must | G | Nenhum arquivo do main com mais de 250 linhas; cada serviço com testes (D13) |
@@ -434,7 +438,7 @@ gantt
 - **M2, Fundação (v1.2):** E3 + E4. Mesma UI, arquitetura nova; o comportamento coberto pelo e2e não muda.
 - **M3, Redesign (v2.0):** E5 + E6 + E7. O protótipo (E5-01) começa em paralelo ao M1 para não travar o M3.
 - **M4, Privacidade (v2.1):** E8 e o que restar do E9 (Flatpak, changelog).
-- **M5, Mídia (v1.3 → v2.2):** o spike do ECS (E10-01) roda logo após o M1 para tirar o risco cedo; a troca do motor entra depois do M2, quando o pipeline já estiver no `electron-vite`.
+- **M5, Mídia (v1.3 → v2.2):** o spike do ECS (E10-01) roda logo após o M1 para tirar o risco cedo; a troca do motor entra depois do M2, quando o build do ADR-002 já estiver no lugar.
 
 ## 11. Métricas de sucesso
 
