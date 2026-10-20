@@ -2,6 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { controllerFamily, type ControllerFamily } from "../../shared/controllerGlyphs";
 import { directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
 import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
+import { gamepadPoll } from "../../shared/gamepadLoop";
 import type { ShellState } from "../../shared/ipc";
 import { bridge, cmd } from "./bridge";
 import { trackActivePad, vibrate } from "./haptics";
@@ -16,7 +17,8 @@ type Overlay = "none" | "tabs" | "menu";
 /**
  * Gamepad handling for the shell. The tab of a web page owns the focus while the user reads it, so the shell keeps
  * polling with requestAnimationFrame and only acts when it is visible; a page that needs the D-pad in Arrows mode gets
- * it through the main process.
+ * it through the main process. A minimized window stops the loop instead of letting it run on frames nobody sees: the
+ * main process reports the window state, and `gamepadPoll` decides per frame.
  */
 export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: Overlay) => void): void {
   const pressed = useRef(new Set<number>());
@@ -31,9 +33,21 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
 
   useEffect(() => {
     let frame = 0;
-    const tick = (now: number) => {
+    let parked = false;
+    const windowActive = { current: true };
+    const resume = (): void => {
+      if (!parked) return;
+      parked = false;
       frame = requestAnimationFrame(tick);
-      if (document.hidden || now - lastTick.current < 50) return;
+    };
+    const tick = (now: number) => {
+      const decision = gamepadPoll(now, lastTick.current, { hidden: document.hidden, active: windowActive.current });
+      if (decision === "park") {
+        parked = true;
+        return;
+      }
+      frame = requestAnimationFrame(tick);
+      if (decision === "wait") return;
       lastTick.current = now;
       const pads = [...navigator.getGamepads()].filter((p): p is Gamepad => Boolean(p));
       const samples: PadSample[] = pads.map((p) => ({ index: p.index, standard: p.mapping === "standard", buttons: p.buttons, axes: p.axes }));
@@ -129,7 +143,19 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       }
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    const visibility = (): void => {
+      if (!document.hidden) resume();
+    };
+    document.addEventListener("visibilitychange", visibility);
+    const stopActivity = bridge().onActivity(({ active }) => {
+      windowActive.current = active;
+      if (active) resume();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", visibility);
+      stopActivity();
+    };
   }, [overlay, setOverlay]);
 }
 

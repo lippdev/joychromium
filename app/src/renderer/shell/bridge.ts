@@ -1,4 +1,4 @@
-import type { ControllerEvent, ShellCommand, ShellPreferences, ShellState, ShellStatePatch } from "../../shared/ipc";
+import type { ControllerEvent, ShellActivity, ShellCommand, ShellPreferences, ShellState, ShellStatePatch } from "../../shared/ipc";
 
 /** The bridge installed by preload/chrome.ts. */
 export interface ShellBridge {
@@ -8,6 +8,8 @@ export interface ShellBridge {
   ready(): void;
   onState(callback: (state: ShellState) => void): void;
   onPatch(callback: (patch: ShellStatePatch) => void): void;
+  /** Whether the window is on screen, so idle loops park while it is minimized. Returns its own unsubscribe. */
+  onActivity(callback: (activity: ShellActivity) => void): () => void;
   thumbnails(): Promise<{ id: number; dataUrl: string }[]>;
   preferences(): Promise<ShellPreferences>;
   setUi(patch: { uiScale?: number; overscan?: number; highContrast?: boolean; language?: string }): void;

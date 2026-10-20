@@ -32,6 +32,8 @@ export interface ShellHost {
   syncViews(): void;
   setLayout(top: number, bottom: number): void;
   setChromeVisible(visible: boolean): void;
+  /** Minimize even from TV mode, where a fullscreen window cannot be minimized as it is (E4-03). */
+  minimizeWindow(): void;
   applyWindowMode(mode: WindowMode, persist: boolean): void;
   resolvePermission(allow: boolean, remember: boolean): void;
   toggleFavorite(): void;

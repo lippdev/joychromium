@@ -47,7 +47,7 @@ export class CommandRouter {
       case "toggle-favorite": h.toggleFavorite(); break;
       case "permission": h.resolvePermission(command.allow, command.remember); break;
       case "window":
-        if (command.action === "minimize") h.window.minimize();
+        if (command.action === "minimize") h.minimizeWindow();
         else if (command.action === "maximize") h.window.isMaximized() ? h.window.unmaximize() : h.window.maximize();
         else h.window.close();
         break;
