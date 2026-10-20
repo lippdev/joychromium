@@ -1,0 +1,83 @@
+/* JoyChromium design tokens. One file for the shell and for every internal page. */
+
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Overridden at runtime from the user's theme and UI scale. */
+  --accent: #64ddb5;
+  --accent-text: #07120f;
+  --bg: #0c0e13;
+  --surface: #14171e;
+  --text: #f3f5f9;
+  --ui-scale: 1;
+  --overscan: 0;
+
+  --surface-2: color-mix(in srgb, var(--surface) 92%, var(--text));
+  --hover: color-mix(in srgb, var(--surface) 86%, var(--text));
+  --border: color-mix(in srgb, var(--surface) 82%, var(--text));
+  --muted: color-mix(in srgb, var(--text) 68%, var(--surface));
+  --faint: color-mix(in srgb, var(--text) 46%, var(--surface));
+  --input: color-mix(in srgb, var(--bg) 96%, var(--text));
+  --danger: #ff6b5e;
+
+  /* Space scale, in scaled pixels so the whole UI grows with the TV viewing distance. */
+  --u: calc(var(--ui-scale) * 1px);
+  --space-1: calc(4 * var(--u));
+  --space-2: calc(8 * var(--u));
+  --space-3: calc(12 * var(--u));
+  --space-4: calc(16 * var(--u));
+  --space-5: calc(24 * var(--u));
+  --space-6: calc(32 * var(--u));
+  --radius-sm: calc(8 * var(--u));
+  --radius: calc(12 * var(--u));
+  --radius-lg: calc(18 * var(--u));
+
+  /* Type scale: 24px body at 1080p, so text is readable from a sofa. */
+  --text-xs: calc(13 * var(--u));
+  --text-sm: calc(15 * var(--u));
+  --text-base: calc(18 * var(--u));
+  --text-lg: calc(22 * var(--u));
+  --text-xl: calc(28 * var(--u));
+  --text-2xl: calc(36 * var(--u));
+
+  --duration: 140ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --focus-ring: calc(3 * var(--u));
+}
+
+body[data-contrast="high"] {
+  --muted: var(--text);
+  --faint: var(--text);
+  --border: color-mix(in srgb, var(--surface) 60%, var(--text));
+  --hover: color-mix(in srgb, var(--surface) 70%, var(--text));
+}
+
+* { box-sizing: border-box; }
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  font-family: inherit;
+}
+
+button { cursor: pointer; }
+
+:focus { outline: none; }
+
+:focus-visible {
+  outline: var(--focus-ring) solid var(--accent);
+  outline-offset: calc(2 * var(--u));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

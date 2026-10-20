@@ -26,15 +26,16 @@ test("shell UI, tabs, internal pages and session", async () => {
   await expect(chrome.locator("#address")).toBeVisible();
   await expect.poll(tabs, { timeout: 30_000 }).toHaveLength(1);
   expect((await tabs())[0]?.url).toBe("joychromium://newtab");
-  await expect(chrome.locator("#tabs .tab")).toHaveCount(1);
-
-  await command({ type: "new-tab" });
+  // Tabs are switched through the grid overlay, which is what a controller uses; its last card opens a new tab.
+  await chrome.locator("#tabs-button").click();
+  await expect(chrome.locator(".tab-card")).toHaveCount(2);
+  await chrome.locator(".tab-card.new").click();
   await expect.poll(tabs).toHaveLength(2);
-  await expect(chrome.locator("#tabs .tab")).toHaveCount(2);
+  await expect(chrome.locator("#tabs-button")).toContainText("2");
 
   await command({ type: "settings" });
   await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.url).toBe("joychromium://settings");
-  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toBe("Settings");
+  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toMatch(/Settings|Configurações/);
   await expect(chrome.locator("#address")).toHaveValue("joychromium://settings");
 
   // The settings page asked for its data over the bridge and rendered it.
@@ -42,7 +43,7 @@ test("shell UI, tabs, internal pages and session", async () => {
   expect(await app.evaluate(() => globalThis.joy.pageEval("document.querySelectorAll('#presets .preset').length"))).toBeGreaterThan(3);
 
   await command({ type: "navigate", url: "joychromium://favorites" });
-  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toBe("Favorites");
+  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toMatch(/Favorites|Favoritos/);
 
   // Web pages get the spatial-navigation script and the cursor overlay.
   await command({ type: "navigate", url: "about:blank" });
@@ -51,14 +52,14 @@ test("shell UI, tabs, internal pages and session", async () => {
   await command({ type: "close-tab" });
   await expect.poll(tabs).toHaveLength(1);
 
-  // Blocked scheme never navigates; the status line says why.
+  // Blocked scheme never navigates; a toast says why.
   await command({ type: "navigate", url: "file:///C:/Windows" });
-  await expect(chrome.locator("#status")).toContainText("BLOCKED");
+  await expect(chrome.locator(".toasts")).toContainText("BLOCKED");
 
   await command({ type: "keyboard-open", target: "address" });
   await expect(chrome.locator("#keyboard")).toBeVisible();
   await command({ type: "keyboard-close" });
-  await expect(chrome.locator("#keyboard")).toBeHidden();
+  await expect(chrome.locator("#keyboard")).toHaveCount(0);
 
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
   await expect.poll(() => existsSync(join(data, "session.json")), { timeout: 10_000 }).toBe(true);

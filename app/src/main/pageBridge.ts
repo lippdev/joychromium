@@ -5,6 +5,7 @@ import {
   withoutInputMode, withoutPermissions,
 } from "../shared/settings";
 import { currentShortcutMod } from "./platform";
+import { dictionary } from "../shared/i18n";
 import type { ShellDeps } from "./shell";
 import type { Shell } from "./shell";
 import type { Tab } from "./tabs";
@@ -20,9 +21,12 @@ export class PageBridge {
   }
 
   private init(tab: Tab): void {
+    this.reply(tab, { type: "init", ...this.payloadFields() });
+  }
+
+  private payloadFields(): Record<string, unknown> {
     const s = this.deps.store.current;
-    this.reply(tab, {
-      type: "init",
+    return {
       theme: s.theme,
       presets: THEME_PRESETS,
       searchEngine: s.searchEngine,
@@ -47,13 +51,18 @@ export class PageBridge {
       siteInputModes: s.siteInputModes,
       runtimeVersion: process.versions.chrome,
       shortcutMod: currentShortcutMod(),
+      dictionary: dictionary(s.language),
+      language: s.language,
+      uiScale: s.uiScale,
+      overscan: s.overscan,
+      highContrast: s.highContrast,
       appVersion: this.deps.appVersion,
       appUpdate: this.deps.updateStatus(),
       updateUrl: this.deps.updateUrl(),
       adBlockVersion: this.deps.adblock.listsVersion,
       adBlockUpdate: this.deps.adblock.status,
       policy: this.deps.policy.status,
-    });
+    };
   }
 
   async handle(tab: Tab, raw: unknown): Promise<void> {
@@ -119,6 +128,17 @@ export class PageBridge {
       case "permission-forget":
         if (typeof m.host === "string") store.update((s) => withoutPermissions(s, m.host as string));
         break;
+      case "ui-settings": {
+        const patch: Partial<AppSettings> = {};
+        if (typeof m.uiScale === "number" && [0.8, 1, 1.25, 1.5].includes(m.uiScale)) patch.uiScale = m.uiScale;
+        if (typeof m.overscan === "number" && m.overscan >= 0 && m.overscan <= 8) patch.overscan = m.overscan;
+        if (typeof m.highContrast === "boolean") patch.highContrast = m.highContrast;
+        if (m.language === "pt-BR" || m.language === "en") patch.language = m.language;
+        store.update((s) => ({ ...s, ...patch }));
+        this.shell.broadcast();
+        this.reply(tab, { type: "init", ...this.payloadFields() });
+        break;
+      }
       case "inputmode-default":
         if (m.inputMode === "Spatial" || m.inputMode === "Cursor" || m.inputMode === "Arrows") store.update((s) => ({ ...s, defaultInputMode: m.inputMode as AppSettings["defaultInputMode"] }));
         break;

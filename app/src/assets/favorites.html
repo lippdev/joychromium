@@ -1,32 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Favorites</title>
+<title>Favoritos</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="list.css">
 </head>
 <body>
 <main>
-  <h1>Favorites</h1>
-  <p class="lead">Press the ★ button (or <kbd id="favkey">Ctrl+D</kbd>, or hold <kbd>LB</kbd> and press <kbd>Y</kbd>) on any page to keep it here. Favorites also appear on the new tab page.</p>
-  <div class="bar"><input id="q" placeholder="Filter favorites" autofocus autocomplete="off"></div>
+  <h1 data-i18n="home.favorites">Favoritos</h1>
+  <p class="lead">Use o botão ★ (ou <kbd data-i18n="shortcut.favorite">Ctrl+D</kbd>, ou segure <kbd>LB</kbd> e aperte <kbd>Y</kbd>) em qualquer página. Os favoritos também aparecem na tela inicial.</p>
+  <div class="bar"><input id="q" placeholder="Filtrar favoritos" autofocus autocomplete="off"></div>
   <div id="list"></div>
 </main>
+<script src="i18n.js"></script>
 <script src="list.js"></script>
 <script>
   let all = [];
   const draw = () => {
     const q = $('q').value.trim().toLowerCase();
-    renderList($('list'), all.filter(f => !q || f.title.toLowerCase().includes(q) || f.url.toLowerCase().includes(q)),
-      { removeType: 'favorite-remove', emptyText: all.length ? 'Nothing matches.' : 'No favorites yet.' });
+    renderList($('list'), all.filter((f) => !q || f.title.toLowerCase().includes(q) || f.url.toLowerCase().includes(q)),
+      { removeType: 'favorite-remove', emptyText: all.length ? 'Nada encontrado.' : 'Nenhum favorito ainda.' });
   };
   $('q').addEventListener('input', draw);
-  window.joy.onMessage(msg => {
+  window.joy.onMessage((msg) => {
     if (msg.type !== 'init') return;
     paint(msg.theme);
-    if (msg.shortcutMod) document.getElementById('favkey').textContent = msg.shortcutMod + '+D';
-    all = (msg.favorites || []).map(f => ({ title: f.name, url: f.url }));
+    i18n.set(msg.dictionary, msg.language);
+    if (msg.shortcutMod) {
+      const key = document.querySelector('kbd[data-i18n="shortcut.favorite"]');
+      if (key) key.textContent = msg.shortcutMod + '+D';
+    }
+    all = (msg.favorites || []).map((f) => ({ title: f.name, url: f.url }));
     draw();
   });
   post('ready', {});

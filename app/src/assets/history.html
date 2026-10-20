@@ -1,28 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>History</title>
+<title>Histórico</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="list.css">
 </head>
 <body>
 <main>
-  <h1>History</h1>
-  <p class="lead">Pages you visited in normal tabs. Private tabs and JoyChromium's own pages are never recorded.</p>
-  <div class="bar"><input id="q" placeholder="Search history" autofocus autocomplete="off"><button id="clear">Clear all</button></div>
+  <h1 data-i18n="home.history">Histórico</h1>
+  <p class="lead">Páginas visitadas em abas normais. Abas privadas e páginas do próprio JoyChromium nunca são gravadas.</p>
+  <div class="bar"><input id="q" placeholder="Pesquisar no histórico" autofocus autocomplete="off"><button class="ghost" id="clear">Limpar tudo</button></div>
   <div id="list"></div>
 </main>
+<script src="i18n.js"></script>
 <script src="list.js"></script>
 <script>
   let timer = null;
   const ask = () => post('history-search', { query: $('q').value });
   $('q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(ask, 150); });
-  $('clear').addEventListener('click', () => { post('history-clear', {}); renderList($('list'), [], { removeType: 'history-remove', emptyText: 'History cleared.' }); });
-  window.joy.onMessage(msg => {
-    if (msg.type === 'init') { paint(msg.theme); ask(); }
-    if (msg.type === 'history') renderList($('list'), msg.entries.map(e => ({ title: e.title, url: e.url, when: new Date(e.visitedUtc).toLocaleString() })),
-      { removeType: 'history-remove', emptyText: $('q').value ? 'Nothing matches.' : 'No history yet.' });
+  $('clear').addEventListener('click', () => {
+    post('history-clear', {});
+    renderList($('list'), [], { removeType: 'history-remove', emptyText: 'Histórico limpo.' });
+  });
+  window.joy.onMessage((msg) => {
+    if (msg.type === 'init') { paint(msg.theme); i18n.set(msg.dictionary, msg.language); ask(); }
+    if (msg.type === 'history') {
+      renderList($('list'), msg.entries.map((e) => ({ title: e.title, url: e.url, when: new Date(e.visitedUtc).toLocaleString() })),
+        { removeType: 'history-remove', emptyText: $('q').value ? 'Nada encontrado.' : 'Nenhum histórico ainda.' });
+    }
   });
   post('ready', {});
 </script>

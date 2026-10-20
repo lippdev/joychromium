@@ -1,76 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src joychromium:; style-src joychromium: 'unsafe-inline'; img-src https: http: data:; font-src joychromium:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src joychromium:; style-src joychromium: 'unsafe-inline'; img-src https: http: data: blob:; font-src joychromium:; connect-src joychromium:;">
 <title>JoyChromium</title>
-<link rel="stylesheet" href="/assets/chrome/chrome.css">
+<link rel="stylesheet" href="/assets/design/tokens.css">
+<link rel="stylesheet" href="/renderer/shell.css">
 </head>
 <body>
-<div id="top">
-  <div id="titlebar">
-    <div class="logo"><b>J</b></div>
-    <div id="tabs" role="tablist"></div>
-    <button id="newtab" class="caption" data-cmd="new-tab" aria-label="New tab" title="New tab · Start">＋</button>
-    <div class="spacer"></div>
-    <div id="wincontrols">
-      <button class="caption" data-win="minimize" aria-label="Minimize" title="Minimize"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 5.5h10" /></svg></button>
-      <button class="caption" data-win="maximize" aria-label="Maximize" title="Maximize"><svg viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" /></svg></button>
-      <button class="caption close" data-win="close" aria-label="Close" title="Close"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0l10 10M10 0L0 10" /></svg></button>
-    </div>
-  </div>
-  <div id="toolbar">
-    <button class="tool" data-cmd="back" aria-label="Back" title="Back · LB / B">‹</button>
-    <button class="tool" data-cmd="forward" aria-label="Forward" title="Forward · RB">›</button>
-    <button class="tool" data-cmd="reload" aria-label="Reload" title="Reload · X">⟳</button>
-    <button class="tool" data-cmd="home" aria-label="Home" title="Home">⌂</button>
-    <div id="addresswrap">
-      <input id="address" aria-label="Address" placeholder="Search or type a web address" autocomplete="off" spellcheck="false">
-      <div id="suggestions" role="listbox" hidden></div>
-    </div>
-    <button id="go" class="tool primary" aria-label="Go">GO</button>
-    <button id="favorite" class="tool" aria-label="Favorite" title="Add to favorites · LB+Y">☆</button>
-    <span id="tvbadge" class="badge">TV ON</span>
-    <button class="tool" data-cmd="settings" aria-label="Settings" title="Settings">⚙</button>
-    <button class="tool" data-cmd="window-mode" aria-label="Switch between TV and window mode" title="TV / window mode · F11">⛶</button>
-  </div>
-  <div id="permission" class="panel" hidden>
-    <div class="panel-title">PERMISSION REQUEST</div>
-    <div id="permission-text"></div>
-    <div class="row" data-focusgroup>
-      <button class="key" data-perm="deny">DENY</button>
-      <button class="key" data-perm="deny-always">ALWAYS DENY</button>
-      <button class="key" data-perm="allow">ALLOW</button>
-      <button class="key" data-perm="allow-always">ALWAYS ALLOW</button>
-    </div>
-  </div>
-  <div id="findbar" class="panel" hidden>
-    <input id="findtext" aria-label="Find in page" placeholder="Find in page">
-    <button class="key" id="findprev">▲</button>
-    <button class="key" id="findnext">▼</button>
-    <button class="key" id="findclose">✕</button>
-  </div>
-</div>
-
-<div id="bottom">
-  <div id="keyboard" class="panel" hidden>
-    <div class="panel-head"><span id="keyboard-title" class="panel-title">CONTROLLER KEYBOARD</span><span class="hint">D-PAD MOVE · A SELECT · B CLOSE</span></div>
-    <div id="keys" data-focusgroup></div>
-    <div class="row" data-focusgroup>
-      <button class="key wide" data-key="shift">SHIFT</button>
-      <button class="key wider" data-key="space">SPACE</button>
-      <button class="key wide" data-key="backspace">⌫</button>
-      <button class="key wide" data-key="enter">ENTER</button>
-      <button class="key wide" data-key="done">DONE</button>
-    </div>
-  </div>
-  <div id="statusbar">
-    <span id="controller" class="muted">XINPUT · SEARCHING</span>
-    <span id="adblock" class="muted">ADBLOCK …</span>
-    <span id="status"></span>
-    <span class="faint">Y KEYBOARD · START NEW TAB · BACK CLOSE TAB · LT/RT SWITCH TAB · LB/RB HISTORY · X RELOAD · R-STICK CLICK MODE</span>
-  </div>
-</div>
-<script type="module" src="/esm/renderer/chrome.js"></script>
+<div id="root"></div>
+<script type="module" src="/renderer/shell.js"></script>
 </body>
 </html>

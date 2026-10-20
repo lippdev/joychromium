@@ -15,6 +15,10 @@ export const Channels = {
   shellStatus: "shell:status",
   /** chrome renderer -> main: controller input event */
   controller: "shell:controller",
+  /** chrome renderer -> main (invoke): one small screenshot per tab, for the tab switcher */
+  shellThumbnails: "shell:thumbnails",
+  /** chrome renderer -> main: the chrome's height, so the tab views sit below it */
+  shellLayout: "shell:layout",
 } as const;
 
 export interface TabState {
@@ -43,6 +47,7 @@ export interface ShellState {
   inputMode: "Spatial" | "Cursor" | "Arrows";
   adBlock: boolean;
   controllerConnected: boolean;
+  controllerFamily: "xbox" | "playstation" | "switch" | "generic";
   chromeVisible: boolean;
   permission?: PermissionPrompt;
   theme: { accent: string; background: string; surface: string; text: string };
@@ -53,6 +58,10 @@ export interface ShellState {
   shortcutMod: "Ctrl" | "Cmd";
   nativeWindowControls: boolean;
   windowMode: "tv" | "window";
+  uiScale: number;
+  overscan: number;
+  highContrast: boolean;
+  language: "pt-BR" | "en";
 }
 
 export type ShellCommand =
@@ -86,6 +95,8 @@ export type ShellCommand =
   | { type: "keyboard-submit" }
   | { type: "address-input"; text: string }
   | { type: "cycle-input-mode" }
+  | { type: "chrome-height"; height: number }
+  | { type: "ui-settings"; uiScale?: number; overscan?: number; highContrast?: boolean; language?: "pt-BR" | "en" }
   | { type: "escape" };
 
 export type ControllerEvent =
@@ -94,4 +105,4 @@ export type ControllerEvent =
   | { type: "cursor-move"; dx: number; dy: number }
   | { type: "cursor-click" }
   | { type: "scroll"; notches: number }
-  | { type: "connected"; connected: boolean };
+  | { type: "connected"; connected: boolean; family?: "xbox" | "playstation" | "switch" | "generic" };
