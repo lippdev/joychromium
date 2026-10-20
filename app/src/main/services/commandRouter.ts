@@ -1,7 +1,8 @@
 import { Pages } from "../../shared/pages";
 import { newTabTarget } from "../../shared/settings";
 import { buildSuggestions } from "../../shared/suggestion";
-import { insertIntoPage, mediaControl, submitPage } from "./keyboard";
+import { mediaControl } from "../controllerActions";
+import { insertIntoPage, submitPage } from "./keyboard";
 import type { ShellHost } from "./shellHost";
 import type { ShellCommand } from "../../shared/ipc";
 import type { AppSettings } from "../../shared/settings";

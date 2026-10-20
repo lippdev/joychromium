@@ -1,4 +1,5 @@
 import type { ShellCommand } from "./ipc";
+import { isMediaAction } from "./media";
 
 /**
  * Validation for commands arriving from the chrome renderer. The renderer is our own code, but a compromised or
@@ -40,7 +41,7 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
     case "zoom":
       return typeof c.delta === "number";
     case "media":
-      return c.action === "toggle" || c.action === "next" || c.action === "previous";
+      return isMediaAction(c.action);
     case "chrome-height":
       return typeof c.height === "number" && c.height >= 0 && c.height < 1000;
     case "ui-settings":

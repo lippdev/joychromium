@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { commandForShortcut, type ShortcutInput } from "../../src/shared/shortcuts";
+import { activateIntent, mediaActionForKey, mediaCommandForKey } from "../../src/shared/media";
 import { decideDownload, downloadStatus, nextAvailablePath } from "../../src/main/services/downloads";
 import { tabViewBounds } from "../../src/main/services/layout";
 import { describePermission, PermissionQueue } from "../../src/main/services/permissions";
@@ -31,8 +32,33 @@ describe("keyboard shortcuts", () => {
   it("keeps the plain keys and refuses unmodified letters", () => {
     expect(commandForShortcut(key("Escape"), "h", "f")).toEqual({ type: "escape" });
     expect(commandForShortcut(key("F11"), "h", "f")).toEqual({ type: "window-mode" });
+    expect(commandForShortcut(key("MediaPlayPause"), "h", "f")).toEqual({ type: "media", action: "toggle" });
+    expect(commandForShortcut(key("MediaTrackNext"), "h", "f")).toEqual({ type: "media", action: "next" });
+    expect(commandForShortcut(key("MediaTrackPrevious"), "h", "f")).toEqual({ type: "media", action: "previous" });
     expect(commandForShortcut(key("t"), "h", "f")).toBeUndefined();
     expect(commandForShortcut({ ...key("t", { control: true }), type: "keyUp" }, "h", "f")).toBeUndefined();
+  });
+});
+
+describe("media", () => {
+  it("maps the keys Chromium reports for the media keys", () => {
+    expect(mediaActionForKey("MediaPlayPause")).toBe("toggle");
+    expect(mediaActionForKey("Play")).toBe("toggle");
+    expect(mediaActionForKey("pause")).toBe("toggle");
+    // Chromium reports the UI Events names; the VK-style ones stay accepted.
+    expect(mediaActionForKey("MediaTrackNext")).toBe("next");
+    expect(mediaActionForKey("MediaNextTrack")).toBe("next");
+    expect(mediaActionForKey("MediaTrackPrevious")).toBe("previous");
+    expect(mediaActionForKey("MediaPreviousTrack")).toBe("previous");
+    expect(mediaActionForKey("Enter")).toBeUndefined();
+    expect(mediaCommandForKey("MediaTrackNext")).toEqual({ type: "media", action: "next" });
+    expect(mediaCommandForKey("Enter")).toBeUndefined();
+    expect(isShellCommand({ type: "media", action: "next" })).toBe(true);
+    expect(isShellCommand({ type: "media", action: "stop" })).toBe(false);
+  });
+  it("gives the A button to play/pause only when the page has media", () => {
+    expect(activateIntent(true)).toBe("media");
+    expect(activateIntent(false)).toBe("focus");
   });
 });
 

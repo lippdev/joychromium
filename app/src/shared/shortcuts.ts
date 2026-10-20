@@ -1,4 +1,5 @@
-import type { ShellCommand } from "../shared/ipc";
+import type { ShellCommand } from "./ipc";
+import { mediaCommandForKey } from "./media";
 
 /**
  * Turns a keyboard event into a shell command. Pure, so every platform mapping is covered by a unit test instead of
@@ -17,9 +18,8 @@ export function commandForShortcut(input: ShortcutInput, historyUrl: string, fav
   const mod = input.control || input.meta;
   const key = input.key.toLowerCase();
   if (key === "escape") return { type: "escape" };
-  if (key === "mediaplaypause" || key === "play") return { type: "media", action: "toggle" };
-  if (key === "medianexttrack") return { type: "media", action: "next" };
-  if (key === "mediaprevioustrack") return { type: "media", action: "previous" };
+  const media = mediaCommandForKey(key);
+  if (media) return media;
   if (key === "f11") return { type: "window-mode" };
   if (!mod) return undefined;
   if (key === "t") return input.shift ? { type: "reopen-tab" } : { type: "new-tab" };

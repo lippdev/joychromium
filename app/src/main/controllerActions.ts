@@ -1,5 +1,6 @@
 import type { WebContents } from "electron";
 import type { Direction } from "../shared/controllerInput";
+import type { MediaAction } from "../shared/media";
 
 /** Turns controller intents into page input. Everything here goes through Chromium's input pipeline, so it is cross-platform. */
 
@@ -34,6 +35,19 @@ export async function spatialMove(wc: WebContents, direction: Direction): Promis
 
 export async function spatialActivate(wc: WebContents): Promise<void> {
   await runInPageWorld(wc, "window.__joy && window.__joy.activate()");
+}
+
+const MEDIA_CALLS: Record<MediaAction, string> = { toggle: "playPause", next: "mediaNext", previous: "mediaPrevious" };
+
+/** Runs a media action in the injected script; false when the page has nothing to play, pause or skip. */
+export async function spatialMedia(wc: WebContents, action: MediaAction): Promise<boolean> {
+  const call = MEDIA_CALLS[action];
+  return Boolean(await runInPageWorld<boolean>(wc, `window.__joy && window.__joy.${call} ? window.__joy.${call}() : false`));
+}
+
+/** Play/pause and track skipping for the media keys and the quick menu. */
+export async function mediaControl(wc: WebContents | undefined, action: MediaAction): Promise<void> {
+  if (wc) await spatialMedia(wc, action);
 }
 
 /** Virtual cursor: the overlay is drawn by the injected script; hover and clicks are real input events at the same point. */

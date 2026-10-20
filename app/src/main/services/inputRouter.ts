@@ -1,7 +1,8 @@
 import type { WebContents } from "electron";
 import type { ControllerEvent } from "../../shared/ipc";
+import { activateIntent } from "../../shared/media";
 import type { InputMode } from "../../shared/settings";
-import { sendArrow, sendKey, spatialActivate, spatialMove, type VirtualCursor } from "../controllerActions";
+import { sendArrow, sendKey, spatialActivate, spatialMedia, spatialMove, type VirtualCursor } from "../controllerActions";
 
 export interface InputHost {
   readonly activeWebContents: WebContents | undefined;
@@ -37,8 +38,10 @@ export class InputRouter {
       case "activate":
         if (!wc) return;
         if (this.host.inputMode === "Cursor") this.cursor.click(wc);
-        else if (this.host.inputMode === "Spatial") await spatialActivate(wc);
-        else sendKey(wc, "Return");
+        else if (activateIntent(await spatialMedia(wc, "toggle")) === "focus") {
+          if (this.host.inputMode === "Spatial") await spatialActivate(wc);
+          else sendKey(wc, "Return");
+        }
         break;
       case "cursor-move":
         if (wc && this.host.inputMode === "Cursor") {

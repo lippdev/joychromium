@@ -1,5 +1,5 @@
-// JoyChromium spatial navigation. Injected into every document; the shell calls window.__joy.move('up'|'down'|'left'|'right')
-// and window.__joy.activate(). Focus is real DOM focus, so pages get their normal :focus / focusin behaviour.
+// JoyChromium spatial navigation. Injected into every document; the shell calls window.__joy.move('up'|'down'|'left'|'right'),
+// window.__joy.activate() and the media actions. Focus is real DOM focus, so pages get their normal :focus / focusin behaviour.
 (() => {
   if (window.__joy) return;
   const SELECTOR = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"], [role="menuitem"], [role="tab"], [role="option"], [contenteditable="true"], video[controls], audio[controls]';
@@ -71,6 +71,47 @@
     const dy = dir === 'up' ? -innerHeight / 2 : dir === 'down' ? innerHeight / 2 : 0;
     scrollBy({ left: dx, top: dy, behavior: 'smooth' });
   };
+  // Media: play/pause and track skipping through the page's own player. The media session gets the same actions, so
+  // the hardware media keys work even on a page that does not implement them.
+  const mediaElements = () => Array.from(document.querySelectorAll('video,audio'));
+  const hasSource = el => Boolean(el.currentSrc || el.srcObject || el.getAttribute('src') || el.querySelector('source'));
+  const activeMedia = () => {
+    const all = mediaElements();
+    return all.find(el => !el.paused && !el.ended) || all.find(hasSource) || null;
+  };
+  const invoke = (el, method) => {
+    try {
+      const result = el[method]();
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (_) {}
+  };
+  const playPause = () => {
+    const el = activeMedia();
+    if (!el) return false;
+    invoke(el, el.paused ? 'play' : 'pause');
+    return true;
+  };
+  const skip = dir => {
+    if (!activeMedia()) return false;
+    const control = document.querySelector(dir === 'next'
+      ? '[aria-label*="next" i], .ytp-next-button, [data-testid*="next" i]'
+      : '[aria-label*="previous" i], .ytp-prev-button, [data-testid*="prev" i]');
+    if (!control) return false;
+    control.click();
+    return true;
+  };
+  const session = navigator.mediaSession;
+  if (session && typeof session.setActionHandler === 'function') {
+    const handlers = {
+      play: () => { const el = activeMedia(); if (el && el.paused) invoke(el, 'play'); },
+      pause: () => { const el = activeMedia(); if (el && !el.paused) invoke(el, 'pause'); },
+      nexttrack: () => skip('next'),
+      previoustrack: () => skip('previous'),
+    };
+    for (const action in handlers) {
+      try { session.setActionHandler(action, handlers[action]); } catch (_) {}
+    }
+  }
   window.__joy = {
     move(dir) {
       const from = focused();
@@ -91,6 +132,9 @@
       el.click();
       return 'click';
     },
+    playPause,
+    mediaNext() { return skip('next'); },
+    mediaPrevious() { return skip('previous'); },
     clear() { if (current) current.classList.remove('__joy-focus'); current = null; }
   };
 })();

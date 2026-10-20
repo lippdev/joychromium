@@ -33,6 +33,8 @@ export interface JoyState {
   command: (command: unknown) => Promise<void>;
   /** Evaluates JavaScript in the active tab (tests only; tab views are not reachable through Playwright). */
   pageEval: (script: string) => Promise<unknown>;
+  /** Evaluates JavaScript in the injected script's world, where `window.__joy` lives (tests only). */
+  spatialEval: (script: string) => Promise<unknown>;
   dataDir: string;
   /** Widevine status from the content-security build, for the diagnostics and the tests. */
   widevine: string;
@@ -68,6 +70,7 @@ globalThis.joy = {
   tabs: () => [],
   command: async () => undefined,
   pageEval: async () => undefined,
+  spatialEval: async () => undefined,
   dataDir,
   widevine: "starting",
   spatialWorld: async () => ({ isolated: "unavailable", page: "unavailable" }),
@@ -136,6 +139,10 @@ async function start(): Promise<void> {
     shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active, isLoading: t.isLoading }));
   globalThis.joy.command = (command) => shell.handle(command as never);
   globalThis.joy.pageEval = (script) => shell.activeWebContents?.executeJavaScript(script, true) ?? Promise.resolve(undefined);
+  globalThis.joy.spatialEval = (script) => {
+    const wc = shell.activeWebContents;
+    return wc ? runInPageWorld<unknown>(wc, script) : Promise.resolve(undefined);
+  };
   globalThis.joy.spatialWorld = async () => {
     const wc = shell.activeWebContents;
     if (!wc) return { isolated: "no-tab", page: "no-tab" };
