@@ -33,6 +33,8 @@ test("opens fullscreen in TV mode and keeps a single instance", async () => {
 // Inside the Flatpak sandbox the host updates the bundle, so the settings row says where updates come from instead of
 // offering a download that would land on top of the sandbox files.
 test("a Flatpak build reports Flathub as its updater", async () => {
+  // FLATPAK_ID only decides the updater on Linux; everywhere else the same variable must change nothing.
+  test.skip(process.platform !== "linux", "a Flatpak sandbox only exists on Linux");
   const data = mkdtempSync(join(tmpdir(), "joychromium-e2e-"));
   writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", windowMode: "window" }));
   const app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data, FLATPAK_ID: "dev.lipp.joychromium" } });
