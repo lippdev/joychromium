@@ -122,16 +122,18 @@ function moveFocus(button: number): Promise<number> {
       resolve(-1);
     }, 5_000);
     pad.buttons[index]!.pressed = true;
-    const frame = (): void => {
+    // Watch with a timer, not with an animation frame: waiting for the next frame adds up to a frame (16 ms) to every
+    // sample, which is measurement error, not latency the viewer feels.
+    const watch = (): void => {
       if (document.activeElement !== from) {
         clearTimeout(give);
         pad.buttons[index]!.pressed = false;
         resolve(performance.now() - started);
         return;
       }
-      requestAnimationFrame(frame);
+      setTimeout(watch, 0);
     };
-    requestAnimationFrame(frame);
+    setTimeout(watch, 0);
   }), button);
 }
 
