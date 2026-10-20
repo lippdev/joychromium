@@ -11,10 +11,12 @@ export const Channels = {
   pageFocusIn: "page:focusin",
   /** chrome renderer -> main: a shell command */
   shellCommand: "shell:command",
-  /** main -> chrome renderer: full state snapshot */
+  /** main -> chrome renderer: full state snapshot, sent once when the UI says it is ready */
   shellState: "shell:state",
-  /** main -> chrome renderer: transient status line */
-  shellStatus: "shell:status",
+  /** main -> chrome renderer: only the state areas that changed since the last message */
+  shellPatch: "shell:patch",
+  /** chrome renderer -> main: the UI is listening and wants the first full snapshot */
+  shellReady: "shell:ready",
   /** chrome renderer -> main: controller input event */
   controller: "shell:controller",
   /** chrome renderer -> main (invoke): one small screenshot per tab, for the tab switcher */
@@ -66,6 +68,9 @@ export interface ShellState {
   language: "pt-BR" | "en";
   crashReports: boolean;
 }
+
+/** A state update that carries only the areas that changed, applied over the snapshot the renderer already has. */
+export type ShellStatePatch = Partial<ShellState>;
 
 export type ShellCommand =
   | { type: "navigate"; url: string; allowHttp?: boolean }

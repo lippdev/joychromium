@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, powerSaveBlocker, session, type Session, type W
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { Channels, type ControllerEvent, type PermissionPrompt, type ShellCommand, type ShellState } from "../shared/ipc";
+import { diffShellState } from "../shared/statePatch";
 import { displayUrl, isInternal, isWebUrl, Pages } from "../shared/pages";
 import type { WindowMode } from "../shared/platform";
 import { hostOf, isDangerousDownload, isThirdPartyRequest, allowPopup, safeFileName, trackingPolicy } from "../shared/security";
@@ -70,6 +71,10 @@ export class Shell {
   private readonly navigation: Navigation;
   private lastSavedSession = "";
   private chromeHideTimer: NodeJS.Timeout | undefined;
+  /** True once the chrome UI is listening; until then a broadcast has nowhere to land. */
+  private chromeReady = false;
+  /** The state the chrome UI already has; undefined until it asks for the first full snapshot. */
+  private sentState: ShellState | undefined;
 
   constructor(private readonly deps: ShellDeps) {
     this.window = new BrowserWindow(browserWindowOptions(deps.store.current.theme.background, join(deps.distDir, "preload", "chrome.js")));
@@ -119,7 +124,7 @@ export class Shell {
 
   status(text: string): void {
     this.statusText = text;
-    this.window.webContents.send(Channels.shellStatus, text);
+    this.broadcast();
   }
 
   setStatus(text: string): void {
@@ -242,7 +247,12 @@ export class Shell {
     this.window.on("unmaximize", () => this.layout.apply());
     this.window.on("close", () => this.deps.store.saveSession(this.tabs.sessionUrls()));
     this.window.webContents.on("before-input-event", (event, input) => this.handleShortcut(event, input));
-    this.window.webContents.on("render-process-gone", (_e, details) => this.deps.log.error(`Shell UI renderer gone: ${details.reason}`));
+    // The UI is gone or reloading: nothing can apply a patch until it asks for a fresh snapshot again.
+    this.window.webContents.on("did-start-loading", () => this.forgetChrome());
+    this.window.webContents.on("render-process-gone", (_event, details) => {
+      this.forgetChrome();
+      this.deps.log.error(`Shell UI renderer gone: ${details.reason}`);
+    });
   }
 
   private readonly wired = new WeakSet<WebContents>();
@@ -313,7 +323,29 @@ export class Shell {
 
   // ---- State to the chrome UI ----
 
+  /**
+   * Sends only what changed since the UI last heard from us: the whole state for a UI that just started, a patch of
+   * the changed areas after that (E3-03). Nothing goes out before the UI announces itself, so a patch can never land
+   * on top of a snapshot that never arrived.
+   */
   broadcast(): void {
+    if (!this.chromeReady || this.window.isDestroyed()) return;
+    const state = this.snapshot();
+    if (!this.sentState) {
+      this.window.webContents.send(Channels.shellState, state);
+    } else {
+      const patch = diffShellState(this.sentState, state);
+      if (patch) this.window.webContents.send(Channels.shellPatch, patch);
+    }
+    this.sentState = state;
+  }
+
+  private forgetChrome(): void {
+    this.chromeReady = false;
+    this.sentState = undefined;
+  }
+
+  private snapshot(): ShellState {
     const s = this.deps.store.current;
     const active = this.tabs.active;
     const state: ShellState = {
@@ -340,12 +372,19 @@ export class Shell {
       language: s.language,
       crashReports: s.crashReports,
     };
-    if (!this.window.isDestroyed()) this.window.webContents.send(Channels.shellState, state);
+    return state;
   }
 
   // ---- Commands from the chrome UI ----
 
   private wireIpc(): void {
+    // The chrome UI registers its listeners first, then asks for the snapshot that starts the patch stream.
+    ipcMain.on(Channels.shellReady, (event) => {
+      if (event.sender !== this.window.webContents) return;
+      this.chromeReady = true;
+      this.sentState = undefined;
+      this.broadcast();
+    });
     ipcMain.on(Channels.shellCommand, (event, command: unknown) => {
       if (event.sender !== this.window.webContents) return;
       if (!isShellCommand(command)) {

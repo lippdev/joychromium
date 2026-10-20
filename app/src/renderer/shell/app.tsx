@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ShellState } from "../../shared/ipc";
+import { applyShellStatePatch } from "../../shared/statePatch";
 import { buttonGlyphs } from "../../shared/controllerGlyphs";
 import { t } from "../../shared/i18n";
 import { bridge, cmd } from "./bridge";
@@ -27,9 +28,10 @@ export function App() {
   const chromeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // One full snapshot when the UI says it is listening, then only the areas that changed, applied over it.
     bridge().onState(setState);
-    // Transient statuses (blocked navigation, download progress) arrive on their own channel.
-    bridge().onStatus((status) => setState((current) => ({ ...current, status })));
+    bridge().onPatch((patch) => setState((current) => applyShellStatePatch(current, patch)));
+    bridge().ready();
   }, []);
 
   useEffect(() => {
