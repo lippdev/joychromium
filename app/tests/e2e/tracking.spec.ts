@@ -28,6 +28,7 @@ test.afterEach(async () => {
 });
 
 const tabs = () => app.evaluate(() => globalThis.joy.tabs());
+const activeTab = async () => (await tabs()).find((tab) => tab.isActive);
 const command = (c: unknown) => app.evaluate(({}, cmd) => globalThis.joy.command(cmd), c);
 const pageEval = <T>(script: string) => app.evaluate(({}, code) => globalThis.joy.pageEval(code), script) as Promise<T>;
 const level = () => app.evaluate(() => globalThis.joy.adblockLevel());
@@ -43,6 +44,9 @@ test("each level blocks a different set of hosts without a restart", async () =>
   expect(await level()).toBe("Balanced");
 
   await command({ type: "navigate", url: "joychromium://settings" });
+  // Wait for the page before evaluating in it: an evaluate that lands mid-navigation never resolves.
+  await expect.poll(async () => (await activeTab())?.url, { timeout: 30_000 }).toBe("joychromium://settings");
+  await expect.poll(async () => (await activeTab())?.isLoading, { timeout: 30_000 }).toBe(false);
   await expect.poll(() => pageEval<string>("document.getElementById('trackingPrevention')?.value"), { timeout: 30_000 }).toBe("Balanced");
   await expect.poll(statusText, { timeout: 15_000 }).toMatch(/^Balanced: 14 lists loaded/);
 
