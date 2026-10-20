@@ -96,10 +96,11 @@
     box.replaceChildren(...items.map((item) => {
       const b = document.createElement('button');
       b.className = 'opt' + (isActive(item) ? ' active' : '');
+      b.setAttribute('aria-pressed', String(isActive(item)));
       b.innerHTML = render(item);
       b.addEventListener('click', () => {
         onPick(item);
-        [...box.children].forEach((c) => c.classList.toggle('active', c === b));
+        [...box.children].forEach((c) => { c.classList.toggle('active', c === b); c.setAttribute('aria-pressed', String(c === b)); });
       });
       return b;
     }));

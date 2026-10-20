@@ -32,19 +32,19 @@
       </div>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.scale">Tamanho da interface</span><small data-i18n="settings.scaleHint">Texto maior para o sofá</small></div>
+      <div><label for="uiScale" data-i18n="settings.scale">Tamanho da interface</label><small data-i18n="settings.scaleHint">Texto maior para o sofá</small></div>
       <select id="uiScale"><option value="0.8">80%</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option></select>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.overscan">Margem da tela (overscan)</span><small data-i18n="settings.overscanHint">Para TVs que cortam as bordas</small></div>
+      <div><label for="overscan" data-i18n="settings.overscan">Margem da tela (overscan)</label><small data-i18n="settings.overscanHint">Para TVs que cortam as bordas</small></div>
       <select id="overscan"><option value="0">0%</option><option value="2">2%</option><option value="4">4%</option><option value="6">6%</option><option value="8">8%</option></select>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.contrast">Alto contraste</span></div>
-      <label class="switch"><input type="checkbox" id="highContrast" data-ui><span></span></label>
+      <div><span id="highContrastLabel" data-i18n="settings.contrast">Alto contraste</span></div>
+      <label class="switch"><input type="checkbox" id="highContrast" data-ui aria-labelledby="highContrastLabel"><span></span></label>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.language">Idioma</span></div>
+      <div><label for="language" data-i18n="settings.language">Idioma</label></div>
       <select id="language"><option value="pt-BR">Português (Brasil)</option><option value="en">English</option></select>
     </div>
     <div class="status" id="uiStatus"></div>
@@ -70,7 +70,7 @@
       <label><input type="radio" name="startup" value="Restore"> Restaurar sessão</label>
       <label><input type="radio" name="startup" value="Custom"> URL fixa</label>
     </div>
-    <div class="row"><div>URL de início</div><input type="text" id="startupUrl"></div>
+    <div class="row"><label for="startupUrl">URL de início</label><input type="text" id="startupUrl"></div>
 
     <h3 data-i18n="settings.newTab">Nova aba abre</h3>
     <div class="choices">
@@ -78,19 +78,19 @@
       <label><input type="radio" name="newTab" value="Home"> Página inicial</label>
       <label><input type="radio" name="newTab" value="Custom"> URL fixa</label>
     </div>
-    <div class="row"><div>URL da nova aba</div><input type="text" id="newTabUrl"></div>
-    <div class="row"><div data-i18n="settings.home">Página inicial</div><input type="text" id="homeUrl"></div>
+    <div class="row"><label for="newTabUrl">URL da nova aba</label><input type="text" id="newTabUrl"></div>
+    <div class="row"><label for="homeUrl" data-i18n="settings.home">Página inicial</label><input type="text" id="homeUrl"></div>
     <div class="row"><button class="primary" id="generalSave" data-i18n="settings.save">Salvar</button><span class="status" id="generalStatus"></span></div>
 
-    <h3 data-i18n="settings.shortcuts">Atalhos na nova aba</h3>
-    <textarea id="shortcuts" rows="7" spellcheck="false"></textarea>
+    <h3 id="shortcutsLabel" data-i18n="settings.shortcuts">Atalhos na nova aba</h3>
+    <textarea id="shortcuts" rows="7" spellcheck="false" aria-labelledby="shortcutsLabel"></textarea>
     <div class="row"><button class="ghost" id="shortcutsSave" data-i18n="settings.save">Salvar</button><span class="status" id="shortcutsStatus"></span></div>
   </section>
 
   <section id="controller">
     <h2 data-i18n="settings.controller">Controle</h2>
     <div class="row">
-      <div><span data-i18n="settings.defaultMode">Modo de entrada padrão</span><small>Spatial: pula entre elementos · Cursor: ponteiro · Arrows: setas</small></div>
+      <div><label for="defaultInputMode" data-i18n="settings.defaultMode">Modo de entrada padrão</label><small>Spatial: pula entre elementos · Cursor: ponteiro · Arrows: setas</small></div>
       <select id="defaultInputMode"><option>Spatial</option><option>Cursor</option><option>Arrows</option></select>
     </div>
     <div class="status" id="controllerStatus"></div>
@@ -101,23 +101,23 @@
   <section id="privacy">
     <h2 data-i18n="settings.privacy">Privacidade e segurança</h2>
     <div class="row">
-      <div><span data-i18n="settings.adblock">Bloquear anúncios e rastreadores</span><small id="adblockNote">Ghostery engine</small></div>
-      <label class="switch"><input type="checkbox" id="adblock"><span></span></label>
+      <div><span id="adblockLabel" data-i18n="settings.adblock">Bloquear anúncios e rastreadores</span><small id="adblockNote">Ghostery engine</small></div>
+      <label class="switch"><input type="checkbox" id="adblock" aria-labelledby="adblockLabel"><span></span></label>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.httpsOnly">Somente HTTPS</span><small>Tenta a versão segura; pergunta antes de cair para http</small></div>
-      <label class="switch"><input type="checkbox" id="httpsOnly" data-privacy><span></span></label>
+      <div><span id="httpsOnlyLabel" data-i18n="settings.httpsOnly">Somente HTTPS</span><small>Tenta a versão segura; pergunta antes de cair para http</small></div>
+      <label class="switch"><input type="checkbox" id="httpsOnly" data-privacy aria-labelledby="httpsOnlyLabel"><span></span></label>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.riskyDownloads">Bloquear downloads perigosos</span><small>Instaladores e scripts do seu sistema são recusados</small></div>
-      <label class="switch"><input type="checkbox" id="blockDangerousDownloads" data-privacy><span></span></label>
+      <div><span id="blockDangerousDownloadsLabel" data-i18n="settings.riskyDownloads">Bloquear downloads perigosos</span><small>Instaladores e scripts do seu sistema são recusados</small></div>
+      <label class="switch"><input type="checkbox" id="blockDangerousDownloads" data-privacy aria-labelledby="blockDangerousDownloadsLabel"><span></span></label>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.tracking">Proteção contra rastreamento</span><small>Equilibrado pede para não rastrear; rígido também bloqueia cookies de terceiros</small></div>
+      <div><label for="trackingPrevention" data-i18n="settings.tracking">Proteção contra rastreamento</label><small>Equilibrado pede para não rastrear; rígido também bloqueia cookies de terceiros</small></div>
       <select id="trackingPrevention" data-privacy><option>Basic</option><option>Balanced</option><option>Strict</option></select>
     </div>
     <div class="row">
-      <div><span data-i18n="settings.doh">DNS over HTTPS</span><small>Aplica ao reiniciar</small></div>
+      <div><label for="dnsOverHttps" data-i18n="settings.doh">DNS over HTTPS</label><small>Aplica ao reiniciar</small></div>
       <select id="dnsOverHttps" data-privacy><option>Off</option><option>Cloudflare</option><option>Quad9</option><option>Google</option></select>
     </div>
     <div class="status" id="privacyStatus"></div>
@@ -126,8 +126,8 @@
     <div id="permissions"></div>
 
     <div class="row">
-      <div><span data-i18n="settings.crashReports">Enviar relatórios de falha</span><small>Desligado por padrão. Ajuda a corrigir erros; nenhuma página visitada é enviada.</small></div>
-      <label class="switch"><input type="checkbox" id="crashReports" data-ui><span></span></label>
+      <div><span id="crashReportsLabel" data-i18n="settings.crashReports">Enviar relatórios de falha</span><small>Desligado por padrão. Ajuda a corrigir erros; nenhuma página visitada é enviada.</small></div>
+      <label class="switch"><input type="checkbox" id="crashReports" data-ui aria-labelledby="crashReportsLabel"><span></span></label>
     </div>
     <div class="row">
       <div><span data-i18n="settings.clearData">Limpar cookies, cache, dados de sites e histórico</span><small>Desconecta de todos os sites</small></div>
@@ -184,6 +184,7 @@
     $('engines').replaceChildren(...engines.map((e) => {
       const b = document.createElement('button');
       b.className = 'preset' + (e.template === current.template ? ' active' : '');
+      b.setAttribute('aria-pressed', String(e.template === current.template));
       b.textContent = e.name;
       b.addEventListener('click', () => { post('search-save', { searchEngine: e }); renderEngines(engines, e); flash('searchStatus', e.name); });
       return b;
