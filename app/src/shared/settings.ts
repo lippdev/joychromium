@@ -120,6 +120,8 @@ export interface AppSettings {
   language: Language;
   /** Sends crash reports so bugs get fixed. Off until the user says yes. */
   crashReports: boolean;
+  /** Short haptic tap when A confirms and a double tap when something is blocked. Off until the user asks for it. */
+  vibration: boolean;
   /** host -> permission kind -> allowed */
   sitePermissions: Record<string, Record<string, boolean>>;
   /**
@@ -154,6 +156,7 @@ export function defaultSettings(): AppSettings {
     highContrast: false,
     language: "pt-BR",
     crashReports: false,
+    vibration: false,
     sitePermissions: {},
     streamingDesktopUa: false,
   };
@@ -165,7 +168,7 @@ const bool = (value: unknown, fallback: boolean): boolean => (typeof value === "
 const webUrl = (value: unknown, fallback: string): string => (isWebUrl(value as string) ? (value as string) : fallback);
 
 /** Bumped whenever a stored file needs a new shape; migrations below bring older files forward. */
-export const SETTINGS_SCHEMA_VERSION = 3;
+export const SETTINGS_SCHEMA_VERSION = 4;
 
 /**
  * Old versions this app wrote. The file is plain JSON with every field optional, so the only migrations needed are
@@ -174,6 +177,8 @@ export const SETTINGS_SCHEMA_VERSION = 3;
  *           being enforced, and its default became Balanced. Nothing to rewrite — parseSettings drops the dead keys.
  *   2 -> 3  the per-site streaming user agent was added, off for every profile until a measurement in
  *           docs/DRM-UAS.md justifies turning it on. Nothing to rewrite — a missing key parses as off.
+ *   3 -> 4  haptic feedback arrived, off: an older file gets the switch written as false, so the living room stays
+ *           quiet until someone turns it on.
  */
 export function migrateSettings(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;
@@ -184,6 +189,7 @@ export function migrateSettings(raw: unknown): unknown {
     delete migrated.passwordAutosave;
     delete migrated.autofill;
   }
+  if (version < 4 && typeof migrated.vibration !== "boolean") migrated.vibration = false;
   migrated.schemaVersion = SETTINGS_SCHEMA_VERSION;
   return migrated;
 }
@@ -235,6 +241,7 @@ export function parseSettings(input: unknown): AppSettings {
     highContrast: bool(r.highContrast, d.highContrast),
     language: oneOf(["pt-BR", "en"] as const, r.language, d.language),
     crashReports: bool(r.crashReports, d.crashReports),
+    vibration: bool(r.vibration, d.vibration),
     sitePermissions: permissions,
     streamingDesktopUa: bool(r.streamingDesktopUa, d.streamingDesktopUa),
   };

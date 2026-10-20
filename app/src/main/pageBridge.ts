@@ -60,6 +60,7 @@ export class PageBridge {
       highContrast: s.highContrast,
       crashReports: s.crashReports,
       streamingDesktopUa: s.streamingDesktopUa,
+      vibration: s.vibration,
       appVersion: this.deps.appVersion,
       appUpdate: this.deps.updateStatus(),
       updateUrl: this.deps.updateUrl(),
@@ -147,6 +148,9 @@ export class PageBridge {
       }
       case "inputmode-default":
         if (m.inputMode === "Spatial" || m.inputMode === "Cursor" || m.inputMode === "Arrows") store.update((s) => ({ ...s, defaultInputMode: m.inputMode as AppSettings["defaultInputMode"] }));
+        break;
+      case "vibration-save":
+        if (typeof m.vibration === "boolean") store.update((s) => ({ ...s, vibration: m.vibration as boolean }));
         break;
       case "inputmode-forget":
         if (typeof m.host === "string") store.update((s) => withoutInputMode(s, (m.host as string).toLowerCase()));

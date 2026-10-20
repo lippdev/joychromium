@@ -4,6 +4,7 @@ import { directionOf, stickToScroll, stickToVelocity, type Direction } from "../
 import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
 import type { ShellState } from "../../shared/ipc";
 import { bridge, cmd } from "./bridge";
+import { trackActivePad, vibrate } from "./haptics";
 
 const Button = {
   A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, Back: 8, Start: 9, RightStick: 10,
@@ -42,6 +43,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const padIndex = activePad(active.current, samples, startedUsing(inUse.current, using));
       inUse.current = using;
       const pad = pads.find((p) => p.index === padIndex) ?? null;
+      trackActivePad(pad);
       if (padIndex !== active.current) {
         active.current = padIndex;
         pressed.current.clear();
@@ -92,6 +94,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       if (justPressed(Button.A)) {
         if (overlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
         else bridge().controller({ type: "activate" });
+        vibrate("confirm");
         return;
       }
       if (justPressed(Button.X)) cmd({ type: "reload" });

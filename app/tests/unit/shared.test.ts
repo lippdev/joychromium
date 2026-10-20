@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { displayUrl, errorPageFor, internalPageFile, isDesignPage, isDevOnlyFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
 import {
-  buildSearchUrl, defaultSettings, GOOGLE, isHexColor, isValidSearchTemplate, migrateSettings, newTabTarget, parseSettings, parseShortcut,
-  parseTheme, SETTINGS_SCHEMA_VERSION, startupTargets, THEME_PRESETS, toggleFavorite, withInputMode, withoutInputMode, withoutPermissions, withPermission,
+  buildSearchUrl, defaultSettings, GOOGLE, isHexColor, isValidSearchTemplate, migrateSettings, newTabTarget, parseSettings,
+  parseShortcut, parseTheme, SETTINGS_SCHEMA_VERSION, startupTargets, THEME_PRESETS, toggleFavorite, withInputMode,
+  withoutInputMode, withoutPermissions, withPermission,
 } from "../../src/shared/settings";
+import { hapticTimeline, isBlockedStatus } from "../../src/shared/haptics";
 import {
   allowPopup, dohTemplate, hostOf, isDangerousDownload, isNavigationAllowed, isThirdPartyRequest, safeFileName,
   trackingPolicy, upgradeToHttps, versionAtLeast,
@@ -89,6 +91,14 @@ describe("settings", () => {
     expect(parseSettings({ streamingDesktopUa: "yes" }).streamingDesktopUa).toBe(false);
     expect(migrateSettings({ schemaVersion: 2, httpsOnly: false })).toMatchObject({ schemaVersion: SETTINGS_SCHEMA_VERSION, httpsOnly: false });
   });
+  it("keeps vibration off unless the user asks for it", () => {
+    expect(defaultSettings().vibration).toBe(false);
+    expect(parseSettings({ vibration: true }).vibration).toBe(true);
+    expect(parseSettings({ vibration: "yes" }).vibration).toBe(false);
+    // A file written before the preference existed gets the switch written as off.
+    expect((migrateSettings({ schemaVersion: 3 }) as Record<string, unknown>).vibration).toBe(false);
+    expect((migrateSettings({ schemaVersion: 3, vibration: true }) as Record<string, unknown>).vibration).toBe(true);
+  });
   it("tracks favorites, permissions and input modes", () => {
     const fav = toggleFavorite(defaultSettings(), "https://b.example/two", "Two");
     expect(fav.isFavorite).toBe(true);
@@ -102,6 +112,34 @@ describe("settings", () => {
     expect(withoutInputMode(modes, "a.example").siteInputModes).toEqual({});
     expect(parseShortcut({ name: "Bad", url: "ftp://x" })).toBeUndefined();
     expect(parseShortcut({ name: " ", url: "https://x.example" })).toBeUndefined();
+  });
+});
+
+describe("haptics", () => {
+  it("taps once to confirm and twice, harder, to report a block", () => {
+    const [confirm] = hapticTimeline("confirm");
+    const error = hapticTimeline("error");
+    expect(hapticTimeline("confirm")).toHaveLength(1);
+    expect(error).toHaveLength(2);
+    expect(confirm.at).toBe(0);
+    for (const pulse of [confirm, ...error]) {
+      expect(pulse.strongMagnitude).toBeGreaterThan(0);
+      expect(pulse.weakMagnitude).toBeGreaterThan(0);
+      expect(pulse.strongMagnitude).toBeLessThanOrEqual(1);
+      expect(pulse.weakMagnitude).toBeLessThanOrEqual(1);
+      expect(pulse.duration).toBeGreaterThanOrEqual(20);
+    }
+    expect(confirm.duration).toBeLessThan(error[0].duration);
+    expect(error[0].strongMagnitude).toBeGreaterThan(confirm.strongMagnitude);
+    // The second tap starts only after the first ends, and the whole error cue stays short.
+    expect(error[1].at).toBeGreaterThanOrEqual(error[0].at + error[0].duration);
+    expect(error[1].at + error[1].duration).toBeLessThan(400);
+  });
+  it("recognises the statuses that mean something was refused", () => {
+    for (const status of ["BLOCKED · UNSUPPORTED ADDRESS", "BLOCKED BY POLICY · a.example", "DOWNLOAD BLOCKED · a.exe", "POPUP BLOCKED"]) {
+      expect(isBlockedStatus(status)).toBe(true);
+    }
+    for (const status of ["DOWNLOADED · a.mp4", "ADDED TO FAVORITES", "INPUT · CURSOR", ""]) expect(isBlockedStatus(status)).toBe(false);
   });
 });
 

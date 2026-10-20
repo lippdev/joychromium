@@ -93,6 +93,10 @@
       <div><label for="defaultInputMode" data-i18n="settings.defaultMode">Modo de entrada padrão</label><small>Spatial: pula entre elementos · Cursor: ponteiro · Arrows: setas</small></div>
       <select id="defaultInputMode"><option>Spatial</option><option>Cursor</option><option>Arrows</option></select>
     </div>
+    <div class="row">
+      <div><span id="vibrationLabel" data-i18n="settings.vibration">Vibração</span><small data-i18n="settings.vibrationHint">Um toque curto quando A confirma e um toque duplo quando algo é bloqueado</small></div>
+      <label class="switch"><input type="checkbox" id="vibration" aria-labelledby="vibrationLabel"><span></span></label>
+    </div>
     <div class="status" id="controllerStatus"></div>
     <h3 data-i18n="settings.siteModes">Modos por site</h3>
     <div id="inputModes"></div>
@@ -232,6 +236,7 @@
   });
 
   $('defaultInputMode').addEventListener('change', (e) => { post('inputmode-default', { inputMode: e.target.value }); flash('controllerStatus', i18n.t('settings.saved')); });
+  $('vibration').addEventListener('change', (e) => { post('vibration-save', { vibration: e.target.checked }); flash('controllerStatus', i18n.t('settings.saved')); });
 
   function renderInputModes(modes) {
     const box = $('inputModes');
@@ -353,6 +358,7 @@
     $('streamingUa').checked = !!msg.streamingDesktopUa;
     renderPermissions(msg.sitePermissions || {});
     $('defaultInputMode').value = msg.defaultInputMode;
+    $('vibration').checked = !!msg.vibration;
     renderInputModes(msg.siteInputModes || {});
     $('runtime2').textContent = msg.runtimeVersion || '';
     $('widevine').textContent = msg.widevine || '';
