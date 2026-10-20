@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
-import { controllerFamily, buttonGlyphs } from "../../shared/controllerGlyphs";
+import { controllerFamily, type ControllerFamily } from "../../shared/controllerGlyphs";
 import { directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
+import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
 import type { ShellState } from "../../shared/ipc";
 import { bridge, cmd } from "./bridge";
 
@@ -19,6 +20,9 @@ type Overlay = "none" | "tabs" | "menu";
 export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: Overlay) => void): void {
   const pressed = useRef(new Set<number>());
   const connected = useRef(false);
+  const active = useRef<number | null>(null);
+  const inUse = useRef<number[]>([]);
+  const family = useRef<ControllerFamily | undefined>(undefined);
   const lastDirection = useRef(0);
   const lastTick = useRef(0);
   const stateRef = useRef(state);
@@ -30,8 +34,19 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       frame = requestAnimationFrame(tick);
       if (document.hidden || now - lastTick.current < 50) return;
       lastTick.current = now;
-      const pads = navigator.getGamepads();
-      const pad = pads.find((p) => p && p.mapping === "standard") ?? pads.find((p) => p) ?? null;
+      const pads = [...navigator.getGamepads()].filter((p): p is Gamepad => Boolean(p));
+      const samples: PadSample[] = pads.map((p) => ({ index: p.index, standard: p.mapping === "standard", buttons: p.buttons, axes: p.axes }));
+      // A pad that starts being used takes the input from the one before it: the last controller used is the one the
+      // shell listens to, so swapping controllers never needs a restart.
+      const using = padsInUse(samples);
+      const padIndex = activePad(active.current, samples, startedUsing(inUse.current, using));
+      inUse.current = using;
+      const pad = pads.find((p) => p.index === padIndex) ?? null;
+      if (padIndex !== active.current) {
+        active.current = padIndex;
+        pressed.current.clear();
+        lastDirection.current = 0;
+      }
       const down = (i: number): boolean => pad?.buttons[i]?.pressed ?? false;
       const justPressed = (i: number): boolean => {
         const is = down(i);
@@ -43,16 +58,18 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       if (!pad) {
         if (connected.current) {
           connected.current = false;
+          family.current = undefined;
           pressed.current.clear();
           bridge().controller({ type: "connected", connected: false });
         }
         return;
       }
-      if (!connected.current) {
-        connected.current = true;
-        bridge().controller({ type: "connected", connected: true, family: controllerFamily(pad.id) });
+      if (!connected.current) connected.current = true;
+      // The swap reaches the shell as a new connection: same window, same tabs, new glyphs.
+      if (family.current !== controllerFamily(pad.id)) {
+        family.current = controllerFamily(pad.id);
+        bridge().controller({ type: "connected", connected: true, family: family.current });
       }
-      const glyphs = buttonGlyphs(controllerFamily(pad.id));
 
       const s = stateRef.current;
       const overlayOpen = overlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);
