@@ -45,6 +45,51 @@ jobs:
         run: npm run build && npx electron-builder --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The installers build; this proves one of them installs and the installed app actually starts.
+      - name: Smoke test the installed package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          # apt (not dpkg) so the declared dependencies are pulled in, the way people install it.
+          sudo apt-get update
+          sudo apt-get install -y ./release/*-amd64.deb
+          profile=$(mktemp -d)
+          echo '{"onboardingCompleted":true,"startup":"NewTab","windowMode":"window"}' > "$profile/settings.json"
+          JOYCHROMIUM_DATA="$profile" xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" joychromium &
+          app=$!
+          started=no
+          for _ in $(seq 1 40); do
+            if grep -qs "starting" "$profile"/logs/*.log 2>/dev/null; then started=yes; break; fi
+            sleep 1
+          done
+          kill "$app" 2>/dev/null || true
+          grep -h "starting" "$profile"/logs/*.log || true
+          [ "$started" = yes ] || { echo "The installed app never started"; exit 1; }
+      - name: Smoke test the installed package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release/*-x64.exe | Select-Object -First 1
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
+          $app = Join-Path $env:LOCALAPPDATA 'Programs\JoyChromium\JoyChromium.exe'
+          if (-not (Test-Path $app)) { Write-Error "The installer did not create $app"; exit 1; }
+          $profile = Join-Path $env:RUNNER_TEMP "smoke-joychromium"
+          New-Item -ItemType Directory -Force -Path $profile | Out-Null
+          '{"onboardingCompleted":true,"startup":"NewTab","windowMode":"window"}' | Set-Content (Join-Path $profile 'settings.json')
+          $env:JOYCHROMIUM_DATA = $profile
+          $process = Start-Process -FilePath $app -PassThru
+          $started = $false
+          for ($i = 0; $i -lt 40; $i++) {
+            $log = Get-ChildItem (Join-Path $profile 'logs') -Filter *.log -ErrorAction SilentlyContinue
+            if ($log -and (Select-String -Path $log.FullName -Pattern 'starting' -Quiet)) { $started = $true; break }
+            Start-Sleep -Seconds 1
+          }
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          Get-ChildItem (Join-Path $profile 'logs') -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object { Get-Content $_.FullName -TotalCount 1 }
+          if (-not $started) { Write-Error 'The installed app never started'; exit 1; }
+      # macOS is not in this check: the app installed from the dmg runs in the runner but writes no log at all
+      # (it never reaches its first line), while the e2e in the same job launches Electron fine. The dmg is still
+      # built here, and docs/RELEASE.md keeps the manual check for the machine it ships to.
       - uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.os }}
