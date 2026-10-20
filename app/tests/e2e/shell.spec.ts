@@ -19,7 +19,11 @@ test.afterEach(async () => {
 });
 
 const tabs = () => app.evaluate(() => globalThis.joy.tabs());
+const activeTab = async () => (await tabs()).find((t) => t.isActive);
 const command = (c: unknown) => app.evaluate(({}, cmd) => globalThis.joy.command(cmd), c);
+// Waits for the active tab to finish loading: navigating away from a page still on its way in aborts it, and the
+// assertions below are about the page that actually committed.
+const settle = () => expect.poll(async () => (await activeTab())?.isLoading, { timeout: 30_000 }).toBe(false);
 
 test("shell UI, tabs, internal pages and session", async () => {
   const chrome = await app.firstWindow();
@@ -32,11 +36,13 @@ test("shell UI, tabs, internal pages and session", async () => {
   await chrome.locator(".tab-card.new").click();
   await expect.poll(tabs).toHaveLength(2);
   await expect(chrome.locator("#tabs-button")).toContainText("2");
+  await settle();
 
   await command({ type: "settings" });
   await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.url).toBe("joychromium://settings");
   await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toMatch(/Settings|Configurações/);
   await expect(chrome.locator("#address")).toHaveValue("joychromium://settings");
+  await settle();
 
   // The settings page asked for its data over the bridge and rendered it.
   await expect.poll(() => app.evaluate(() => globalThis.joy.pageEval("document.getElementById('appVersion').textContent")), { timeout: 15_000 }).toMatch(/^v\d/);
@@ -44,9 +50,11 @@ test("shell UI, tabs, internal pages and session", async () => {
 
   await command({ type: "navigate", url: "joychromium://favorites" });
   await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.title, { timeout: 15_000 }).toMatch(/Favorites|Favoritos/);
+  await settle();
 
   // Web pages get the spatial-navigation script in their own world: the page itself cannot see it.
   await command({ type: "navigate", url: "about:blank" });
+  await settle();
   await expect.poll(() => app.evaluate(() => globalThis.joy.spatialWorld()), { timeout: 15_000 }).toEqual({ isolated: "object", page: "undefined" });
 
   await command({ type: "close-tab" });
@@ -63,6 +71,17 @@ test("shell UI, tabs, internal pages and session", async () => {
 
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
   await expect.poll(() => existsSync(join(data, "session.json")), { timeout: 10_000 }).toBe(true);
+});
+
+test("the newest navigation wins when two are requested back to back", async () => {
+  await app.firstWindow();
+  await expect.poll(tabs, { timeout: 30_000 }).toHaveLength(1);
+  // Both land in the same tick, before did-start-navigation has reported the first one: the second must still win.
+  await app.evaluate(() => {
+    void globalThis.joy.command({ type: "navigate", url: "joychromium://favorites" });
+    void globalThis.joy.command({ type: "navigate", url: "joychromium://settings" });
+  });
+  await expect.poll(async () => (await tabs()).find((t) => t.isActive)?.url, { timeout: 15_000 }).toBe("joychromium://settings");
 });
 
 test("restores the previous tabs after an unexpected close", async () => {
