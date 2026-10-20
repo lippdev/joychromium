@@ -30,6 +30,9 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
   const lastTick = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
+  // Read through a ref so the loop below is created once and keeps a single activity subscription for its lifetime.
+  const overlayRef = useRef(overlay);
+  overlayRef.current = overlay;
 
   useEffect(() => {
     let frame = 0;
@@ -88,9 +91,10 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       }
 
       const s = stateRef.current;
-      const overlayOpen = overlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);
+      const openOverlay = overlayRef.current;
+      const overlayOpen = openOverlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);
       if (justPressed(Button.Start)) {
-        setOverlay(overlay === "menu" ? "none" : "menu");
+        setOverlay(openOverlay === "menu" ? "none" : "menu");
         return;
       }
       if (justPressed(Button.Back)) {
@@ -99,14 +103,14 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         return;
       }
       if (justPressed(Button.B)) {
-        if (overlay !== "none") setOverlay("none");
+        if (openOverlay !== "none") setOverlay("none");
         else if (s.permission) cmd({ type: "permission", allow: false, remember: false });
         else if (s.keyboard) cmd({ type: "keyboard-close" });
         else cmd({ type: "back" });
         return;
       }
       if (justPressed(Button.A)) {
-        if (overlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
+        if (openOverlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
         else bridge().controller({ type: "activate" });
         vibrate("confirm");
         return;
@@ -138,7 +142,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const direction: Direction | undefined = cursorMode ? directionOf(dpad, 0, 0) : directionOf(dpad, lx, ly);
       if (direction && now - lastDirection.current >= 180) {
         lastDirection.current = now;
-        if (overlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
+        if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
         else bridge().controller({ type: "direction", direction });
       }
     };
@@ -156,7 +160,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       document.removeEventListener("visibilitychange", visibility);
       stopActivity();
     };
-  }, [overlay, setOverlay]);
+  }, [setOverlay]);
 }
 
 /** Spatial focus among the shell's own buttons, used while a dialog or the keyboard is open. */
