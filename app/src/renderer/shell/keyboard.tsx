@@ -72,10 +72,10 @@ export function Keyboard({ state }: { state: ShellState }) {
             {layout === "qwerty" ? "ABC" : "QWERTY"}
           </button>
           <button class="key wider" onClick={() => type(" ")}>{t(state.language, "input.space")}</button>
-          <button class="key wide" onClick={backspace}>⌫</button>
+          <button class="key wide" onClick={backspace} aria-label={t(state.language, "input.delete")}>⌫</button>
           <button
             class="key wide primary"
-            onClick={() => { if (target === "page") cmd({ type: "keyboard-submit" }); else document.getElementById("go")?.click(); }}
+            onClick={() => { if (target === "page") cmd({ type: "keyboard-submit" }); else (document.getElementById("address") as HTMLInputElement | null)?.form?.requestSubmit(); }}
           >
             {t(state.language, "input.ok")}
           </button>

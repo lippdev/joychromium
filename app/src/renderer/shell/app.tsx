@@ -44,9 +44,10 @@ export function App() {
     root.setProperty("--accent-text", lum > 0.45 ? "#07120F" : "#FFFFFF");
     document.body.dataset.contrast = state.highContrast ? "high" : "normal";
     document.body.dataset.mode = state.windowMode;
+    document.documentElement.lang = state.language;
     const overscan = `${state.overscan}%`;
     root.setProperty("--safe-x", overscan);
-  }, [state.theme, state.uiScale, state.highContrast, state.windowMode, state.overscan]);
+  }, [state.theme, state.uiScale, state.highContrast, state.windowMode, state.overscan, state.language]);
 
   // The tab views sit below the chrome: report the chrome's real height whenever it changes.
   useEffect(() => {
@@ -85,16 +86,23 @@ export function App() {
 
           <button
             class={`icon-btn ${state.isFavorite ? "on" : ""}`}
-            aria-label={tr("nav.favorite")} title={`${tr("nav.favorite")} · ${state.shortcutMod}+D · LB+Y`}
+            aria-label={tr("nav.favorite")} aria-pressed={state.isFavorite}
+            title={`${tr("nav.favorite")} · ${state.shortcutMod}+D · LB+Y`}
             onClick={() => cmd({ type: "toggle-favorite" })}
           >
             <StarIcon filled={state.isFavorite} />
           </button>
-          <button id="tabs-button" class="icon-btn with-badge" aria-label={tr("nav.tabs")} title={`${tr("nav.tabs")} · LT/RT`} onClick={() => setOverlay("tabs")}>
+          <button
+            id="tabs-button" class="icon-btn with-badge" aria-label={tr("nav.tabs")} title={`${tr("nav.tabs")} · LT/RT`}
+            aria-haspopup="dialog" aria-expanded={overlay === "tabs"} onClick={() => setOverlay("tabs")}
+          >
             <TabsIcon />
             {state.tabs.length > 1 && <span class="badge">{state.tabs.length}</span>}
           </button>
-          <button class="icon-btn" aria-label={tr("nav.menu")} title={`${tr("nav.menu")} · Start`} onClick={() => setOverlay("menu")}>
+          <button
+            class="icon-btn" aria-label={tr("nav.menu")} title={`${tr("nav.menu")} · Start`}
+            aria-haspopup="dialog" aria-expanded={overlay === "menu"} onClick={() => setOverlay("menu")}
+          >
             <MenuIcon />
           </button>
 
@@ -161,7 +169,6 @@ function AddressBar({ url, focused, setFocused, language }: { url: string; focus
           cmd({ type: "address-input", text });
         }}
       />
-      <button id="go" type="submit" class="visually-hidden" aria-hidden="true" tabIndex={-1}>OK</button>
     </form>
   );
 }

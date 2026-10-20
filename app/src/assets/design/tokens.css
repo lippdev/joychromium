@@ -22,7 +22,8 @@
   --hover: color-mix(in srgb, var(--surface) 86%, var(--text));
   --border: color-mix(in srgb, var(--surface) 82%, var(--text));
   --muted: color-mix(in srgb, var(--text) 68%, var(--surface));
-  --faint: color-mix(in srgb, var(--text) 46%, var(--surface));
+  /* 50% keeps faint hints at 4.9:1 on the surface, the WCAG AA floor for normal text. */
+  --faint: color-mix(in srgb, var(--text) 50%, var(--surface));
   --input: color-mix(in srgb, var(--bg) 96%, var(--text));
   --danger: #ff6b5e;
 

@@ -4,7 +4,8 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: transparent;
+  /* The window paints the theme background behind the tab views; the shell shows it in the bar and status line. */
+  background: var(--bg);
   color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
   font-size: var(--text-base);
@@ -331,13 +332,4 @@ body[data-mode="tv"] .status-line { display: none; }
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }

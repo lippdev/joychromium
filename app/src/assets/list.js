@@ -15,7 +15,8 @@ function renderList(box, items, { removeType, emptyText }) {
     const open = document.createElement('button'); open.className = 'open';
     open.innerHTML = `<span class="t">${esc(item.title || item.url)}</span><span class="u">${esc(item.url)}</span>` + (item.when ? `<span class="w">${esc(item.when)}</span>` : '');
     open.addEventListener('click', () => post('navigate', { url: item.url }));
-    const del = document.createElement('button'); del.className = 'del'; del.title = 'Remove'; del.textContent = '✕';
+    const remove = i18n.t('settings.forget', 'Remove');
+    const del = document.createElement('button'); del.className = 'del'; del.title = remove; del.setAttribute('aria-label', remove); del.textContent = '✕';
     del.addEventListener('click', () => { post(removeType, { url: item.url }); row.remove(); if (!box.children.length) renderList(box, [], { removeType, emptyText }); });
     row.append(open, del); return row;
   }));
