@@ -52,14 +52,24 @@ export class InputRouter {
           if ((await spatialActivate(wc)) === "edit") this.host.openKeyboard("page");
         } else sendKey(wc, "Return");
         break;
+      // The stick's pointer works in every mode but Arrows, whose sites (YouTube TV, Twitch) are built for the arrow keys.
       case "cursor-move":
-        if (wc && this.host.inputMode === "Cursor") {
+        if (wc && this.host.inputMode !== "Arrows") {
           const size = this.host.pageSize();
           await this.cursor.moveBy(wc, input.dx, input.dy, size.width, size.height);
         }
         break;
-      case "cursor-click": if (wc && this.host.inputMode === "Cursor") this.cursor.click(wc); break;
-      case "scroll": if (wc) this.cursor.scroll(wc, input.notches); break;
+      case "cursor-click": if (wc && this.host.inputMode !== "Arrows") this.cursor.click(wc, input.button); break;
+      case "cursor-hide": if (wc) await this.cursor.show(wc, false); break;
+      case "scroll":
+        if (!wc) return;
+        // Never pointed anywhere yet: the wheel turns over the middle of the page, not over a corner.
+        if (!this.cursor.placed) {
+          const size = this.host.pageSize();
+          this.cursor.place(size.width / 2, size.height / 2, size.width, size.height);
+        }
+        this.cursor.scroll(wc, input.notches, input.sideways);
+        break;
     }
   }
 }

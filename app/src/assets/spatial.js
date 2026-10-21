@@ -253,25 +253,43 @@
   });
 })();
 
-// Virtual cursor overlay (Cursor input mode). The shell moves it and sends real mouse events at the same point.
+// The controller's pointer: the left stick moves it and A clicks where it points (real mouse events at the same spot,
+// sent by the shell). It is a ring, not an arrow, so it never passes for the system mouse; the dot in the middle is the
+// spot that gets clicked.
 (() => {
   if (window.__joyCursor) return;
+  const SIZE = 34;
+  const ring = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34">' +
+    '<circle cx="17" cy="17" r="12" fill="rgba(43,149,255,0.22)" stroke="#fff" stroke-width="5"/>' +
+    '<circle cx="17" cy="17" r="12" fill="none" stroke="#2B95FF" stroke-width="3"/>' +
+    '<circle cx="17" cy="17" r="3" fill="#2B95FF" stroke="#fff" stroke-width="1.5"/></svg>';
   let el = null;
+  let at = { x: 0, y: 0 };
   const ensure = () => {
     if (el && document.contains(el)) return el;
     el = document.createElement('div');
     el.id = '__joy-cursor';
     el.setAttribute('aria-hidden', 'true');
-    el.style.cssText = 'position:fixed;left:0;top:0;width:18px;height:26px;z-index:2147483647;pointer-events:none;display:none;' +
-      'background:url("data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 28"><path d="M1 1 L1 23 L7 18 L11 27 L14 26 L10 17 L17 17 Z" fill="#2B95FF" stroke="#0A0F1A" stroke-width="1.5"/></svg>') + '") no-repeat;';
+    el.style.cssText = `position:fixed;left:0;top:0;width:${SIZE}px;height:${SIZE}px;z-index:2147483647;pointer-events:none;display:none;` +
+      'filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));transition:scale 90ms ease-out;' +
+      'background:url("data:image/svg+xml;utf8,' + encodeURIComponent(ring) + '") no-repeat center / contain;';
     (document.body || document.documentElement).appendChild(el);
     return el;
   };
   window.__joyCursor = {
     show(visible, x, y) {
       const c = ensure();
+      at = { x, y };
       c.style.display = visible ? 'block' : 'none';
-      c.style.transform = `translate(${x}px, ${y}px)`;
+      // The click lands on (x, y): the ring is centred on it.
+      c.style.transform = `translate(${x - SIZE / 2}px, ${y - SIZE / 2}px)`;
+    },
+    // A short squeeze on every click, so a press from the sofa is seen to land.
+    press() {
+      const c = ensure();
+      if (c.style.display === 'none') this.show(true, at.x, at.y);
+      c.style.scale = '0.75';
+      setTimeout(() => { c.style.scale = '1'; }, 110);
     },
   };
 })();

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 import { controllerFamily, type ControllerFamily } from "../../shared/controllerGlyphs";
-import { Button, directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
+import { Button, DOUBLE_PRESS_MS, directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
 import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
 import { GAMEPAD_POLL_MS, gamepadPoll, STICK_INTERVAL_MS } from "../../shared/gamepadLoop";
 import type { ShellState } from "../../shared/ipc";
@@ -29,6 +29,13 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
   const family = useRef<ControllerFamily | undefined>(undefined);
   const lastDirection = useRef(0);
   const lastStick = useRef(0);
+  /**
+   * Who A answers to on a page: the stick's pointer once the stick moved it, the D-pad's focus once the D-pad moved.
+   * The last one used wins, so both can be mixed on the same page.
+   */
+  const pointing = useRef(false);
+  /** A single A at the pointer waits here for a possible second one, which would make it a right click. */
+  const pendingClick = useRef<number | undefined>(undefined);
   const lastTick = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -117,6 +124,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       if (justPressed(Button.A)) {
         if (openOverlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
         else if (chrome) activateChrome();
+        else if (pointing.current || s.inputMode === "Cursor") clickAtPointer();
         else bridge().controller({ type: "activate" });
         vibrate("confirm");
         return;
@@ -134,28 +142,56 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
 
       const lx = pad.axes[0] ?? 0;
       const ly = pad.axes[1] ?? 0;
+      const rx = pad.axes[2] ?? 0;
       const ry = pad.axes[3] ?? 0;
       const dpad = { up: down(Button.DpadUp), down: down(Button.DpadDown), left: down(Button.DpadLeft), right: down(Button.DpadRight) };
-      const cursorMode = s.inputMode === "Cursor" && !overlayOpen;
+      // On a page the left stick is the pointer and the right stick the wheel. Arrows mode keeps the stick on the arrow
+      // keys its sites are built for; a dialog, the keyboard or the toolbar take the stick as a D-pad.
+      const page = !overlayOpen && !chrome;
+      const pointer = page && s.inputMode !== "Arrows";
 
-      // Buttons follow the poll rate; the stick keeps its own, slower cadence so the cursor moves at the same speed.
-      if (cursorMode && now - lastStick.current >= STICK_INTERVAL_MS) {
+      // Buttons follow the poll rate; the sticks keep their own, slower cadence so the pointer moves at the same speed.
+      if (page && now - lastStick.current >= STICK_INTERVAL_MS) {
         lastStick.current = now;
-        const velocity = stickToVelocity(lx, ly);
-        if (velocity.dx !== 0 || velocity.dy !== 0) bridge().controller({ type: "cursor-move", dx: velocity.dx, dy: velocity.dy });
+        const velocity = pointer ? stickToVelocity(lx, ly) : { dx: 0, dy: 0 };
+        if (velocity.dx !== 0 || velocity.dy !== 0) {
+          pointing.current = true;
+          bridge().controller({ type: "cursor-move", dx: velocity.dx, dy: velocity.dy });
+        }
         const notches = stickToScroll(ry);
-        if (notches !== 0) bridge().controller({ type: "scroll", notches });
+        const sideways = stickToScroll(rx);
+        if (notches !== 0 || sideways !== 0) bridge().controller({ type: "scroll", notches, sideways });
       }
 
-      const direction: Direction | undefined = cursorMode ? directionOf(dpad, 0, 0) : directionOf(dpad, lx, ly);
+      const direction: Direction | undefined = directionOf(dpad, pointer ? 0 : lx, pointer ? 0 : ly);
       if (direction && now - lastDirection.current >= 180) {
         lastDirection.current = now;
         if (moveSuggestionFocus(direction)) { /* the D-pad walked the address suggestions */ }
         else if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
         // Down with nothing under the toolbar goes back into the page.
         else if (chrome) { if (!moveFocusAmong(chromeControls(), direction) && direction === "down") leaveChrome(); }
-        else bridge().controller({ type: "direction", direction });
+        else {
+          // The D-pad takes over from the pointer (in Cursor mode the D-pad steps the pointer itself, so it stays).
+          if (pointing.current && s.inputMode !== "Cursor") {
+            pointing.current = false;
+            bridge().controller({ type: "cursor-hide" });
+          }
+          bridge().controller({ type: "direction", direction });
+        }
       }
+    }
+    /** A at the pointer: the second press within DOUBLE_PRESS_MS turns the pending left click into a right click. */
+    function clickAtPointer(): void {
+      if (pendingClick.current !== undefined) {
+        clearTimeout(pendingClick.current);
+        pendingClick.current = undefined;
+        bridge().controller({ type: "cursor-click", button: "right" });
+        return;
+      }
+      pendingClick.current = window.setTimeout(() => {
+        pendingClick.current = undefined;
+        bridge().controller({ type: "cursor-click", button: "left" });
+      }, DOUBLE_PRESS_MS);
     }
     // Up from the top of the page: the main process hands the focus over and the address field takes it.
     bridge().onFocusChrome(() => document.getElementById("address")?.focus());

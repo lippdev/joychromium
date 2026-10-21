@@ -81,16 +81,20 @@ export class VirtualCursor {
     await this.show(wc, true);
   }
 
-  click(wc: WebContents): void {
+  click(wc: WebContents, button: "left" | "right" = "left"): void {
     const x = Math.round(this.x);
     const y = Math.round(this.y);
     wc.sendInputEvent({ type: "mouseMove", x, y });
-    wc.sendInputEvent({ type: "mouseDown", x, y, button: "left", clickCount: 1 });
-    wc.sendInputEvent({ type: "mouseUp", x, y, button: "left", clickCount: 1 });
+    wc.sendInputEvent({ type: "mouseDown", x, y, button, clickCount: 1 });
+    wc.sendInputEvent({ type: "mouseUp", x, y, button, clickCount: 1 });
+    void runInPageWorld(wc, "window.__joyCursor && window.__joyCursor.press()");
   }
 
-  /** Positive notches scroll down (Gamepad API stick Y grows downward); wheel deltaY is negative for down. */
-  scroll(wc: WebContents, notches: number): void {
-    wc.sendInputEvent({ type: "mouseWheel", x: Math.round(this.x), y: Math.round(this.y), deltaX: 0, deltaY: -notches * 120 });
+  /**
+   * Positive notches scroll down (Gamepad API stick Y grows downward) and positive `sideways` to the right; wheel deltas
+   * are negative for those. The wheel turns under the pointer, so whatever box it is over scrolls, like a real mouse.
+   */
+  scroll(wc: WebContents, notches: number, sideways = 0): void {
+    wc.sendInputEvent({ type: "mouseWheel", x: Math.round(this.x), y: Math.round(this.y), deltaX: -sideways * 120, deltaY: -notches * 120 });
   }
 }
