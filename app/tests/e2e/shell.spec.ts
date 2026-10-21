@@ -127,3 +127,19 @@ test("settings change the new tab: backdrop and quick links", async () => {
   await command({ type: "navigate", url: "joychromium://newtab" });
   await expect.poll(() => pageEval<string>("document.body.dataset.bg"), { timeout: 15_000 }).toBe("Solid");
 });
+
+test("the new tab box opens an address and searches the rest", async () => {
+  const pageEval = (code: string) => app.evaluate(({}, c) => globalThis.joy.pageEval(c), code);
+  await app.evaluate(({ protocol }) => {
+    protocol.handle("https", () => new Response("<title>Site</title>", { headers: { "content-type": "text/html" } }));
+  });
+  const submit = async (text: string) => {
+    await command({ type: "navigate", url: "joychromium://newtab" });
+    await expect.poll(() => pageEval("Boolean(document.getElementById('q'))"), { timeout: 15_000 }).toBe(true);
+    await pageEval(`(() => { document.getElementById('q').value = ${JSON.stringify(text)}; document.getElementById('search').requestSubmit(); })()`);
+  };
+  await submit("youtube.com");
+  await expect.poll(async () => (await activeTab())?.url, { timeout: 15_000 }).toBe("https://youtube.com/");
+  await submit("filmes de terror");
+  await expect.poll(async () => (await activeTab())?.url, { timeout: 15_000 }).toContain("/search?q=filmes%20de%20terror");
+});

@@ -1,4 +1,5 @@
-import { Pages, isInternal, isWebUrl } from "../../shared/pages";
+import { resolveAddressInput } from "../../shared/addressInput";
+import { Pages } from "../../shared/pages";
 import { hostOf } from "../../shared/security";
 import { buildSearchUrl, newTabTarget, type AppSettings } from "../../shared/settings";
 import type { TabManager } from "../tabs";
@@ -28,12 +29,11 @@ export class Navigation {
     void this.host.tabs.load(tab, url);
   }
 
-  /** A bar entry: a URL or an internal page goes as-is, anything else becomes a search. */
+  /** A bar entry: an address or an internal page opens, anything else becomes a search (see resolveAddressInput). */
   searchOrGo(text: string): void {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    const url = isWebUrl(trimmed) || isInternal(trimmed) ? trimmed : buildSearchUrl(this.host.settings().searchEngine, trimmed);
-    this.go(url);
+    const intent = resolveAddressInput(text);
+    if (!intent) return;
+    this.go(intent.kind === "open" ? intent.url : buildSearchUrl(this.host.settings().searchEngine, intent.text));
   }
 
   newTab(isPrivate = false): void {
