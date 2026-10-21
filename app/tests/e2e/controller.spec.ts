@@ -373,3 +373,18 @@ test("the pointer is on every page from the start, and stays where it was when t
   await expect.poll(pointerShown, { timeout: 10_000 }).toBe(true);
   await expect.poll(where).toBe(first);
 });
+
+test("after a mouse click, the key the D-pad reaches is still lit", async () => {
+  await installPads([XBOX]);
+  // A mouse click first: from then on Chromium stops drawing :focus-visible for focus moved by script.
+  await chrome.locator(".new-tab").click();
+  await expect(chrome.locator("#keyboard")).toBeVisible();
+  await step(Pad.Right);
+  await expect.poll(shellFocus).toBe("q");
+  // The selected key turns the text colour (white on the dark themes), not the grey of the other keys.
+  const lit = () => chrome.evaluate(() => getComputedStyle(document.activeElement as Element).backgroundColor === getComputedStyle(document.body).color);
+  await expect.poll(lit).toBe(true);
+  await step(Pad.Right);
+  await expect.poll(shellFocus).toBe("w");
+  await expect.poll(lit).toBe(true);
+});
