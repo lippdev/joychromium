@@ -196,11 +196,8 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         // Down with nothing under the toolbar goes back into the page.
         else if (chrome) { if (!moveFocusAmong(chromeControls(), direction) && direction === "down") leaveChrome(); }
         else {
-          // The D-pad takes over from the pointer (in Cursor mode the D-pad steps the pointer itself, so it stays).
-          if (pointing.current && s.inputMode !== "Cursor") {
-            pointing.current = false;
-            bridge().controller({ type: "cursor-hide" });
-          }
+          // The D-pad takes A back from the pointer, which stays on screen (in Cursor mode the D-pad steps the pointer itself).
+          if (s.inputMode !== "Cursor") pointing.current = false;
           bridge().controller({ type: "direction", direction });
         }
       }
