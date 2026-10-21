@@ -10,6 +10,11 @@ import { trackActivePad, vibrate } from "./haptics";
 
 type Overlay = "none" | "tabs" | "menu";
 
+/** The controller keyboard's shortcuts (keyboard.tsx draws each glyph on the key it presses). */
+const KEYBOARD_SHORTCUTS: readonly [number, string][] = [
+  [Button.X, "delete"], [Button.Y, "space"], [Button.LT, "shift"], [Button.Start, "submit"], [Button.LeftStick, "layer"],
+];
+
 /**
  * Gamepad handling for the shell. The tab of a web page owns the focus while the user reads it, so the shell keeps
  * polling on its own timer; a page that needs the D-pad in Arrows mode gets it through the main process. A minimized
@@ -103,6 +108,16 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const s = stateRef.current;
       const openOverlay = overlayRef.current;
       const overlayOpen = openOverlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);
+      // The keyboard's shortcuts, as on Xbox: each presses the key that shows its glyph. While it is open these buttons
+      // type; they never reload the page or switch tabs in the middle of a word.
+      if (s.keyboard && openOverlay === "none" && !s.permission) {
+        for (const [button, key] of KEYBOARD_SHORTCUTS) {
+          if (!justPressed(button)) continue;
+          document.querySelector<HTMLElement>(`#keyboard [data-pad="${key}"]`)?.click();
+          vibrate("confirm");
+          return;
+        }
+      }
       if (justPressed(Button.Start)) {
         setOverlay(openOverlay === "menu" ? "none" : "menu");
         return;
@@ -129,16 +144,19 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         vibrate("confirm");
         return;
       }
-      if (justPressed(Button.X)) cmd({ type: "reload" });
-      if (justPressed(Button.Y)) {
-        if (down(Button.LB)) cmd({ type: "toggle-favorite" });
-        else cmd({ type: "keyboard-open", target: "address" });
+      // The browser's own buttons belong to the page and the bar, not to an open keyboard, menu or prompt.
+      if (!overlayOpen) {
+        if (justPressed(Button.X)) cmd({ type: "reload" });
+        if (justPressed(Button.Y)) {
+          if (down(Button.LB)) cmd({ type: "toggle-favorite" });
+          else cmd({ type: "keyboard-open", target: "address" });
+        }
+        if (justPressed(Button.LB)) cmd({ type: "back" });
+        if (justPressed(Button.RB)) cmd({ type: "forward" });
+        if (justPressed(Button.LT)) cmd({ type: "switch-tab", offset: -1 });
+        if (justPressed(Button.RT)) cmd({ type: "switch-tab", offset: 1 });
+        if (justPressed(Button.RightStick)) cmd({ type: "cycle-input-mode" });
       }
-      if (justPressed(Button.LB) && !overlayOpen) cmd({ type: "back" });
-      if (justPressed(Button.RB)) cmd({ type: "forward" });
-      if (justPressed(Button.LT)) cmd({ type: "switch-tab", offset: -1 });
-      if (justPressed(Button.RT)) cmd({ type: "switch-tab", offset: 1 });
-      if (justPressed(Button.RightStick)) cmd({ type: "cycle-input-mode" });
 
       const lx = pad.axes[0] ?? 0;
       const ly = pad.axes[1] ?? 0;
@@ -272,9 +290,9 @@ function moveOverlayFocus(direction: Direction): void {
   const group = (document.querySelector('.overlay[role="dialog"]') as HTMLElement | null) ?? document.body;
   const buttons = [...group.querySelectorAll<HTMLElement>("button:not([disabled])")];
   const current = document.activeElement as HTMLElement | null;
-  // Nothing focused inside yet (a dialog opens with the focus on itself): the first press lands on the first key of the
-  // keyboard, or the first button of any other dialog, not on the close button in the corner.
-  if (!current || !buttons.includes(current)) { (group.querySelector<HTMLElement>(".key") ?? buttons[0])?.focus(); return; }
+  // Nothing focused inside yet (a dialog opens with the focus on itself): the first press lands on the keyboard's "q",
+  // as on Xbox, or on the first button of any other dialog.
+  if (!current || !buttons.includes(current)) { (group.querySelector<HTMLElement>(".key[data-start]") ?? buttons[0])?.focus(); return; }
   moveFocusAmong(buttons, direction);
 }
 
