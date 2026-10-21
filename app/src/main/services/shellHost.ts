@@ -34,6 +34,8 @@ export interface ShellHost {
   broadcast(): void;
   syncViews(): void;
   setLayout(top: number, bottom: number): void;
+  /** Hides the active tab's view under a modal overlay, which the shell draws over a snapshot of it. */
+  setPageCovered(covered: boolean): void;
   setChromeVisible(visible: boolean): void;
   /** Minimize even from TV mode, where a fullscreen window cannot be minimized as it is (E4-03). */
   minimizeWindow(): void;

@@ -60,11 +60,12 @@ export class Shell {
   readonly tabs: TabManager;
   private readonly layout: WindowLayout;
   chromeVisible = true;
+  private pageCovered = false;
   inputMode: InputMode = "Spatial";
   keyboard: ShellState["keyboard"];
   find: ShellState["find"];
   suggestions: ShellState["suggestions"] = [];
-  private statusText = "STARTING · TV IDENTITY ON";
+  private statusText = "";
   controllerConnected = false;
   controllerFamily: ShellState["controllerFamily"] = "generic";
   readonly permissions = new PermissionQueue();
@@ -266,8 +267,8 @@ export class Shell {
 
   private wireWindow(): void {
     this.window.on("resize", () => this.layout.apply());
-    this.window.on("maximize", () => this.layout.apply());
-    this.window.on("unmaximize", () => this.layout.apply());
+    this.window.on("maximize", () => { this.layout.apply(); this.broadcast(); });
+    this.window.on("unmaximize", () => { this.layout.apply(); this.broadcast(); });
     const onActivity = (): void => this.broadcastActivity();
     this.window.on("minimize", onActivity);
     this.window.on("show", onActivity);
@@ -302,7 +303,7 @@ export class Shell {
         this.attachShortcuts(tab.webContents);
       }
       if (!contentView.children.includes(tab.view)) contentView.addChildView(tab.view);
-      tab.view.setVisible(tab === this.tabs.active);
+      tab.view.setVisible(tab === this.tabs.active && !this.pageCovered);
     }
     for (const child of contentView.children) {
       if (child instanceof Object && !this.tabs.tabs.some((t) => !t.sleeping && t.view === child)) contentView.removeChildView(child);
@@ -315,6 +316,16 @@ export class Shell {
 
   setLayout(top: number, bottom: number): void {
     this.layout.setInsets(top, bottom);
+  }
+
+  /**
+   * The tab views are native views stacked above the shell's own page, so nothing the shell draws can cover them. A
+   * modal overlay therefore paints a snapshot of the page and asks the live view to step aside until it closes.
+   */
+  setPageCovered(covered: boolean): void {
+    if (this.pageCovered === covered) return;
+    this.pageCovered = covered;
+    this.syncViews();
   }
 
   setChromeVisible(visible: boolean): void {
@@ -422,6 +433,7 @@ export class Shell {
       suggestions: this.suggestions,
       shortcutMod: currentShortcutMod(),
       nativeWindowControls: nativeWindowControls(),
+      maximized: this.window.isMaximized(),
       windowMode: s.windowMode,
       uiScale: s.uiScale,
       overscan: s.overscan,
@@ -484,6 +496,16 @@ export class Shell {
         }
       }));
       return shots;
+    });
+    ipcMain.handle(Channels.shellSnapshot, async (event): Promise<string> => {
+      const tab = this.tabs.active;
+      if (event.sender !== this.window.webContents || !tab || tab.sleeping) return "";
+      try {
+        const image = await tab.webContents.capturePage();
+        return image.isEmpty() ? "" : `data:image/jpeg;base64,${image.toJPEG(88).toString("base64")}`;
+      } catch {
+        return "";
+      }
     });
     ipcMain.handle(Channels.shellPreferences, (event): ShellPreferences => {
       if (event.sender !== this.window.webContents) return { vibration: false };
@@ -605,7 +627,7 @@ export class Shell {
 
   async handle(command: ShellCommand): Promise<void> {
     // The bar comes back for anything the user asked for, except the renderer reporting its own height.
-    if (command.type !== "chrome-height") this.revealChrome();
+    if (command.type !== "chrome-height" && command.type !== "page-cover") this.revealChrome();
     await this.router.run(command);
   }
 

@@ -8,7 +8,7 @@ import { t } from "../../shared/i18n";
 import { isInternal } from "../../shared/pages";
 import { bridge, cmd } from "./bridge";
 import {
-  BackIcon, CaptionCloseIcon, CaptionMaximizeIcon, CaptionMinimizeIcon, CloseIcon, ForwardIcon, GlobeIcon, FullscreenIcon, GamepadIcon, HomeIcon, MenuIcon, PlusIcon, ReloadIcon,
+  BackIcon, CaptionCloseIcon, CaptionMaximizeIcon, CaptionMinimizeIcon, CaptionRestoreIcon, CloseIcon, ForwardIcon, GlobeIcon, FullscreenIcon, GamepadIcon, HomeIcon, MenuIcon, PlusIcon, ReloadIcon,
   SearchIcon, SettingsIcon, ShieldIcon, StarIcon, TabsIcon, TvIcon, VolumeIcon,
 } from "./icons";
 import { Keyboard } from "./keyboard";
@@ -21,7 +21,7 @@ import { vibrate } from "./haptics";
 const Empty: ShellState = {
   tabs: [], activeUrl: "", isFavorite: false, inputMode: "Spatial", adBlock: false, controllerConnected: false,
   chromeVisible: true, theme: { accent: "#2B95FF", background: "#1C1C1C", surface: "#2B2B2B", text: "#F3F3F3" },
-  status: "", suggestions: [], shortcutMod: "Ctrl", nativeWindowControls: false, windowMode: "tv",
+  status: "", suggestions: [], shortcutMod: "Ctrl", nativeWindowControls: false, maximized: false, windowMode: "tv",
   uiScale: 1, overscan: 0, highContrast: false, language: "pt-BR", controllerFamily: "generic",
 };
 
@@ -59,17 +59,51 @@ export function App() {
     root.setProperty("--safe-x", overscan);
   }, [state.theme, state.uiScale, state.highContrast, state.windowMode, state.overscan, state.language]);
 
-  // The tab views sit below the chrome: report the chrome's real height whenever it changes.
+  // The tab views sit below the chrome and above the controller keyboard: report both whenever either changes.
+  const insets = useRef({ top: 0, bottom: 0 });
+  const [chromeTop, setChromeTop] = useState(0);
+  const sendInsets = () => cmd({ type: "chrome-height", height: insets.current.top, bottom: insets.current.bottom });
   useEffect(() => {
     const report = () => {
-      const top = document.getElementById("chrome")?.getBoundingClientRect().height ?? 0;
-      bridge().command({ type: "chrome-height", height: Math.round(top) } as never);
+      insets.current.top = Math.round(document.getElementById("chrome")?.getBoundingClientRect().height ?? 0);
+      setChromeTop(insets.current.top);
+      sendInsets();
     };
     const observer = new ResizeObserver(report);
     if (chromeRef.current) observer.observe(chromeRef.current);
     report();
     return () => observer.disconnect();
   }, []);
+  const keyboardInset = (bottom: number) => {
+    if (insets.current.bottom === bottom) return;
+    insets.current.bottom = bottom;
+    sendInsets();
+  };
+
+  // The page is a native view above this document, so a modal overlay would open behind it. The overlay paints a
+  // snapshot of the page instead, and only then asks the live view to step aside, so nothing flickers.
+  const modal = overlay !== "none" || Boolean(state.permission);
+  const [cover, setCover] = useState("");
+  const covered = useRef(false);
+  useEffect(() => {
+    if (!modal) {
+      setCover("");
+      if (covered.current) cmd({ type: "page-cover", covered: false });
+      covered.current = false;
+      return;
+    }
+    let live = true;
+    void bridge().snapshot().then((image) => {
+      if (!live) return;
+      setCover(image);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (!live) return;
+        covered.current = true;
+        cmd({ type: "page-cover", covered: true });
+      }));
+    });
+    return () => { live = false; };
+  }, [modal]);
 
   useGamepad(state, overlay, setOverlay);
 
@@ -97,7 +131,9 @@ export function App() {
           {!state.nativeWindowControls && (
             <div class="window-controls">
               <button class="window-btn" aria-label={tr("nav.minimize")} title={tr("nav.minimize")} onClick={() => cmd({ type: "window", action: "minimize" })}><CaptionMinimizeIcon /></button>
-              <button class="window-btn" aria-label={tr("nav.maximize")} title={tr("nav.maximize")} onClick={() => cmd({ type: "window", action: "maximize" })}><CaptionMaximizeIcon /></button>
+              <button class="window-btn" aria-label={tr(state.maximized ? "nav.restore" : "nav.maximize")} title={tr(state.maximized ? "nav.restore" : "nav.maximize")} onClick={() => cmd({ type: "window", action: "maximize" })}>
+                {state.maximized ? <CaptionRestoreIcon /> : <CaptionMaximizeIcon />}
+              </button>
               <button class="window-btn close" aria-label={tr("nav.close")} title={tr("nav.close")} onClick={() => cmd({ type: "window", action: "close" })}><CaptionCloseIcon /></button>
             </div>
           )}
@@ -114,6 +150,7 @@ export function App() {
           </button>
 
           <AddressBar url={state.activeUrl} focused={addressFocused} setFocused={setAddressFocused} language={state.language} keyboard={Boolean(state.keyboard?.target === "address")}>
+            <Toasts status={state.status} />
             <button
               class={`address-btn ${state.isFavorite ? "on" : ""}`}
               aria-label={tr("nav.favorite")} aria-pressed={state.isFavorite}
@@ -123,6 +160,15 @@ export function App() {
               <StarIcon size={18} filled={state.isFavorite} />
             </button>
           </AddressBar>
+          {/* What used to be the status line, as toolbar indicators: Edge shows its tracking shield the same way. */}
+          <div class="status-line">
+            <span class={`indicator ${state.adBlock ? "on" : ""}`} role="img" aria-label={state.adBlock ? tr("status.adsOn") : tr("status.adsOff")} title={state.adBlock ? tr("status.adsOn") : tr("status.adsOff")}>
+              <ShieldIcon />
+            </span>
+            <span class={`indicator pad ${state.controllerConnected ? "on" : "off"}`} title={state.controllerConnected ? tr("status.padOn") : tr("status.padOff")}>
+              <GamepadIcon /> <span class="mode">{state.inputMode.toUpperCase()}</span>
+            </span>
+          </div>
           <button
             class="icon-btn" aria-label={tr("nav.menu")} title={`${tr("nav.menu")} · Start`}
             aria-haspopup="dialog" aria-expanded={overlay === "menu"} onClick={() => setOverlay("menu")}
@@ -143,15 +189,10 @@ export function App() {
       </div>
 
       {state.permission && <PermissionDialog prompt={state.permission} language={state.language} />}
-      {state.keyboard && <Keyboard state={state} />}
+      {cover && <img class="page-cover" src={cover} alt="" style={{ top: `${state.chromeVisible ? chromeTop : 0}px` }} />}
+      {state.keyboard && <Keyboard state={state} onInset={keyboardInset} />}
       {overlay === "tabs" && <TabSwitcher tabs={state.tabs} language={state.language} onClose={() => setOverlay("none")} />}
       {overlay === "menu" && <QuickMenu state={state} onClose={() => setOverlay("none")} onTabs={() => setOverlay("tabs")} />}
-      <Toasts status={state.status} />
-      <div class="status-line">
-        <span class={state.adBlock ? "on" : ""}><ShieldIcon /> {state.adBlock ? tr("status.adsOn") : tr("status.adsOff")}</span>
-        <span class={state.controllerConnected ? "on" : ""}><GamepadIcon /> {state.controllerConnected ? tr("status.padOn") : tr("status.padOff")}</span>
-        <span class="mode">{state.inputMode.toUpperCase()}</span>
-      </div>
     </div>
   );
 }

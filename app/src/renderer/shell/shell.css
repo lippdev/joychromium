@@ -306,24 +306,17 @@ body {
 .pad-hints { color: var(--muted); flex: none; }
 .shell.tv .bar { border-bottom: 0; }
 
-.status-line {
-  position: fixed;
-  right: var(--space-3);
-  bottom: var(--space-2);
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-  color: var(--faint);
-  font-size: var(--text-xs);
-  letter-spacing: 0.04em;
-  pointer-events: none;
-}
-
-.status-line span { display: flex; align-items: center; gap: var(--space-1); }
+/* Ad blocking and the controller, as quiet indicators next to the menu button. */
+.status-line { display: flex; align-items: center; gap: var(--space-1); color: var(--muted); }
+.status-line .indicator { display: flex; align-items: center; gap: var(--space-1); height: calc(36 * var(--u)); padding: 0 var(--space-2); font-size: calc(11 * var(--u)); font-weight: 600; letter-spacing: 0.04em; }
 .status-line .on { color: var(--accent); }
-body[data-mode="tv"] .status-line { display: none; }
+/* Without a controller the input mode means nothing, but its text stays in the tree for whoever reads the state. */
+.status-line .pad.off { display: none; }
 
 /* ---- Overlays ---- */
+
+/* The page as it was when a modal opened; the live view steps aside under it (see app.tsx). */
+.page-cover { position: fixed; left: 0; z-index: 10; width: 100vw; pointer-events: none; }
 
 .overlay {
   position: fixed;
@@ -372,6 +365,12 @@ body[data-mode="tv"] .status-line { display: none; }
 .btn:hover { filter: brightness(1.08); }
 
 .menu { display: grid; gap: var(--space-1); min-width: calc(360 * var(--u)); }
+
+/* With a mouse the menu drops from the … button, as Edge's does; on the TV it stays centered for the controller. */
+.overlay.dropdown { align-items: flex-start; justify-content: flex-end; padding: calc(84 * var(--u)) var(--space-2) 0; background: transparent; backdrop-filter: none; }
+.overlay.dropdown .menu { min-width: calc(300 * var(--u)); max-height: calc(100vh - 100 * var(--u)); overflow: auto; padding: var(--space-2); gap: 0; border-radius: var(--radius); }
+.overlay.dropdown .menu h2 { display: none; }
+.overlay.dropdown .menu-item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); }
 
 .menu-item {
   display: flex;
@@ -527,28 +526,23 @@ body[data-mode="tv"] .status-line { display: none; }
 
 /* ---- Toasts ---- */
 
-.toasts {
-  position: fixed;
-  left: 50%;
-  bottom: var(--space-5);
-  transform: translateX(-50%);
-  display: grid;
-  gap: var(--space-2);
-  z-index: 30;
-  pointer-events: none;
-}
+.toasts { display: flex; min-width: 0; max-width: 45%; pointer-events: none; }
 
 .toast {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border);
+  min-width: 0;
+  padding: calc(2 * var(--u)) var(--space-3);
   border-radius: calc(999 * var(--u));
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--input));
   color: var(--text);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   animation: toast-in var(--duration) var(--ease);
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateX(8px); }
   to { opacity: 1; transform: none; }
 }

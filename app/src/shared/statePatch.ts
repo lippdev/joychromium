@@ -24,6 +24,7 @@ const areaOf: Record<keyof ShellState, ShellStateArea> = {
   adBlock: "chrome",
   controllerConnected: "chrome",
   controllerFamily: "chrome",
+  maximized: "chrome",
   permission: "overlay",
   keyboard: "keyboard",
   find: "find",

@@ -43,7 +43,10 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
     case "media":
       return isMediaAction(c.action);
     case "chrome-height":
-      return typeof c.height === "number" && c.height >= 0 && c.height < 1000;
+      return typeof c.height === "number" && c.height >= 0 && c.height < 1000
+        && (c.bottom === undefined || (typeof c.bottom === "number" && c.bottom >= 0 && c.bottom < 4000));
+    case "page-cover":
+      return typeof c.covered === "boolean";
     case "ui-settings":
       return (c.uiScale === undefined || typeof c.uiScale === "number")
         && (c.overscan === undefined || typeof c.overscan === "number")

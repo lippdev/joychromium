@@ -14,12 +14,24 @@ const URL_KEYS = [".com", ".br", "www.", "https://", "/", "-"];
  * address field is being typed, what the shell knows of the typed text comes back as suggestions: D-pad up leaves the
  * keys for them, and A on one opens it instead of typing another letter.
  */
-export function Keyboard({ state }: { state: ShellState }) {
+export function Keyboard({ state, onInset }: { state: ShellState; onInset: (bottom: number) => void }) {
   const [layout, setLayout] = useState<"qwerty" | "abc">("qwerty");
   const [row, setRow] = useState<"letters" | "accents">("letters");
   const [shift, setShift] = useState(false);
   const [selected, setSelected] = useState(-1);
   const dialog = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  // The page shrinks to end above the keyboard, so the field being typed into stays in sight and live.
+  useEffect(() => {
+    const report = () => {
+      const top = panel.current?.getBoundingClientRect().top;
+      if (top !== undefined) onInset(Math.max(0, Math.round(window.innerHeight - top)));
+    };
+    const observer = new ResizeObserver(report);
+    if (panel.current) observer.observe(panel.current);
+    report();
+    return () => { observer.disconnect(); onInset(0); };
+  }, []);
   // Opened from the controller (Y) the dialog takes focus so the screen reader announces it; opened by focusing the
   // address field the field keeps it, because that is where the physical keyboard types.
   useEffect(() => {
@@ -52,7 +64,7 @@ export function Keyboard({ state }: { state: ShellState }) {
 
   return (
     <div ref={dialog} tabindex={-1} class="overlay bottom" id="keyboard" role="dialog" aria-label={t(state.language, "a11y.keyboard")}>
-      <div class="keyboard">
+      <div class="keyboard" ref={panel}>
         <div class="keyboard-head">
           <span class="label">{target === "address" ? t(state.language, "input.address") : t(state.language, "input.page")}</span>
           <span class="hint">{t(state.language, "input.hint")}</span>

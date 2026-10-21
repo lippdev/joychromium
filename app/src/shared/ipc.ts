@@ -23,6 +23,7 @@ export const Channels = {
   controller: "shell:controller",
   /** chrome renderer -> main (invoke): one small screenshot per tab, for the tab switcher */
   shellThumbnails: "shell:thumbnails",
+  shellSnapshot: "shell:snapshot",
   /** chrome renderer -> main: the chrome's height, so the tab views sit below it */
   shellLayout: "shell:layout",
   /** chrome renderer -> main (invoke): the preferences the shell itself acts on, such as haptics */
@@ -79,6 +80,8 @@ export interface ShellState {
   suggestions: { title: string; url: string }[];
   shortcutMod: "Ctrl" | "Cmd";
   nativeWindowControls: boolean;
+  /** The window fills the screen through the maximize button: the caption shows Restore instead of Maximize. */
+  maximized: boolean;
   windowMode: "tv" | "window";
   uiScale: number;
   overscan: number;
@@ -122,7 +125,10 @@ export type ShellCommand =
   | { type: "address-input"; text: string }
   | { type: "cycle-input-mode" }
   | { type: "media"; action: MediaAction }
-  | { type: "chrome-height"; height: number }
+  /** The chrome's height on top and, while the controller keyboard is open, the room it takes at the bottom. */
+  | { type: "chrome-height"; height: number; bottom?: number }
+  /** A modal overlay is open: the shell paints a snapshot of the page and the live view steps aside under it. */
+  | { type: "page-cover"; covered: boolean }
   | { type: "ui-settings"; uiScale?: number; overscan?: number; highContrast?: boolean; language?: "pt-BR" | "en"; crashReports?: boolean }
   | { type: "escape" };
 

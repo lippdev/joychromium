@@ -81,4 +81,20 @@ export const GlobeIcon = ({ size = 16, class: c }: Props) => (
 const caption = { width: 10, height: 10, viewBox: "0 0 10 10", fill: "none", stroke: "currentColor", "stroke-width": 1, "aria-hidden": true };
 export const CaptionMinimizeIcon = () => <svg {...caption}><path d="M0 5.5h10" /></svg>;
 export const CaptionMaximizeIcon = () => <svg {...caption}><rect x="0.5" y="0.5" width="9" height="9" rx="1" /></svg>;
+export const CaptionRestoreIcon = () => <svg {...caption}><rect x="0.5" y="2.5" width="7" height="7" rx="1" /><path d="M2.5 2.5V0.5h7v7h-2" /></svg>;
 export const CaptionCloseIcon = () => <svg {...caption}><path d="M0.5 0.5l9 9M9.5 0.5l-9 9" /></svg>;
+export const PlayPauseIcon = ({ size = 22, class: c }: Props) => (
+  <svg {...base(size)} class={c}><path d="M4 5v14l9-7z" /><path d="M16 5v14M20 5v14" /></svg>
+);
+export const SkipBackIcon = ({ size = 22, class: c }: Props) => (
+  <svg {...base(size)} class={c}><path d="M19 20 9 12l10-8z" /><path d="M5 19V5" /></svg>
+);
+export const SkipForwardIcon = ({ size = 22, class: c }: Props) => (
+  <svg {...base(size)} class={c}><path d="m5 4 10 8-10 8z" /><path d="M19 5v14" /></svg>
+);
+export const ZoomInIcon = ({ size = 22, class: c }: Props) => (
+  <svg {...base(size)} class={c}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5M11 8v6M8 11h6" /></svg>
+);
+export const ZoomOutIcon = ({ size = 22, class: c }: Props) => (
+  <svg {...base(size)} class={c}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5M8 11h6" /></svg>
+);
