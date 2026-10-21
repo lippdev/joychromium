@@ -59,7 +59,7 @@ export class CommandRouter {
         }
         break;
       case "fullscreen-toggle": h.setChromeVisible(!h.chromeVisible); break;
-      case "window-mode": h.applyWindowMode(h.store.current.windowMode === "tv" ? "window" : "tv", true); break;
+      case "window-mode": h.applyWindowMode(h.windowMode === "tv" ? "window" : "tv", true); break;
       case "find":
         h.find = { text: command.text };
         if (wc && command.text) wc.findInPage(command.text, { forward: !command.backwards, findNext: true });
@@ -97,7 +97,7 @@ export class CommandRouter {
         else if (h.keyboard) h.closeKeyboard();
         else if (h.find) { h.find = undefined; wc?.stopFindInPage("clearSelection"); h.broadcast(); }
         else if (wc && !h.chromeVisible) await wc.executeJavaScript("document.exitFullscreen && document.exitFullscreen()", true).catch(() => undefined);
-        else if (h.store.current.windowMode === "tv") h.applyWindowMode("window", true);
+        else if (h.windowMode === "tv") h.applyWindowMode("window", true);
         break;
     }
   }

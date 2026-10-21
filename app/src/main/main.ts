@@ -16,9 +16,10 @@ import { firstScreenLine } from "../shared/metrics";
 import { Pages } from "../shared/pages";
 import { effectiveMinimumChromium } from "../shared/policy";
 import { dohTemplate, versionAtLeast } from "../shared/security";
-import { urlFromArgv } from "../shared/platform";
+import { t } from "../shared/i18n";
+import { parseLaunchArgs } from "../shared/launchArgs";
 import { startupTargets } from "../shared/settings";
-import { installApplicationMenu } from "./platform";
+import { installApplicationMenu, installJumpList } from "./platform";
 import { CrashReporting } from "./services/crashReporting";
 import { watchWidevine } from "./services/widevine";
 import { runInPageWorld } from "./controllerActions";
@@ -186,7 +187,11 @@ async function start(): Promise<void> {
   const crashed = store.previousRunCrashed();
   store.markRunning();
   const lastSession = store.loadSession();
-  const startUrl = process.env.JOYCHROMIUM_START;
+  const tr = (key: string) => t(settings.language, key);
+  installJumpList({ newTab: tr("menu.newTab"), tv: tr("menu.tv"), window: tr("menu.window") });
+  const launch = parseLaunchArgs(process.argv);
+  if (launch.mode) shell.applyWindowMode(launch.mode, false);
+  const startUrl = process.env.JOYCHROMIUM_START ?? launch.url ?? openedUrl;
   const targets = startUrl
     ? [startUrl]
     : !settings.onboardingCompleted
@@ -215,7 +220,16 @@ let shellRef: Shell | undefined;
 let bootMs = 0;
 
 app.on("second-instance", (_event, argv) => {
-  shellRef?.focusFromSecondInstance(urlFromArgv(argv));
+  shellRef?.focusFromSecondInstance(parseLaunchArgs(argv));
+});
+
+// macOS hands a joychromium:// link to the app as an event instead of argv, before the shell exists on a cold start.
+let openedUrl: string | undefined;
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  const args = parseLaunchArgs([url]);
+  if (shellRef) shellRef.focusFromSecondInstance(args);
+  else openedUrl = args.url;
 });
 
 if (hasInstanceLock) {

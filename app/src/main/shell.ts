@@ -6,6 +6,7 @@ import { diffShellState } from "../shared/statePatch";
 import { statusText, type StatusId } from "../shared/status";
 import { displayUrl, isInternal, isWebUrl, Pages } from "../shared/pages";
 import type { WindowMode } from "../shared/platform";
+import type { LaunchArgs } from "../shared/launchArgs";
 import { hostOf, isDangerousDownload, isThirdPartyRequest, allowPopup, safeFileName, trackingPolicy } from "../shared/security";
 import { commandForShortcut } from "../shared/shortcuts";
 import { userAgentForUrl } from "../shared/streamingUa";
@@ -60,6 +61,8 @@ export class Shell {
   readonly tabs: TabManager;
   private readonly layout: WindowLayout;
   chromeVisible = true;
+  /** A mode asked for on the command line (`--tv`, `--window`): it holds for this run without touching the setting. */
+  private launchMode: WindowMode | undefined;
   private pageCovered = false;
   inputMode: InputMode = "Spatial";
   keyboard: ShellState["keyboard"];
@@ -118,7 +121,7 @@ export class Shell {
 
   async start(targets: readonly string[]): Promise<void> {
     await this.window.loadURL("joychromium://chrome/");
-    this.applyWindowMode(this.deps.store.current.windowMode, false);
+    this.layout.applyMode(this.windowMode === "tv");
     this.window.show();
     const first = targets[0] === undefined ? undefined : this.tabs.open(targets[0], { activate: true });
     // The screen the user was waiting for: the shell is loaded above and this is the first tab's own document. Reported
@@ -330,14 +333,19 @@ export class Shell {
 
   setChromeVisible(visible: boolean): void {
     if (!visible) clearTimeout(this.chromeHideTimer);
-    this.layout.setChromeVisible(visible, () => this.deps.store.current.windowMode === "tv");
+    this.layout.setChromeVisible(visible, () => this.windowMode === "tv");
     this.layout.apply();
     this.broadcast();
   }
 
+  get windowMode(): WindowMode {
+    return this.launchMode ?? this.deps.store.current.windowMode;
+  }
+
   applyWindowMode(mode: WindowMode, persist: boolean): void {
     if (persist) this.deps.store.update((s) => ({ ...s, windowMode: mode }));
-    this.layout.applyMode(this.deps.store.current.windowMode === "tv");
+    this.launchMode = persist ? undefined : mode;
+    this.layout.applyMode(this.windowMode === "tv");
     this.broadcast();
   }
 
@@ -353,11 +361,15 @@ export class Shell {
   }
 
   /** A second launch focuses this window instead of opening another copy of the profile. */
-  focusFromSecondInstance(url?: string): void {
+  /** A second launch (a launcher, a shortcut, a link from another app) is handed to this instance. */
+  focusFromSecondInstance(args: LaunchArgs): void {
     if (this.window.isMinimized()) this.window.restore();
     this.window.show();
     this.window.focus();
-    if (url) this.navigate(url);
+    if (args.mode) this.applyWindowMode(args.mode, false);
+    // A browser opens what another app hands it in a new tab instead of replacing what the user was watching.
+    if (args.url) this.tabs.open(args.url, { activate: true });
+    else if (args.newTab) this.newTab();
   }
 
   private housekeeping(): void {
@@ -434,7 +446,7 @@ export class Shell {
       shortcutMod: currentShortcutMod(),
       nativeWindowControls: nativeWindowControls(),
       maximized: this.window.isMaximized(),
-      windowMode: s.windowMode,
+      windowMode: this.windowMode,
       uiScale: s.uiScale,
       overscan: s.overscan,
       highContrast: s.highContrast,
@@ -639,11 +651,11 @@ export class Shell {
 
   private scheduleChromeHide(): void {
     clearTimeout(this.chromeHideTimer);
-    if (this.deps.store.current.windowMode !== "tv") return;
+    if (this.windowMode !== "tv") return;
     const tab = this.tabs.active;
     if (!tab || tab.sleeping || isInternal(tab.url)) return;
     this.chromeHideTimer = setTimeout(() => {
-      if (this.deps.store.current.windowMode === "tv" && !this.permissions.prompt && !this.keyboard) this.setChromeVisible(false);
+      if (this.windowMode === "tv" && !this.permissions.prompt && !this.keyboard) this.setChromeVisible(false);
     }, 4_000);
     this.chromeHideTimer.unref?.();
   }

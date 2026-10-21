@@ -40,6 +40,8 @@ export interface ShellHost {
   /** Minimize even from TV mode, where a fullscreen window cannot be minimized as it is (E4-03). */
   minimizeWindow(): void;
   applyWindowMode(mode: WindowMode, persist: boolean): void;
+  /** The mode in effect: the one from the command line for this run, else the saved one. */
+  readonly windowMode: WindowMode;
   resolvePermission(allow: boolean, remember: boolean): void;
   toggleFavorite(): void;
   navigate(url: string, allowHttp?: boolean): void;

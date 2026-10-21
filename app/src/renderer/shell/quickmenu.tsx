@@ -3,7 +3,7 @@ import type { ShellState } from "../../shared/ipc";
 import { t } from "../../shared/i18n";
 import { cmd } from "./bridge";
 import {
-  FullscreenIcon, KeyboardIcon, PictureInPictureIcon, PlayPauseIcon, PlusIcon, SettingsIcon, SkipBackIcon, SkipForwardIcon, TabsIcon,
+  CloseIcon, FullscreenIcon, KeyboardIcon, PictureInPictureIcon, PlayPauseIcon, PlusIcon, SettingsIcon, SkipBackIcon, SkipForwardIcon, TabsIcon,
   VolumeIcon, ZoomInIcon, ZoomOutIcon,
 } from "./icons";
 
@@ -52,6 +52,10 @@ export function QuickMenu({ state, onClose, onTabs }: { state: ShellState; onClo
         </button>
         <button class="menu-item" onClick={() => run({ type: "settings" })}>
           <SettingsIcon /> {tr("menu.settings")}
+        </button>
+        {/* Back to whatever launched the browser (ConsoleMode, Steam, the desktop) without reaching for a mouse. */}
+        <button class="menu-item" onClick={() => run({ type: "window", action: "close" })}>
+          <CloseIcon /> {tr("menu.quit")}
         </button>
       </div>
     </div>

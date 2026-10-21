@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { readJsonFile } from "../../src/main/atomicFile";
+import { launchUrl, parseLaunchArgs } from "../../src/shared/launchArgs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { displayUrl, errorPageFor, internalPageFile, isDevOnlyFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
@@ -20,7 +21,7 @@ import { buildSuggestions } from "../../src/shared/suggestion";
 import { defaultModeFor, directionOf, nextMode, stickToScroll, stickToVelocity } from "../../src/shared/controllerInput";
 import { activePad, padInUse, padsInUse, startedUsing, type PadSample } from "../../src/shared/controllerSelection";
 import {
-  extraDangerousExtensions, shortcutLabel, shortcutModifier, updateInstaller, urlFromArgv, usesNativeWindowControls,
+  extraDangerousExtensions, shortcutLabel, shortcutModifier, updateInstaller, usesNativeWindowControls,
 } from "../../src/shared/platform";
 import { diagnosticsLines, formatBootLine, formatMemoryLines, formatTabsLine } from "../../src/shared/diagnostics";
 import { History } from "../../src/main/history";
@@ -342,9 +343,20 @@ describe("platform", () => {
     expect(extraDangerousExtensions("linux")).toContain(".desktop");
     expect(extraDangerousExtensions("win32")).toEqual([]);
   });
-  it("finds a URL handed to a second instance", () => {
-    expect(urlFromArgv(["/app/joychromium", "https://a.example/x"])).toBe("https://a.example/x");
-    expect(urlFromArgv(["--flag"])).toBeUndefined();
+  it("reads what a launcher asks for on the command line", () => {
+    expect(parseLaunchArgs(["/app/joychromium", "https://a.example/x"])).toEqual({ url: "https://a.example/x", mode: undefined, newTab: false });
+    expect(parseLaunchArgs(["JoyChromium.exe", "--flag"])).toEqual({ url: undefined, mode: undefined, newTab: false });
+    expect(parseLaunchArgs(["JoyChromium.exe", "--KIOSK", "joychromium://history"])).toMatchObject({ mode: "tv", url: "joychromium://history" });
+    expect(parseLaunchArgs(["JoyChromium.exe", "--window", "--new-tab"])).toMatchObject({ mode: "window", newTab: true });
+    // Contradictory flags keep the saved mode.
+    expect(parseLaunchArgs(["JoyChromium.exe", "--tv", "--window"]).mode).toBeUndefined();
+    // Chromium's own switches are not URLs.
+    expect(parseLaunchArgs(["JoyChromium.exe", "--allow-file-access-from-files", "file:///C:/x.html"]).url).toBeUndefined();
+    // What the OS hands over for joychromium:// links: public pages and open?url=, nothing else.
+    expect(launchUrl("joychromium://open?url=https%3A%2F%2Fwww.youtube.com%2Ftv")).toBe("https://www.youtube.com/tv");
+    expect(launchUrl("joychromium://open?url=javascript%3Aalert(1)")).toBeUndefined();
+    expect(launchUrl("joychromium://chrome/")).toBeUndefined();
+    expect(launchUrl("joychromium://design")).toBeUndefined();
   });
   it("leaves updates to the host inside the Flatpak sandbox", () => {
     expect(updateInstaller("linux", "dev.lipp.joychromium")).toBe("flathub");
