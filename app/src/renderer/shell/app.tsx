@@ -236,13 +236,17 @@ function AddressBar({ url, focused, setFocused, language, keyboard, children }: 
   const fresh = keyboard && isInternal(url);
   const shown = fresh ? "" : url;
   const [value, setValue] = useState(shown);
-  useEffect(() => { if (!focused) setValue(shown); }, [shown, focused]);
+  // The field follows the tab's address until the user types in it: a new tab focuses the field, and a page that loads
+  // meanwhile must show its address, but text being typed is never overwritten.
+  const edited = useRef(false);
+  useEffect(() => { if (!focused || !edited.current) setValue(shown); }, [shown, focused]);
 
   const submit = () => cmd({ type: "search-or-navigate", text: value });
   return (
     <form
       class="address"
-      onSubmit={(e) => { e.preventDefault(); submit(); setFocused(false); (input.current as HTMLInputElement | null)?.blur(); }}
+      // Going somewhere hands the focus to the page that loads, as in Edge; the D-pad then walks the page, not the bar.
+      onSubmit={(e) => { e.preventDefault(); submit(); setFocused(false); (input.current as HTMLInputElement | null)?.blur(); cmd({ type: "focus-page" }); }}
     >
       <SearchIcon />
       <input
@@ -256,7 +260,7 @@ function AddressBar({ url, focused, setFocused, language, keyboard, children }: 
         // A click (or A on the field from the D-pad, see gamepad.ts) opens the controller keyboard; focus alone does not, or
         // walking the toolbar with the D-pad would pop the keyboard up on the way past.
         onMouseDown={() => cmd({ type: "keyboard-open", target: "address" })}
-        onFocus={() => { setFocused(true); (input.current as HTMLInputElement).select(); }}
+        onFocus={() => { setFocused(true); edited.current = false; (input.current as HTMLInputElement).select(); }}
         onBlur={() => setFocused(false)}
         onKeyDown={(e) => {
           // Down leaves the field for the suggestions the controller keyboard shows, so both inputs reach them.
@@ -268,6 +272,7 @@ function AddressBar({ url, focused, setFocused, language, keyboard, children }: 
         }}
         onInput={(e) => {
           const text = (e.target as HTMLInputElement).value;
+          edited.current = true;
           setValue(text);
           cmd({ type: "address-input", text });
         }}

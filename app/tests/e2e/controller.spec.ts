@@ -320,3 +320,34 @@ test("the keyboard's own shortcuts: Y space, LT shift, X delete, LS the layer, a
   await step(10);
   await expect.poll(layerKey).toBe("abc");
 });
+
+test("a new tab opens on the address field with the keyboard up, and the D-pad types there", async () => {
+  await installPads([XBOX]);
+  await app.evaluate(() => globalThis.joy.command({ type: "new-tab" } as never));
+  await expect(chrome.locator("#keyboard")).toBeVisible();
+  await expect.poll(shellFocus).toBe("address");
+  await expect.poll(shellHasWindowFocus).toBe(true);
+  // The first press goes into the keys, at "q"; A types it into the address.
+  await step(Pad.Right);
+  await expect.poll(shellFocus).toBe("q");
+  await step(Pad.A);
+  await expect.poll(() => chrome.locator("#address").inputValue()).toBe("q");
+});
+
+test("the pointer is an arrow, and a hand over what can be clicked", async () => {
+  await app.evaluate(({ protocol }, page) => {
+    protocol.handle("https", () => new Response(page, { headers: { "content-type": "text/html" } }));
+  }, POINTER_PAGE);
+  await app.evaluate(() => globalThis.joy.command({ type: "navigate", url: "https://pointer.example/" } as never));
+  await expect.poll(async () => {
+    const tab = (await tabs()).find((t) => t.isActive);
+    return tab?.url === "https://pointer.example/" && !tab.isLoading;
+  }, { timeout: 30_000 }).toBe(true);
+  const shapeAt = async (where: string) => {
+    await app.evaluate(({}, code) => globalThis.joy.spatialEval(code), `(() => { const r = ${where}.getBoundingClientRect(); window.__joyCursor.show(true, r.left + r.width / 2, r.top + r.height / 2); })()`);
+    // The hand is the shape with fingers: its path starts at the fingertip.
+    return app.evaluate(() => globalThis.joy.pageEval("document.getElementById('__joy-cursor').style.backgroundImage.includes('M10%201.6') ? 'hand' : 'arrow'"));
+  };
+  expect(await shapeAt("document.getElementById('area')")).toBe("arrow");
+  expect(await shapeAt("document.getElementById('b')")).toBe("hand");
+});

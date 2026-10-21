@@ -8,7 +8,8 @@ export interface NavigationHost {
   readonly tabs: TabManager;
   readonly settings: () => AppSettings;
   readonly httpAllowedHosts: Set<string>;
-  openKeyboard(target: "address" | "page"): void;
+  /** The address field takes the focus with the controller keyboard open on it: where a new tab starts. */
+  typeInAddress(): void;
   closeKeyboard(): void;
 }
 
@@ -39,6 +40,7 @@ export class Navigation {
   newTab(isPrivate = false): void {
     const target = isPrivate ? Pages.newtab : newTabTarget(this.host.settings());
     this.host.tabs.open(target, { isPrivate });
-    if (target !== Pages.newtab) this.host.openKeyboard("address");
+    // A new tab is for going somewhere: it opens on the address field with the keyboard up, whatever page it shows.
+    this.host.typeInAddress();
   }
 }

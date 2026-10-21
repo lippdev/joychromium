@@ -444,6 +444,11 @@ async function quickMenu(h: Harness, label: RegExp): Promise<void> {
   await focusOn(h, "shell", `[...document.querySelectorAll('.menu .menu-item')].find((b) => ${label.toString()}.test((b.textContent || '').trim()))`, `menu item ${label}`);
   await press(h, Pad.A);
   await expect(h.chrome.locator(".overlay .menu")).toHaveCount(0);
+  // A new tab opens on the address field with the keyboard up; B puts it away to go on with the pad.
+  if (await h.chrome.locator("#keyboard").count()) {
+    await press(h, Pad.B);
+    await expect(h.chrome.locator("#keyboard")).toHaveCount(0);
+  }
 }
 
 test("three tabs, switching in the tab switcher and closing one, all from the pad", async () => {
