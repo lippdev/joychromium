@@ -75,6 +75,31 @@ async function press(pad: number, button: number): Promise<void> {
   await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the release, so the next press would count as a hold" }).toBeGreaterThan(up);
 }
 
+/** How far the page's own cursor overlay has moved horizontally, and whether it is drawn at all. */
+const cursor = () => app.evaluate(() => globalThis.joy.pageEval(
+  "(() => { const c = document.getElementById('__joy-cursor'); return c ? { shown: c.style.display === 'block', x: parseFloat((c.style.transform.match(/translate\\(([-\\d.]+)px/) || [0, '0'])[1]) } : null; })()",
+)) as Promise<{ shown: boolean; x: number } | null>;
+
+test("the right stick turns the pointer on and the left stick moves it", async () => {
+  await installPads([XBOX]);
+  await expect.poll(hints, { timeout: 15_000 }).toContain("R3 cursor");
+  const mode = () => chrome.locator(".status-line .mode").textContent();
+  expect(await mode()).toBe("SPATIAL");
+
+  // The right stick is buttons[11]: pressing buttons[10] is the left stick and must not change the mode.
+  await press(0, 10);
+  expect(await mode()).toBe("SPATIAL");
+  await press(0, 11);
+  await expect.poll(mode, { timeout: 10_000 }).toBe("CURSOR");
+  await expect.poll(cursor, { timeout: 10_000 }).toMatchObject({ shown: true });
+
+  // In Cursor mode the stick drives the page's pointer instead of walking the focus.
+  const before = (await cursor())!.x;
+  await chrome.evaluate(() => { (window as unknown as { __pads: { axes: number[] }[] }).__pads[0]!.axes[0] = 1; });
+  await expect.poll(async () => (await cursor())!.x, { timeout: 10_000 }).toBeGreaterThan(before + 20);
+  await chrome.evaluate(() => { (window as unknown as { __pads: { axes: number[] }[] }).__pads[0]!.axes[0] = 0; });
+});
+
 test("the pad last used owns the input and the hints follow it", async () => {
   await installPads([XBOX, DUALSENSE]);
   await expect.poll(hints, { timeout: 15_000 }).toContain("B voltar");

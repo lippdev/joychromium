@@ -235,7 +235,7 @@ describe("controller glyphs", () => {
     expect(controllerFamily("Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)")).toBe("switch");
     expect(controllerFamily("8BitDo Pro 2")).toBe("generic");
     expect(controllerFamily(undefined)).toBe("generic");
-    expect(buttonGlyphs("playstation")).toEqual({ select: "✕", back: "○", reload: "□", keyboard: "△" });
+    expect(buttonGlyphs("playstation")).toEqual({ select: "✕", back: "○", reload: "□", keyboard: "△", stick: "R3" });
     expect(buttonGlyphs("xbox").select).toBe("A");
   });
 });

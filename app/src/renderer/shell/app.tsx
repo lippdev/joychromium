@@ -181,7 +181,7 @@ export function App() {
             <span class="pad-hints">
               {(() => {
                 const g = buttonGlyphs(state.controllerFamily);
-                return `${g.back} voltar · ${g.select} abrir · ${g.reload} recarregar · ${g.keyboard} teclado`;
+                return `${g.back} voltar · ${g.select} abrir · ${g.reload} recarregar · ${g.keyboard} teclado · ${g.stick} cursor`;
               })()}
             </span>
           </div>

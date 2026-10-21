@@ -10,13 +10,22 @@ export function controllerFamily(id: string | undefined): ControllerFamily {
   return "generic";
 }
 
-const GLYPHS: Record<ControllerFamily, { select: string; back: string; reload: string; keyboard: string }> = {
-  xbox: { select: "A", back: "B", reload: "X", keyboard: "Y" },
-  playstation: { select: "✕", back: "○", reload: "□", keyboard: "△" },
-  switch: { select: "A", back: "B", reload: "Y", keyboard: "X" },
-  generic: { select: "A", back: "B", reload: "X", keyboard: "Y" },
+export interface ControllerGlyphs {
+  select: string;
+  back: string;
+  reload: string;
+  keyboard: string;
+  /** Clicking the right stick: the only way into Cursor mode, where the same stick moves a pointer. */
+  stick: string;
+}
+
+const GLYPHS: Record<ControllerFamily, ControllerGlyphs> = {
+  xbox: { select: "A", back: "B", reload: "X", keyboard: "Y", stick: "R3" },
+  playstation: { select: "✕", back: "○", reload: "□", keyboard: "△", stick: "R3" },
+  switch: { select: "A", back: "B", reload: "Y", keyboard: "X", stick: "R3" },
+  generic: { select: "A", back: "B", reload: "X", keyboard: "Y", stick: "R3" },
 };
 
-export function buttonGlyphs(family: ControllerFamily): { select: string; back: string; reload: string; keyboard: string } {
+export function buttonGlyphs(family: ControllerFamily): ControllerGlyphs {
   return GLYPHS[family];
 }
