@@ -46,6 +46,7 @@
   const MAX_TILES = 8;
   let pinned = [];
   let recent = [];
+  let showSites = true;
 
   function card(name, url) {
     const b = document.createElement('button');
@@ -77,6 +78,10 @@
       const v = parseInt(t.accent.slice(1), 16);
       r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#0A0F1A' : '#FFFFFF');
       $('engine').textContent = `${msg.searchEngine.name}`;
+      document.body.dataset.bg = msg.newTabBackground || 'Wallpaper';
+      const b = parseInt(t.background.slice(1), 16);
+      document.body.dataset.tone = (0.2126 * (b >> 16 & 255) + 0.7152 * (b >> 8 & 255) + 0.0722 * (b & 255)) / 255 > 0.5 ? 'light' : 'dark';
+      showSites = msg.newTabSites !== false;
       pinned = [...msg.shortcuts, ...(msg.favorites || [])];
       render();
     }
@@ -89,7 +94,7 @@
   function render() {
     const seen = new Set();
     const sites = [...pinned, ...recent].filter((s) => !seen.has(s.url) && seen.add(s.url)).slice(0, MAX_TILES);
-    $('sites').hidden = sites.length === 0;
+    $('sites').hidden = !showSites || sites.length === 0;
     $('sites').replaceChildren(...sites.map((s) => card(s.name, s.url)));
   }
   post('ready', {});

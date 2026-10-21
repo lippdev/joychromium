@@ -11,6 +11,24 @@ body {
   font-family: "Inter", system-ui, sans-serif;
 }
 
+/* Settings → Appearance picks the backdrop; the glow above is "Gradient". The wallpaper keeps only its light and takes
+   the theme's accent as its color (luminosity blend), then is tinted toward the theme background so text keeps its
+   contrast in every theme, light ones included. */
+body[data-bg="Solid"] { background: var(--bg); }
+body[data-bg="Wallpaper"] {
+  background:
+    radial-gradient(ellipse at center, color-mix(in srgb, var(--bg) 78%, transparent), color-mix(in srgb, var(--bg) 45%, transparent) 80%),
+    url("newtab-wallpaper.jpg") center / cover no-repeat fixed,
+    var(--accent);
+  background-blend-mode: normal, luminosity, normal;
+}
+/* The wallpaper is a dark picture: a light theme washes it out further so dark text stays readable up to the edges. */
+body[data-bg="Wallpaper"][data-tone="light"] {
+  background-image:
+    radial-gradient(ellipse at center, color-mix(in srgb, var(--bg) 92%, transparent), color-mix(in srgb, var(--bg) 72%, transparent) 80%),
+    url("newtab-wallpaper.jpg");
+}
+
 main {
   display: flex;
   flex-direction: column;

@@ -21,6 +21,10 @@ export const THEME_PRESETS: Record<string, Theme> = {
   Ocean: { accent: "#4CC2FF", background: "#0B1220", surface: "#121C2E", text: "#EAF2FF" },
   Ember: { accent: "#FF7A45", background: "#15100E", surface: "#1F1815", text: "#FFF1EA" },
   Violet: { accent: "#B388FF", background: "#100D18", surface: "#191424", text: "#F2EDFF" },
+  Midnight: { accent: "#7AA2FF", background: "#0A0E1A", surface: "#131A2B", text: "#E6ECFF" },
+  Graphite: { accent: "#A9B8D0", background: "#141414", surface: "#232323", text: "#EDEDED" },
+  Rose: { accent: "#FF6B9A", background: "#160E12", surface: "#21161B", text: "#FFEFF4" },
+  Sunset: { accent: "#FFB224", background: "#15110A", surface: "#201A10", text: "#FFF6E5" },
   Light: LIGHT_THEME,
 };
 
@@ -97,6 +101,10 @@ export function parseShortcut(value: unknown): Shortcut | undefined {
   return typeof s.name === "string" && s.name.trim() && isWebUrl(s.url) ? { name: s.name.trim(), url: s.url.trim() } : undefined;
 }
 
+/** What the new tab draws behind the logo and the search: the bundled wallpaper, the accent glow, or the plain color. */
+export const NEW_TAB_BACKGROUNDS = ["Wallpaper", "Gradient", "Solid"] as const;
+export type NewTabBackground = (typeof NEW_TAB_BACKGROUNDS)[number];
+
 export type StartupMode = "NewTab" | "Home" | "Restore" | "Custom";
 export type NewTabMode = "NewTabPage" | "Home" | "Custom";
 export type TrackingLevel = "Basic" | "Balanced" | "Strict";
@@ -142,6 +150,9 @@ export interface AppSettings {
    * sites whose rendition improves without the TV marker. Off until a row in docs/DRM-UAS.md shows a gain.
    */
   streamingDesktopUa: boolean;
+  newTabBackground: NewTabBackground;
+  /** The row of quick-link tiles under the search on the new tab. */
+  newTabSites: boolean;
 }
 
 export function defaultSettings(): AppSettings {
@@ -172,6 +183,8 @@ export function defaultSettings(): AppSettings {
     vibration: false,
     sitePermissions: {},
     streamingDesktopUa: false,
+    newTabBackground: "Wallpaper",
+    newTabSites: true,
   };
 }
 
@@ -260,6 +273,8 @@ export function parseSettings(input: unknown): AppSettings {
     vibration: bool(r.vibration, d.vibration),
     sitePermissions: permissions,
     streamingDesktopUa: bool(r.streamingDesktopUa, d.streamingDesktopUa),
+    newTabBackground: oneOf(NEW_TAB_BACKGROUNDS, r.newTabBackground, d.newTabBackground),
+    newTabSites: bool(r.newTabSites, d.newTabSites),
   };
 }
 
