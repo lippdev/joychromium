@@ -286,7 +286,7 @@ Regras de escopo:
 
 ### 9.3 Status por item
 
-Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregue tem código na `main` e teste). O que falta está separado entre o que exige conta, hardware ou permissão de administrador e o que simplesmente ficou fora deste ciclo.
+Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregue tem código na `main` e teste). O resumo executivo — o que está provado, o que não está e de quem é cada pendência — está em [STATUS.md](STATUS.md). O que falta está separado entre o que exige conta, hardware ou permissão de administrador e o que simplesmente ficou fora deste ciclo.
 
 | Épico | Must | Should | Could | O que falta |
 |---|---|---|---|---|
@@ -316,7 +316,6 @@ Somando: **35 de 37 Must**, **19 de 19 Should** e **10 de 10 Could**. O E2-07 (s
 
 **Fora deste ciclo (Could, sem bloqueio)**
 
-- **E4-03** pausar o polling do controle com a janela minimizada: pequeno e não bloqueia a distribuição.
 - **E9-01 e E9-02** seguem congelados pelo ADR-010, que agora é uma decisão de custo e não um "por enquanto": não há plano de pagar Developer ID nem certificado Windows. O **E9-03** (GPG em `.deb`/`.rpm`) fica congelado por escopo, não por custo — chave GPG é gratuita.
 
 **O que o app faz hoje, em uma frase:** navegador de TV multiplataforma com tela cheia por padrão, controle como entrada principal (incluindo iframes e mídia), PT-BR e EN, bloqueio de anúncios e rastreadores por nível, DRM Widevine no Linux, atualização automática nos instaladores, e CI nos três sistemas que instala e abre o pacote de cada um.
