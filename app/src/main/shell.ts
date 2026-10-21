@@ -115,7 +115,7 @@ export class Shell {
       tabs: this.tabs,
       settings: () => this.deps.store.current,
       httpAllowedHosts: this.httpAllowedHosts,
-      openKeyboard: (target) => this.openKeyboard(target),
+      typeInAddress: () => this.typeInAddress(),
       closeKeyboard: () => this.closeKeyboard(),
     });
     this.wireTabs();
@@ -313,6 +313,17 @@ export class Shell {
       if (!this.wired.has(tab.webContents)) {
         this.wired.add(tab.webContents);
         this.attachShortcuts(tab.webContents);
+        // A view takes the window's focus as it is attached (a new tab, about 10 ms after the shell gave its address field the
+        // focus). While the keyboard types into that field the focus stays with the shell, or the D-pad walks dead keys.
+        // The tab hears of its focus before the shell hears it lost it, so the focus goes back once the swap is over.
+        tab.webContents.on("focus", () => {
+          if (this.keyboard?.target !== "address") return;
+          setImmediate(() => {
+            if (this.keyboard?.target !== "address" || this.window.isDestroyed()) return;
+            this.window.webContents.focus();
+            this.chromeFocused = true;
+          });
+        });
       }
       if (!contentView.children.includes(tab.view)) contentView.addChildView(tab.view);
       tab.view.setVisible(tab === this.tabs.active && !this.pageCovered);
@@ -561,6 +572,12 @@ export class Shell {
     this.revealChrome();
     this.focusChrome();
     this.window.webContents.send(Channels.shellFocusChrome);
+  }
+
+  /** The toolbar takes the D-pad (see enterChrome) and the keyboard opens on the address field. */
+  typeInAddress(): void {
+    this.enterChrome();
+    this.openKeyboard("address");
   }
 
   leaveChrome(): void {

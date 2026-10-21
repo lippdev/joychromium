@@ -34,6 +34,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
   const family = useRef<ControllerFamily | undefined>(undefined);
   const lastDirection = useRef(0);
   const lastStick = useRef(0);
+  const lastPointerMove = useRef(0);
   /**
    * Who A answers to on a page: the stick's pointer once the stick moved it, the D-pad's focus once the D-pad moved.
    * The last one used wins, so both can be mixed on the same page.
@@ -168,14 +169,20 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const page = !overlayOpen && !chrome;
       const pointer = page && s.inputMode !== "Arrows";
 
-      // Buttons follow the poll rate; the sticks keep their own, slower cadence so the pointer moves at the same speed.
-      if (page && now - lastStick.current >= STICK_INTERVAL_MS) {
-        lastStick.current = now;
-        const velocity = pointer ? stickToVelocity(lx, ly) : { dx: 0, dy: 0 };
+      // The pointer moves on every poll, so it glides at the screen's rate instead of jumping 20 times a second; the step
+      // is scaled by the time since the last one, so the speed (set per STICK_INTERVAL_MS) does not depend on the rate.
+      const sinceMove = Math.min(now - lastPointerMove.current, STICK_INTERVAL_MS) / STICK_INTERVAL_MS;
+      lastPointerMove.current = now;
+      if (pointer) {
+        const velocity = stickToVelocity(lx, ly);
         if (velocity.dx !== 0 || velocity.dy !== 0) {
           pointing.current = true;
-          bridge().controller({ type: "cursor-move", dx: velocity.dx, dy: velocity.dy });
+          bridge().controller({ type: "cursor-move", dx: velocity.dx * sinceMove, dy: velocity.dy * sinceMove });
         }
+      }
+      // The wheel keeps the slower cadence: one notch per STICK_INTERVAL_MS is a readable scroll speed.
+      if (page && now - lastStick.current >= STICK_INTERVAL_MS) {
+        lastStick.current = now;
         const notches = stickToScroll(ry);
         const sideways = stickToScroll(rx);
         if (notches !== 0 || sideways !== 0) bridge().controller({ type: "scroll", notches, sideways });

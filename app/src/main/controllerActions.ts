@@ -64,6 +64,8 @@ export class VirtualCursor {
   x = 200;
   y = 200;
   placed = false;
+  private drawing = false;
+  private redraw = false;
 
   place(x: number, y: number, width: number, height: number): void {
     this.x = Math.min(Math.max(0, x), Math.max(0, width - 1));
@@ -78,7 +80,28 @@ export class VirtualCursor {
   async moveBy(wc: WebContents, dx: number, dy: number, width: number, height: number): Promise<void> {
     this.place(this.x + dx, this.y + dy, width, height);
     wc.sendInputEvent({ type: "mouseMove", x: Math.round(this.x), y: Math.round(this.y) });
-    await this.show(wc, true);
+    await this.draw(wc);
+  }
+
+  /**
+   * Draws the pointer where it is now. Moves arrive about 60 times a second; while one drawing is still on its way into
+   * the page, the next ones only ask for another, which then uses the latest position: the pointer never lags behind a
+   * queue of old ones.
+   */
+  private async draw(wc: WebContents): Promise<void> {
+    if (this.drawing) {
+      this.redraw = true;
+      return;
+    }
+    this.drawing = true;
+    try {
+      do {
+        this.redraw = false;
+        await this.show(wc, true);
+      } while (this.redraw);
+    } finally {
+      this.drawing = false;
+    }
   }
 
   click(wc: WebContents, button: "left" | "right" = "left"): void {
