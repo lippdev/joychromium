@@ -289,3 +289,34 @@ test("the left stick points and A clicks there, twice for a right click, until t
   await expect.poll(() => app.evaluate(() => globalThis.joy.pageEval("scrollY")) as Promise<number>, { timeout: 10_000 }).toBeGreaterThan(0);
   await tilt(3, 0);
 });
+
+test("the keyboard's own shortcuts: Y space, LT shift, X delete, LS the layer, and none of them leaves the page", async () => {
+  await installPads([XBOX]);
+  await openForm();
+  await step(Pad.Down);
+  await step(Pad.Down);
+  await expect.poll(pageFocus).toBe("q");
+  await step(Pad.A);
+  await expect(chrome.locator("#keyboard")).toBeVisible();
+  const value = () => app.evaluate(() => globalThis.joy.pageEval("document.getElementById('q').value"));
+
+  // The first press lands on "q"; A types it, Y adds a space, LT makes the next letter a capital.
+  await step(Pad.Right);
+  await expect.poll(shellFocus).toBe("q");
+  await step(Pad.A);
+  await step(3); // Y
+  await step(6); // LT
+  await step(Pad.A);
+  await expect.poll(value).toBe("q Q");
+  // X deletes, and it does not reload the page under the keyboard as it does when no keyboard is open.
+  await step(2); // X
+  await expect.poll(value).toBe("q ");
+  expect((await tabs()).find((t) => t.isActive)?.url).toBe("https://form.example/");
+  // The left stick's click goes to the symbols, then the accents, then back to the letters.
+  const layerKey = () => chrome.locator('#keyboard [data-pad="layer"] .key-label').textContent();
+  expect(await layerKey()).toBe("&123");
+  await step(10); // LS
+  await expect.poll(layerKey).toBe("áç");
+  await step(10);
+  await expect.poll(layerKey).toBe("abc");
+});
