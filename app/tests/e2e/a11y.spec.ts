@@ -99,7 +99,7 @@ interface PageUnderTest {
 
 const pages: PageUnderTest[] = [
   { name: "onboarding", url: "joychromium://welcome", ready: "document.querySelectorAll('#languages .opt').length >= 2" },
-  { name: "new tab", url: "joychromium://newtab", ready: "document.querySelectorAll('#recent .card').length > 0" },
+  { name: "new tab", url: "joychromium://newtab", ready: "document.querySelectorAll('#sites .card').length > 0" },
   { name: "settings", url: "joychromium://settings", ready: "document.getElementById('appVersion').textContent.startsWith('v')" },
   { name: "history", url: "joychromium://history", ready: "document.querySelectorAll('#list .item').length > 0" },
   { name: "favorites", url: "joychromium://favorites", ready: "document.querySelectorAll('#list .item').length > 0" },

@@ -157,6 +157,15 @@ describe("settings store", () => {
     expect(parsed.windowMode).toBe("tv");
   });
 
+  it("drops the old preset shortcuts but keeps a list the user edited", () => {
+    const presets = ["https://www.youtube.com/tv", "https://www.twitch.tv", "https://www.netflix.com",
+      "https://www.primevideo.com", "https://www.disneyplus.com", "https://open.spotify.com"].map((url) => ({ name: url, url }));
+    expect((migrateSettings({ schemaVersion: 4, shortcuts: presets }) as { shortcuts: unknown[] }).shortcuts).toEqual([]);
+    const edited = presets.slice(0, 2);
+    expect((migrateSettings({ schemaVersion: 4, shortcuts: edited }) as { shortcuts: unknown[] }).shortcuts).toEqual(edited);
+    expect(parseSettings({}).shortcuts).toEqual([]);
+  });
+
   it("writes atomically and keeps the previous file as a backup", () => {
     const dir = temp();
     try {

@@ -1,4 +1,4 @@
-/* The home screen: search first, then the things a controller user picks from. */
+/* The new tab: logo and search in the middle of the screen, the user's own sites in one row of tiles under it. */
 
 html,
 body {
@@ -14,13 +14,17 @@ body {
 main {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: var(--space-6);
-  max-width: calc(1280 * var(--u));
+  min-height: 100vh;
+  max-width: calc(1080 * var(--u));
   margin: 0 auto;
-  padding: var(--space-6) var(--space-5) calc(80 * var(--u));
+  padding: var(--space-6) var(--space-5);
+  box-sizing: border-box;
 }
 
-.hero { display: grid; gap: var(--space-4); justify-items: center; padding-top: var(--space-6); }
+.hero { display: grid; gap: var(--space-4); justify-items: center; width: 100%; margin-top: -8vh; }
 
 .logo { display: flex; align-items: center; gap: var(--space-3); }
 .logo img { width: calc(64 * var(--u)); height: calc(64 * var(--u)); }
@@ -51,41 +55,46 @@ main {
 }
 
 .engine { color: var(--faint); font-size: var(--text-sm); margin: 0; }
-.block h2 { margin: 0 0 var(--space-3); font-size: var(--text-lg); font-weight: 650; color: var(--muted); }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--u)), 1fr)); gap: var(--space-3); }
+
+/* Edge's quick links: a square tile per site, its initial in a circle and the name under it. */
+.tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
+.tiles[hidden] { display: none; }
+.card-item { display: contents; }
 
 .card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  justify-content: center;
+  gap: var(--space-2);
+  width: calc(112 * var(--u));
+  height: calc(112 * var(--u));
+  padding: var(--space-2);
   border: 2px solid transparent;
   border-radius: var(--radius);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
   color: var(--text);
-  font-size: var(--text-base);
-  text-align: left;
-  transition: border-color var(--duration) var(--ease), transform var(--duration) var(--ease);
+  font-size: var(--text-sm);
+  transition: border-color var(--duration) var(--ease), background var(--duration) var(--ease);
 }
-.card-item { display: contents; }
-.card.big { padding: var(--space-4); font-size: var(--text-lg); }
 .card:hover,
-.card:focus-visible { border-color: var(--accent); transform: translateY(calc(-2 * var(--u))); }
+.card:focus-visible { border-color: var(--accent); background: var(--surface); }
 .card i {
   display: grid;
   place-items: center;
   flex: none;
-  width: calc(44 * var(--u));
-  height: calc(44 * var(--u));
+  width: calc(48 * var(--u));
+  height: calc(48 * var(--u));
   border-radius: 50%;
   background: color-mix(in srgb, var(--accent) 18%, var(--bg));
   color: var(--accent);
+  font-size: var(--text-lg);
   font-style: normal;
   font-weight: 700;
 }
-.card span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-footer { display: flex; gap: var(--space-4); justify-content: center; color: var(--faint); font-size: var(--text-xs); flex-wrap: wrap; }
+footer { position: fixed; bottom: var(--space-4); left: 0; right: 0; display: flex; align-items: center; gap: var(--space-4); justify-content: center; color: var(--faint); font-size: var(--text-xs); flex-wrap: wrap; }
 footer a { color: var(--muted); text-decoration: none; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
 footer a:hover,
 footer a:focus-visible { color: var(--accent); }

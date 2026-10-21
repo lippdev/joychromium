@@ -19,20 +19,8 @@
     <p class="engine" id="engine"></p>
   </section>
 
-  <section class="block" id="continueBlock" hidden>
-    <h2 data-i18n="home.continue">Continuar assistindo</h2>
-    <div class="cards" id="recent" role="list" data-i18n-aria-label="home.continue" aria-label="Continuar assistindo"></div>
-  </section>
-
-  <section class="block" id="favoritesBlock" hidden>
-    <h2 data-i18n="home.favorites">Favoritos</h2>
-    <div class="cards" id="favorites" role="list" data-i18n-aria-label="home.favorites" aria-label="Favoritos"></div>
-  </section>
-
-  <section class="block">
-    <h2 data-i18n="home.apps">Aplicativos</h2>
-    <div class="cards" id="apps" role="list" data-i18n-aria-label="home.apps" aria-label="Aplicativos"></div>
-  </section>
+  <!-- Only the user's own sites: shortcuts they added, then favorites, then what they opened lately. -->
+  <div class="tiles" id="sites" role="list" data-i18n-aria-label="home.sites" aria-label="Acesso rápido" hidden></div>
 
   <footer>
     <span data-i18n="home.hint">Y abre o teclado · D-pad move · A seleciona</span>
@@ -55,9 +43,13 @@
     if (value) post('navigate', { url: value });
   });
 
-  function card(name, url, big) {
+  const MAX_TILES = 8;
+  let pinned = [];
+  let recent = [];
+
+  function card(name, url) {
     const b = document.createElement('button');
-    b.className = big ? 'card big' : 'card';
+    b.className = 'card';
     b.title = url;
     const badge = document.createElement('i');
     // The initial is decoration: the button is named by the title alone, not "Y YouTube TV".
@@ -85,17 +77,21 @@
       const v = parseInt(t.accent.slice(1), 16);
       r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#0A0F1A' : '#FFFFFF');
       $('engine').textContent = `${msg.searchEngine.name}`;
-      $('apps').replaceChildren(...msg.shortcuts.map((s) => card(s.name, s.url, true)));
-      const favorites = msg.favorites || [];
-      $('favoritesBlock').hidden = favorites.length === 0;
-      $('favorites').replaceChildren(...favorites.map((f) => card(f.name, f.url, false)));
+      pinned = [...msg.shortcuts, ...(msg.favorites || [])];
+      render();
     }
     if (msg.type === 'history' && Array.isArray(msg.entries)) {
-      const recent = msg.entries.slice(0, 8);
-      $('continueBlock').hidden = recent.length === 0;
-      $('recent').replaceChildren(...recent.map((e) => card(e.title || e.url, e.url, false)));
+      recent = msg.entries.map((e) => ({ name: e.title || e.url, url: e.url }));
+      render();
     }
   });
+
+  function render() {
+    const seen = new Set();
+    const sites = [...pinned, ...recent].filter((s) => !seen.has(s.url) && seen.add(s.url)).slice(0, MAX_TILES);
+    $('sites').hidden = sites.length === 0;
+    $('sites').replaceChildren(...sites.map((s) => card(s.name, s.url)));
+  }
   post('ready', {});
   post('history-search', { query: '' });
 </script>

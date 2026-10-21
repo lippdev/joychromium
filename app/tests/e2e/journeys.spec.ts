@@ -57,7 +57,11 @@ async function launch(fixture: Fixture = {}): Promise<Harness> {
 }
 
 /** The desktop profile every journey after the first boot starts from. */
-const SETTLED = { onboardingCompleted: true, startup: "NewTab", windowMode: "tv", language: "en" } as const;
+// The new tab only shows sites the user added, so the journeys start with one shortcut of their own.
+const SETTLED = {
+  onboardingCompleted: true, startup: "NewTab", windowMode: "tv", language: "en",
+  shortcuts: [{ name: "YouTube TV", url: "https://www.youtube.com/tv" }],
+} as const;
 
 const tabs = (h: Harness) => h.app.evaluate(() => globalThis.joy.tabs());
 const activeTab = async (h: Harness) => (await tabs(h)).find((tab) => tab.isActive);
@@ -329,7 +333,8 @@ test("first boot: onboarding tests the controller, then language and search engi
 
   // The home screen, with the choices the onboarding made already saved.
   await expect.poll(() => activeUrl(h), { timeout: 30_000 }).toBe("joychromium://newtab");
-  await waitForPage(h, "document.querySelectorAll('#apps .card').length > 0");
+  // A fresh profile has no sites of its own yet: the page is ready when it shows the engine onboarding picked.
+  await waitForPage(h, "document.getElementById('engine').textContent === 'DuckDuckGo'");
   await expect.poll(() => saved().onboardingCompleted).toBe(true);
   expect(saved().language).toBe("en");
   expect(saved().searchEngine.name).toBe("DuckDuckGo");
@@ -353,7 +358,7 @@ document.addEventListener('fullscreenchange', () => window.events.push(document.
 
 test("home to YouTube TV in Arrows mode, a video in fullscreen, and B back to the home screen", async () => {
   const h = await launch({ settings: { ...SETTLED } });
-  await waitForPage(h, "document.querySelectorAll('#apps .card').length > 0");
+  await waitForPage(h, "document.querySelectorAll('#sites .card').length > 0");
   await serveHttps(h, PLAYER);
   await installPad(h);
 
@@ -438,7 +443,7 @@ async function quickMenu(h: Harness, label: RegExp): Promise<void> {
 
 test("three tabs, switching in the tab switcher and closing one, all from the pad", async () => {
   const h = await launch({ settings: { ...SETTLED } });
-  await waitForPage(h, "document.querySelectorAll('#apps .card').length > 0");
+  await waitForPage(h, "document.querySelectorAll('#sites .card').length > 0");
   await installPad(h);
 
   // Tab 2: a new tab, then Settings from the quick menu. Tab 3: a new tab, then History from the home footer.
@@ -448,7 +453,7 @@ test("three tabs, switching in the tab switcher and closing one, all from the pa
   await expect.poll(() => activeUrl(h), { timeout: 30_000 }).toBe("joychromium://settings");
   await quickMenu(h, /^New tab/);
   await expect.poll(async () => (await tabs(h)).length).toBe(3);
-  await waitForPage(h, "document.querySelectorAll('#apps .card').length > 0");
+  await waitForPage(h, "document.querySelectorAll('#sites .card').length > 0");
   await focusOn(h, "page", "document.getElementById('hist')", "the History link");
   await press(h, Pad.A);
   await expect.poll(() => activeUrl(h), { timeout: 30_000 }).toBe("joychromium://history");
@@ -492,7 +497,7 @@ test("a site asks for the microphone, the pad walks the prompt and chooses Alway
   // Chromium only reaches the permission stage when a capture device exists, and CI has no microphone: the fake device
   // switch gives it one. The stream is Chromium's; the answer below is the app's own Electron permission handler.
   const h = await launch({ settings: { ...SETTLED }, args: ["--use-fake-device-for-media-stream"] });
-  await waitForPage(h, "document.querySelectorAll('#apps .card').length > 0");
+  await waitForPage(h, "document.querySelectorAll('#sites .card').length > 0");
   await serveHttps(h, MICROPHONE);
   await installPad(h);
 
@@ -543,7 +548,7 @@ test("an update cannot be completed end to end without a published release; the 
   // Updater.canInstallNow, "package-manager" only for a downloaded deb/rpm) is covered by the unit tests.
   const h = await launch({ settings: { ...SETTLED } });
   expect(await h.app.evaluate(({ app }) => app.isPackaged)).toBe(false);
-  await waitForPage(h, "document.querySelectorAll('#apps .card').length > 0");
+  await waitForPage(h, "document.querySelectorAll('#sites .card').length > 0");
   await installPad(h);
 
   await quickMenu(h, /^Settings/);
