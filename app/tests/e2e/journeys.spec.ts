@@ -119,20 +119,22 @@ const OVERLAY_PLAN = (expr: string) => `(() => {
   if (targetIndex < 0) return { same: false, missing: true, dirs: [] };
   const best = (current, direction) => {
     if (!current) return buttons[0] || null;
-    const rect = current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
+    const from = current.getBoundingClientRect();
+    const fc = { x: from.left + from.width / 2, y: from.top + from.height / 2 };
     let found = null;
     let bestScore = Infinity;
     for (const button of buttons) {
       if (button === current) continue;
       const r = button.getBoundingClientRect();
-      const dx = r.left + r.width / 2 - cx;
-      const dy = r.top + r.height / 2 - cy;
-      const ahead = direction === 'up' ? -dy : direction === 'down' ? dy : direction === 'left' ? -dx : dx;
-      if (ahead <= 4) continue;
-      const off = direction === 'up' || direction === 'down' ? Math.abs(dx) : Math.abs(dy);
-      const score = ahead + off * 2;
+      const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      const vertical = direction === 'up' || direction === 'down';
+      const centreAhead = direction === 'up' ? fc.y - c.y : direction === 'down' ? c.y - fc.y : direction === 'left' ? fc.x - c.x : c.x - fc.x;
+      if (centreAhead <= 4) continue;
+      const ahead = Math.abs(direction === 'up' ? from.top - r.bottom : direction === 'down' ? r.top - from.bottom
+        : direction === 'left' ? from.left - r.right : r.left - from.right);
+      const off = vertical ? Math.abs(c.x - fc.x) : Math.abs(c.y - fc.y);
+      const overlap = vertical ? Math.min(r.right, from.right) - Math.max(r.left, from.left) : Math.min(r.bottom, from.bottom) - Math.max(r.top, from.top);
+      const score = ahead + off * (overlap > 0 ? 0.1 : 2.2);
       if (score < bestScore) { found = button; bestScore = score; }
     }
     return found;

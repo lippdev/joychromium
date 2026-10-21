@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld("shell", {
   snapshot(): Promise<string> {
     return ipcRenderer.invoke(Channels.shellSnapshot);
   },
+  onFocusChrome(callback: () => void): void {
+    ipcRenderer.on(Channels.shellFocusChrome, () => callback());
+  },
   onActivity(callback: (activity: ShellActivity) => void): () => void {
     const listener = (_event: unknown, activity: ShellActivity): void => callback(activity);
     ipcRenderer.on(Channels.shellActivity, listener);

@@ -32,22 +32,26 @@ if (window.location.protocol === "joychromium:") {
       ipcRenderer.on(Channels.pageReply, (_event, message) => callback(message));
     },
   });
-} else {
-  // Web pages (isolated world): tell the shell when a text field takes focus so the controller keyboard can open.
-  // Nothing is exposed to the page.
-  document.addEventListener(
-    "focusin",
-    (event) => {
-      const field = event.target as HTMLElement | null;
-      if (!field || (field as HTMLInputElement).disabled || (field as HTMLInputElement).readOnly) return;
-      const tag = field.tagName;
-      const type = ((field as HTMLInputElement).type || "text").toLowerCase();
-      const editable =
-        field.isContentEditable ||
-        tag === "TEXTAREA" ||
-        (tag === "INPUT" && ["text", "search", "url", "email", "password", "tel", "number"].includes(type));
-      if (editable) ipcRenderer.send(Channels.pageFocusIn);
-    },
-    true,
-  );
 }
+
+// Every page, ours included: a text field clicked (with a mouse, or with A in Cursor mode, which is a real click) opens the
+// controller keyboard. Only a click counts: a field the D-pad walks over or the page focuses by itself (autofocus) must not
+// pop the keyboard up; with the D-pad, A on the field opens it (InputRouter). Nothing is exposed to the page.
+let pressedAt = 0;
+document.addEventListener("pointerdown", () => { pressedAt = Date.now(); }, true);
+document.addEventListener(
+  "focusin",
+  (event) => {
+    if (Date.now() - pressedAt > 800) return;
+    const field = event.target as HTMLElement | null;
+    if (!field || (field as HTMLInputElement).disabled || (field as HTMLInputElement).readOnly) return;
+    const tag = field.tagName;
+    const type = ((field as HTMLInputElement).type || "text").toLowerCase();
+    const editable =
+      field.isContentEditable ||
+      tag === "TEXTAREA" ||
+      (tag === "INPUT" && ["text", "search", "url", "email", "password", "tel", "number"].includes(type));
+    if (editable) ipcRenderer.send(Channels.pageFocusIn);
+  },
+  true,
+);

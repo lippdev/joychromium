@@ -25,12 +25,14 @@ export async function runInPageWorld<T>(wc: WebContents, code: string, userGestu
   }
 }
 
-export async function spatialMove(wc: WebContents, direction: Direction): Promise<void> {
-  await runInPageWorld(wc, `window.__joy && window.__joy.move(${JSON.stringify(direction)})`);
+/** "edge" when the D-pad went up from the top of the page: there is nothing left in it to walk to. */
+export async function spatialMove(wc: WebContents, direction: Direction): Promise<string | undefined> {
+  return runInPageWorld<string>(wc, `window.__joy && window.__joy.move(${JSON.stringify(direction)})`);
 }
 
-export async function spatialActivate(wc: WebContents): Promise<void> {
-  await runInPageWorld(wc, "window.__joy && window.__joy.activate()");
+/** "edit" when A landed on a text field, which then wants the controller keyboard. */
+export async function spatialActivate(wc: WebContents): Promise<string | undefined> {
+  return runInPageWorld<string>(wc, "window.__joy && window.__joy.activate()");
 }
 
 const MEDIA_CALLS: Record<MediaAction, string> = {

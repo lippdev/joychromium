@@ -135,3 +135,102 @@ test("a pad that connects but is not used does not take the input", async () => 
   await press(1, Button.X);
   await expect.poll(hints).toContain("○ voltar");
 });
+
+// ---- Text fields, the controller keyboard and the toolbar, with the D-pad only ----
+
+const Pad = { A: 0, B: 1, Up: 12, Down: 13, Left: 14, Right: 15 } as const;
+const FORM = `<title>Form</title><body style="font:20px sans-serif;padding:40px"><a href="#a">Link one</a><br><br>` +
+  `<input id="q" style="width:400px;font-size:20px"><br><br><a href="#b">Link two</a></body>`;
+
+/** A page with a link, a wide text field under it and another link, served locally (the CI has no network). */
+async function openForm(): Promise<void> {
+  await app.evaluate(({ protocol }, page) => {
+    protocol.handle("https", () => new Response(page, { headers: { "content-type": "text/html" } }));
+  }, FORM);
+  await app.evaluate(() => globalThis.joy.command({ type: "navigate", url: "https://form.example/" } as never));
+  await expect.poll(async () => {
+    const tab = (await tabs()).find((t) => t.isActive);
+    return tab?.url === "https://form.example/" && !tab.isLoading;
+  }, { timeout: 30_000 }).toBe(true);
+}
+
+// The D-pad ignores a second direction inside its repeat gate (gamepad.ts), so each step waits it out.
+const step = async (button: number) => { await press(0, button); await chrome.waitForTimeout(200); };
+const pageFocus = () => app.evaluate(() => globalThis.joy.pageEval("document.activeElement && (document.activeElement.id || document.activeElement.textContent.trim())"));
+const shellFocus = () => chrome.evaluate(() => {
+  const el = document.activeElement as HTMLElement | null;
+  return el ? el.id || el.getAttribute("aria-label") || (el.textContent ?? "").trim() : "";
+});
+const shellHasWindowFocus = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.isFocused());
+const keyboards = () => chrome.locator("#keyboard").count();
+
+test("A on a text field opens the controller keyboard, which the D-pad walks, every time", async () => {
+  await installPads([XBOX]);
+  await openForm();
+  // As after the keyboard was used once: the tab holds the window's focus. That is when the keys used to look dead.
+  await app.evaluate(({ BrowserWindow, webContents }) => {
+    const shell = BrowserWindow.getAllWindows()[0]!.webContents;
+    webContents.getAllWebContents().find((wc) => wc !== shell)!.focus();
+  });
+
+  // The first press takes the first item; the wide field under a short link is the next stop down.
+  await step(Pad.Down);
+  await expect.poll(pageFocus).toBe("Link one");
+  await step(Pad.Down);
+  await expect.poll(pageFocus).toBe("q");
+  // Walking onto a field does not pop the keyboard up: A does.
+  expect(await keyboards()).toBe(0);
+
+  await step(Pad.A);
+  await expect(chrome.locator("#keyboard")).toBeVisible();
+  await expect.poll(shellHasWindowFocus).toBe(true);
+  // The first press lands on the first key, not on the close button; A types into the page's field.
+  await step(Pad.Right);
+  await expect.poll(shellFocus).toBe("q");
+  await step(Pad.Right);
+  await expect.poll(shellFocus).toBe("w");
+  await step(Pad.A);
+  await expect.poll(() => app.evaluate(() => globalThis.joy.pageEval("document.getElementById('q').value"))).toBe("w");
+
+  // B closes it and hands the focus back to the page; the second time works like the first.
+  await step(Pad.B);
+  await expect.poll(keyboards).toBe(0);
+  await step(Pad.A);
+  await expect(chrome.locator("#keyboard")).toBeVisible();
+  await expect.poll(shellHasWindowFocus).toBe(true);
+  await step(Pad.Down);
+  await expect.poll(shellFocus).toBe("q");
+});
+
+test("up from the top of the page reaches the toolbar and the tabs, and down comes back", async () => {
+  await installPads([XBOX]);
+  await openForm();
+  await step(Pad.Down);
+  await expect.poll(pageFocus).toBe("Link one");
+
+  // Nothing above and the page at its top: the address field takes the focus, without opening the keyboard.
+  await step(Pad.Up);
+  await expect.poll(shellFocus).toBe("address");
+  await expect.poll(shellHasWindowFocus).toBe(true);
+  expect(await keyboards()).toBe(0);
+
+  // A on the field opens the keyboard; B closes it and the D-pad is still on the toolbar.
+  await step(Pad.A);
+  await expect(chrome.locator("#keyboard")).toBeVisible();
+  await step(Pad.B);
+  await expect.poll(keyboards).toBe(0);
+  await expect.poll(shellFocus).toBe("address");
+
+  // Left reaches the reload button, up the tab strip.
+  await step(Pad.Left);
+  await expect.poll(shellFocus).toMatch(/Recarregar|Reload/);
+  await step(Pad.Up);
+  await expect.poll(() => chrome.evaluate(() => Boolean(document.activeElement?.closest(".tabstrip")))).toBe(true);
+
+  // Down twice: the toolbar, then the page again.
+  await step(Pad.Down);
+  await expect.poll(() => chrome.evaluate(() => Boolean(document.activeElement?.closest(".bar")))).toBe(true);
+  await step(Pad.Down);
+  await expect.poll(shellHasWindowFocus).toBe(false);
+  expect(await chrome.evaluate(() => document.activeElement === document.body)).toBe(true);
+});

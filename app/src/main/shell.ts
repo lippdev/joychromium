@@ -64,6 +64,8 @@ export class Shell {
   readonly tabs: TabManager;
   private readonly layout: WindowLayout;
   chromeVisible = true;
+  /** True while the D-pad walks the tabs and the toolbar instead of the page; the TV-mode bar then stays on screen. */
+  chromeFocused = false;
   /** A mode asked for on the command line (`--tv`, `--window`): it holds for this run without touching the setting. */
   private launchMode: WindowMode | undefined;
   private pageCovered = false;
@@ -273,6 +275,9 @@ export class Shell {
   }
 
   private wireWindow(): void {
+    // Whatever takes the window's focus from the shell (a click into the page, the page after the keyboard) ends the
+    // D-pad's walk on the toolbar.
+    this.window.webContents.on("blur", () => { this.chromeFocused = false; });
     this.window.on("resize", () => this.layout.apply());
     this.window.on("maximize", () => { this.layout.apply(); this.broadcast(); });
     this.window.on("unmaximize", () => { this.layout.apply(); this.broadcast(); });
@@ -544,7 +549,24 @@ export class Shell {
   openKeyboard(target: "address" | "page"): void {
     this.revealChrome();
     this.keyboard = { target, title: target === "address" ? "ADDRESS / SEARCH" : "PAGE TEXT ENTRY" };
+    // The keys are the shell's: with the window's focus left on the tab (closing the keyboard hands it back there), the
+    // D-pad walked them but Chromium drew no focus on any of them, so the keyboard looked dead.
+    this.focusChrome();
     this.broadcast();
+  }
+
+  /** The D-pad went up out of the page: the bar shows, takes the window's focus and puts it on the address field. */
+  enterChrome(): void {
+    this.chromeFocused = true;
+    this.revealChrome();
+    this.focusChrome();
+    this.window.webContents.send(Channels.shellFocusChrome);
+  }
+
+  leaveChrome(): void {
+    this.chromeFocused = false;
+    this.tabs.activeWebContents?.focus();
+    this.scheduleChromeHide();
   }
 
   /**
@@ -659,7 +681,7 @@ export class Shell {
     const tab = this.tabs.active;
     if (!tab || tab.sleeping || isInternal(tab.url)) return;
     this.chromeHideTimer = setTimeout(() => {
-      if (this.windowMode === "tv" && !this.permissions.prompt && !this.keyboard) this.setChromeVisible(false);
+      if (this.windowMode === "tv" && !this.permissions.prompt && !this.keyboard && !this.chromeFocused) this.setChromeVisible(false);
     }, 4_000);
     this.chromeHideTimer.unref?.();
   }

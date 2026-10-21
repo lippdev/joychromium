@@ -67,6 +67,7 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
     case "window-mode":
     case "find-close":
     case "keyboard-close":
+    case "focus-page":
     case "keyboard-backspace":
     case "keyboard-submit":
     case "cycle-input-mode":
