@@ -657,9 +657,21 @@ export class Shell {
 
   applyInputMode(mode: InputMode, announce: boolean): void {
     this.inputMode = mode;
-    const wc = this.activeWebContents;
-    if (wc) void this.cursor.show(wc, mode === "Cursor");
+    this.showPointer();
     if (announce) this.notify("inputMode", mode.toUpperCase());
+  }
+
+  /**
+   * The pointer is always on screen, where it was last left: each page draws its own, so a page that loads, a tab that is
+   * switched to or a mode that changes gets it drawn again (this runs on every change of the tab, its load included). The
+   * first time it starts in the middle of the page. Arrows mode is the exception: its sites take the stick as arrow keys.
+   */
+  private showPointer(): void {
+    const wc = this.activeWebContents;
+    if (!wc) return;
+    const size = this.pageSize();
+    if (!this.cursor.placed && size.width > 0) this.cursor.place(size.width / 2, size.height / 2, size.width, size.height);
+    void this.cursor.show(wc, this.inputMode !== "Arrows" && this.cursor.placed);
   }
 
   cycleInputMode(): void {
