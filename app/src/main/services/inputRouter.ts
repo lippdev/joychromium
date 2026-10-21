@@ -60,7 +60,6 @@ export class InputRouter {
         }
         break;
       case "cursor-click": if (wc && this.host.inputMode !== "Arrows") this.cursor.click(wc, input.button); break;
-      case "cursor-hide": if (wc) await this.cursor.show(wc, false); break;
       case "scroll":
         if (!wc) return;
         // Never pointed anywhere yet: the wheel turns over the middle of the page, not over a corner.

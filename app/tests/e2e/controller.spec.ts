@@ -251,7 +251,7 @@ const tilt = (axis: number, value: number) => chrome.evaluate(([a, v]) => {
 const pageLog = () => app.evaluate(() => globalThis.joy.pageEval("window.__log.join(',')")) as Promise<string>;
 const pointerShown = () => app.evaluate(() => globalThis.joy.pageEval("(document.getElementById('__joy-cursor') || {}).style?.display === 'block'"));
 
-test("the left stick points and A clicks there, twice for a right click, until the D-pad takes over", async () => {
+test("the left stick points and A clicks there, twice for a right click, and the D-pad takes A back", async () => {
   await installPads([XBOX]);
   await app.evaluate(({ protocol }, page) => {
     protocol.handle("https", () => new Response(page, { headers: { "content-type": "text/html" } }));
@@ -276,10 +276,10 @@ test("the left stick points and A clicks there, twice for a right click, until t
   await press(0, Pad.A);
   await expect.poll(pageLog, { timeout: 5_000 }).toBe("down0,down2,context");
 
-  // The D-pad takes over: the pointer goes away and A presses what the D-pad focused, not the spot under the pointer.
+  // The D-pad takes A over: A presses what the D-pad focused, not the spot under the pointer, which stays on screen.
   await step(Pad.Down);
   await expect.poll(pageFocus).toBe("b");
-  await expect.poll(pointerShown).toBe(false);
+  expect(await pointerShown()).toBe(true);
   await step(Pad.A);
   await expect.poll(pageLog).toBe("down0,down2,context,button");
 
@@ -350,4 +350,26 @@ test("the pointer is an arrow, and a hand over what can be clicked", async () =>
   };
   expect(await shapeAt("document.getElementById('area')")).toBe("arrow");
   expect(await shapeAt("document.getElementById('b')")).toBe("hand");
+});
+
+test("the pointer is on every page from the start, and stays where it was when the page changes", async () => {
+  await app.evaluate(({ protocol }, page) => {
+    protocol.handle("https", () => new Response(page, { headers: { "content-type": "text/html" } }));
+  }, POINTER_PAGE);
+  const open = async (url: string) => {
+    await app.evaluate(({}, u) => globalThis.joy.command({ type: "navigate", url: u } as never), url);
+    await expect.poll(async () => {
+      const tab = (await tabs()).find((t) => t.isActive);
+      return tab?.url === url && !tab.isLoading;
+    }, { timeout: 30_000 }).toBe(true);
+  };
+  const where = () => app.evaluate(() => globalThis.joy.pageEval("document.getElementById('__joy-cursor')?.style.transform ?? ''")) as Promise<string>;
+  // No stick touched: the pointer is already there, in the middle of the page.
+  await open("https://one.example/");
+  await expect.poll(pointerShown, { timeout: 10_000 }).toBe(true);
+  const first = await where();
+  // Another page: the pointer is drawn again, at the same spot.
+  await open("https://two.example/");
+  await expect.poll(pointerShown, { timeout: 10_000 }).toBe(true);
+  await expect.poll(where).toBe(first);
 });
