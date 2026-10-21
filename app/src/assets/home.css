@@ -61,16 +61,19 @@ main {
   font-size: var(--text-lg);
 }
 .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 var(--focus-ring) color-mix(in srgb, var(--accent) 45%, transparent); outline: none; }
+/* The send arrow browsers put at the end of their search box. */
 .search .go {
+  display: grid;
+  place-items: center;
+  width: calc(64 * var(--u));
   height: calc(64 * var(--u));
-  padding: 0 var(--space-5);
+  padding: 0;
   border: 0;
   border-radius: var(--radius);
   background: var(--accent);
   color: var(--accent-text);
-  font-size: var(--text-base);
-  font-weight: 700;
 }
+.search .go svg { width: calc(28 * var(--u)); height: calc(28 * var(--u)); fill: currentColor; }
 
 .engine { color: var(--faint); font-size: var(--text-sm); margin: 0; }
 
