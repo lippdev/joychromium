@@ -60,7 +60,9 @@
       const overlap = dir === 'up' || dir === 'down'
         ? Math.max(0, Math.min(r.right, fr.right) - Math.max(r.left, fr.left))
         : Math.max(0, Math.min(r.bottom, fr.bottom) - Math.max(r.top, fr.top));
-      const score = Math.max(0, ahead) + off * (overlap > 0 ? 0.6 : 2.2);
+      // Sharing the column (or the row) is what counts: a wide field under a short link is the next stop down, however far
+      // its centre sits (weighing centres made the D-pad jump over text fields); the centres only break ties.
+      const score = Math.max(0, ahead) + off * (overlap > 0 ? 0.1 : 2.2);
       if (score < bestScore) { best = el; bestScore = score; }
     }
     return best;
@@ -102,13 +104,17 @@
   };
   const moveFrom = (fromEl, dir) => {
     const from = fromEl || focused();
-    const next = pick(from ? from.getBoundingClientRect() : viewportCenter(), dir, from);
+    // Nothing focused yet: start from the edge the press comes from, so the first press takes the first item instead of
+    // looking past the middle of the screen and only scrolling.
+    const next = pick(from ? from.getBoundingClientRect() : enterRect(dir), dir, from);
     if (next) {
       mark(next);
       if (isFrame(next)) post(next.contentWindow, { joy: 'enter', dir });
       return 'moved';
     }
     if (window !== window.top) { post(window.parent, { joy: 'exit', dir }); return 'exit'; }
+    // Up with nothing above and the page already at its top: the D-pad leaves the page for the browser's own bar.
+    if (dir === 'up' && scrollY <= 0) return 'edge';
     scroll(dir);
     // After scrolling new elements may be in view; try once more on the next frame.
     requestAnimationFrame(() => {
@@ -201,7 +207,8 @@
       const tag = el.tagName;
       const textual = tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable ||
         (tag === 'INPUT' && !['checkbox', 'radio', 'submit', 'button', 'reset', 'image', 'file', 'color', 'range'].includes((el.type || 'text').toLowerCase()));
-      if (textual) { el.focus(); return 'focus'; }
+      // A on a text field means "type here": the shell opens the controller keyboard for it.
+      if (textual) { el.focus(); return 'edit'; }
       el.click();
       return 'click';
     },

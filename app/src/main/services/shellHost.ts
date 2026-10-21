@@ -34,6 +34,10 @@ export interface ShellHost {
   broadcast(): void;
   syncViews(): void;
   setLayout(top: number, bottom: number): void;
+  /** The D-pad came back down from the toolbar: the page takes the window's focus again. */
+  leaveChrome(): void;
+  /** The D-pad is walking the tabs and the toolbar (see Shell.enterChrome). */
+  readonly chromeFocused: boolean;
   /** Hides the active tab's view under a modal overlay, which the shell draws over a snapshot of it. */
   setPageCovered(covered: boolean): void;
   setChromeVisible(visible: boolean): void;

@@ -32,6 +32,8 @@ export const Channels = {
   shellActivity: "shell:activity",
   /** chrome renderer -> main: focus landed on a control of the shell, so the window's focus belongs to it and not to a tab */
   shellFocus: "shell:focus",
+  /** main -> chrome renderer: the D-pad went up out of the page, so the toolbar takes the focus */
+  shellFocusChrome: "shell:focus-chrome",
 } as const;
 
 /** Whether the window is on screen: sent when it is minimized, hidden, restored or shown. */
@@ -119,6 +121,8 @@ export type ShellCommand =
   | { type: "find-close" }
   | { type: "keyboard-open"; target: "address" | "page" }
   | { type: "keyboard-close" }
+  /** The D-pad left the tabs and the toolbar: the page takes the focus back. */
+  | { type: "focus-page" }
   | { type: "keyboard-insert"; text: string }
   | { type: "keyboard-backspace" }
   | { type: "keyboard-submit" }
