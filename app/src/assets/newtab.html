@@ -48,6 +48,11 @@
   let recent = [];
   let showSites = true;
 
+  // The site's own icon, kept inside the app; the initial in the circle stays until an icon loads (or when there is none).
+  let refreshed = 0;
+  let faviconKey = '';
+  const hostOf = (url) => { try { const u = new URL(url); return u.protocol === 'https:' || u.protocol === 'http:' ? u.hostname : ''; } catch { return ''; } };
+
   function card(name, url) {
     const b = document.createElement('button');
     b.className = 'card';
@@ -55,7 +60,18 @@
     const badge = document.createElement('i');
     // The initial is decoration: the button is named by the title alone, not "Y YouTube TV".
     badge.setAttribute('aria-hidden', 'true');
-    badge.textContent = name.trim()[0]?.toUpperCase() ?? '?';
+    // The letter is its own text node, so taking it away when the icon arrives leaves the icon in place.
+    const letter = document.createTextNode(name.trim()[0]?.toUpperCase() ?? '?');
+    badge.append(letter);
+    const host = hostOf(url);
+    if (host) {
+      const icon = document.createElement('img');
+      icon.alt = '';
+      icon.addEventListener('load', () => { letter.remove(); badge.classList.add('has-icon'); });
+      icon.addEventListener('error', () => icon.remove());
+      icon.src = `joychromium://favicon/?host=${encodeURIComponent(host)}&k=${faviconKey}&r=${refreshed}`;
+      badge.append(icon);
+    }
     const label = document.createElement('span');
     label.textContent = name;
     b.append(badge, label);
@@ -79,10 +95,16 @@
       r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#0A0F1A' : '#FFFFFF');
       $('engine').textContent = `${msg.searchEngine.name}`;
       document.body.dataset.bg = msg.newTabBackground || 'Wallpaper';
+      faviconKey = msg.faviconKey || '';
       const b = parseInt(t.background.slice(1), 16);
       document.body.dataset.tone = (0.2126 * (b >> 16 & 255) + 0.7152 * (b >> 8 & 255) + 0.0722 * (b & 255)) / 255 > 0.5 ? 'light' : 'dark';
       showSites = msg.newTabSites !== false;
       pinned = [...msg.shortcuts, ...(msg.favorites || [])];
+      render();
+    }
+    if (msg.type === 'favicons') {
+      // Icons arrived for sites that had none: draw the tiles again so those load.
+      refreshed += 1;
       render();
     }
     if (msg.type === 'history' && Array.isArray(msg.entries)) {
@@ -92,11 +114,22 @@
   });
 
   function render() {
-    const seen = new Set();
-    const sites = [...pinned, ...recent].filter((s) => !seen.has(s.url) && seen.add(s.url)).slice(0, MAX_TILES);
+    // The user's own shortcuts and favorites always show; a recent page is left out when its site is already there, so a
+    // site is one tile whatever page of it was opened last.
+    const siteOf = (url) => hostOf(url).replace(/^www\./, '') || url;
+    const urls = new Set();
+    const own = pinned.filter((s) => !urls.has(s.url) && urls.add(s.url));
+    const taken = new Set(own.map((s) => siteOf(s.url)));
+    const later = recent.filter((s) => !taken.has(siteOf(s.url)) && taken.add(siteOf(s.url)));
+    const sites = [...own, ...later].slice(0, MAX_TILES);
     $('sites').hidden = !showSites || sites.length === 0;
     $('sites').replaceChildren(...sites.map((s) => card(s.name, s.url)));
+    // Sites with no icon kept yet (visited before icons were saved, or only added by hand): ask for them once.
+    const wanted = [...new Set(sites.map((s) => hostOf(s.url)).filter((h) => h && !asked.has(h)))];
+    for (const h of wanted) asked.add(h);
+    if (wanted.length) post('favicon-fetch', { hosts: wanted });
   }
+  const asked = new Set();
   post('ready', {});
   post('history-search', { query: '' });
 </script>

@@ -19,6 +19,7 @@ import { isFavorite, toggleFavorite, withInputMode, withPermission, type InputMo
 import { defaultModeFor, nextMode } from "../shared/controllerInput";
 import type { AdBlock } from "./adblock";
 import { VirtualCursor } from "./controllerActions";
+import type { FaviconStore } from "./favicons";
 import type { History } from "./history";
 import type { Log } from "./log";
 import { PageBridge } from "./pageBridge";
@@ -33,6 +34,8 @@ import { Tab, TabManager } from "./tabs";
 export interface ShellDeps {
   store: SettingsStore;
   history: History;
+  /** The site icons kept inside the app, drawn by the tab strip and the new tab. */
+  favicons: FaviconStore;
   policy: PolicyService;
   adblock: AdBlock;
   log: Log;
@@ -99,6 +102,7 @@ export class Shell {
       userAgentFor: (url) =>
         userAgentForUrl(url, { desktop: deps.desktopUserAgent, tv: deps.tvUserAgent, enabled: deps.store.current.streamingDesktopUa }),
       prepareSession: (ses) => this.prepareSession(ses),
+      favicons: deps.favicons,
       log: deps.log,
     });
     this.bridge = new PageBridge(this, deps);
