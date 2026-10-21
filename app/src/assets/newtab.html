@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <title>JoyChromium</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="logo.png">
 <link rel="stylesheet" href="design/tokens.css">
 <link rel="stylesheet" href="home.css">
 </head>
 <body>
 <main>
   <section class="hero">
-    <div class="logo"><b>J</b><span>JOYCHROMIUM</span></div>
+    <div class="logo"><img src="logo.png" alt=""><span>Joy<b>Chromium</b></span></div>
     <form id="search" class="search" role="search" data-i18n-aria-label="a11y.search" aria-label="Pesquisar">
       <input id="q" autofocus autocomplete="off" spellcheck="false" data-i18n-placeholder="home.search" data-i18n-aria-label="a11y.search" aria-label="Pesquisar" placeholder="Pesquisar ou digitar um endereço">
       <button class="go" type="submit" data-i18n="input.ok">OK</button>
@@ -82,7 +83,7 @@
       r.setProperty('--surface', t.surface);
       r.setProperty('--text', t.text);
       const v = parseInt(t.accent.slice(1), 16);
-      r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#07120F' : '#FFFFFF');
+      r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#0A0F1A' : '#FFFFFF');
       $('engine').textContent = `${msg.searchEngine.name}`;
       $('apps').replaceChildren(...msg.shortcuts.map((s) => card(s.name, s.url, true)));
       const favorites = msg.favorites || [];

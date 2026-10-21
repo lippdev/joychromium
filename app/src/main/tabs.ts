@@ -51,7 +51,7 @@ export class Tab {
         backgroundThrottling: true,
       },
     });
-    view.setBackgroundColor("#0C0E13");
+    view.setBackgroundColor("#1C1C1C");
     return view;
   }
 

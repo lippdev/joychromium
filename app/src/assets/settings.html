@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>Configurações</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="logo.png">
 <link rel="stylesheet" href="design/tokens.css">
 <link rel="stylesheet" href="pages.css">
 </head>
@@ -191,7 +192,7 @@
   }
   const saveTheme = (theme) => post('theme-save', { theme });
   $('saveTheme').addEventListener('click', () => saveTheme({ accent: $('accent').value.toUpperCase(), background: $('background').value.toUpperCase(), surface: $('surface').value.toUpperCase(), text: $('text').value.toUpperCase() }));
-  $('reset').addEventListener('click', () => saveTheme(presets.Mint));
+  $('reset').addEventListener('click', () => saveTheme(presets.Joy));
 
   function renderEngines(engines, current) {
     $('engines').replaceChildren(...engines.map((e) => {

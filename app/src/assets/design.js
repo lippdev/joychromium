@@ -70,7 +70,7 @@
     root.setProperty('--surface', msg.theme.surface);
     root.setProperty('--text', msg.theme.text);
     const v = parseInt(msg.theme.accent.slice(1), 16);
-    root.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#07120F' : '#FFFFFF');
+    root.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#0A0F1A' : '#FFFFFF');
     if (msg.uiScale) root.setProperty('--ui-scale', String(msg.uiScale));
     repaint();
     // The catalog starts on its first focusable component, so the D-pad has somewhere to go from.

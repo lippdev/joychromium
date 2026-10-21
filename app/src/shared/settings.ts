@@ -11,15 +11,28 @@ export interface Theme {
   text: string;
 }
 
-export const DEFAULT_THEME: Theme = { accent: "#64DDB5", background: "#0C0E13", surface: "#14171E", text: "#F3F5F9" };
+/** The logo's blue on Edge-like neutral greys: the background is the tab strip, the surface the toolbar. */
+export const DEFAULT_THEME: Theme = { accent: "#2B95FF", background: "#1C1C1C", surface: "#2B2B2B", text: "#F3F3F3" };
+
+const LIGHT_THEME: Theme = { accent: "#0067C0", background: "#E9EBEE", surface: "#F9F9F9", text: "#1B1B1B" };
 
 export const THEME_PRESETS: Record<string, Theme> = {
-  Mint: DEFAULT_THEME,
+  Joy: DEFAULT_THEME,
   Ocean: { accent: "#4CC2FF", background: "#0B1220", surface: "#121C2E", text: "#EAF2FF" },
   Ember: { accent: "#FF7A45", background: "#15100E", surface: "#1F1815", text: "#FFF1EA" },
   Violet: { accent: "#B388FF", background: "#100D18", surface: "#191424", text: "#F2EDFF" },
-  Light: { accent: "#0F7B6C", background: "#F4F6FA", surface: "#FFFFFF", text: "#111418" },
+  Light: LIGHT_THEME,
 };
+
+/** The green presets the app shipped before the blue brand, mapped to what replaced them, so saved settings follow. */
+const RETIRED_THEMES: Record<string, Theme> = {
+  "#64DDB5|#0C0E13|#14171E|#F3F5F9": DEFAULT_THEME,
+  "#0F7B6C|#F4F6FA|#FFFFFF|#111418": LIGHT_THEME,
+};
+
+export function migrateTheme(theme: Theme | undefined): Theme | undefined {
+  return theme && (RETIRED_THEMES[[theme.accent, theme.background, theme.surface, theme.text].join("|")] ?? theme);
+}
 
 export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
@@ -218,7 +231,7 @@ export function parseSettings(input: unknown): AppSettings {
     }
   }
   return {
-    theme: parseTheme(r.theme) ?? d.theme,
+    theme: migrateTheme(parseTheme(r.theme)) ?? d.theme,
     searchEngine: parseSearchEngine(r.searchEngine) ?? d.searchEngine,
     adBlockEnabled: bool(r.adBlockEnabled, d.adBlockEnabled),
     onboardingCompleted: bool(r.onboardingCompleted, d.onboardingCompleted),

@@ -61,6 +61,13 @@ describe("settings", () => {
     expect(parseTheme({ accent: "#123456", background: "nope", surface: "#000000", text: "#FFFFFF" })).toBeUndefined();
     expect(parseTheme(THEME_PRESETS.Light)).toEqual(THEME_PRESETS.Light);
   });
+  it("moves saved green themes to the blue brand and keeps the rest", () => {
+    const mint = { accent: "#64ddb5", background: "#0C0E13", surface: "#14171E", text: "#F3F5F9" };
+    expect(parseSettings({ theme: mint }).theme).toEqual(THEME_PRESETS.Joy);
+    expect(parseSettings({ theme: { accent: "#0F7B6C", background: "#F4F6FA", surface: "#FFFFFF", text: "#111418" } }).theme).toEqual(THEME_PRESETS.Light);
+    expect(parseSettings({ theme: THEME_PRESETS.Ember }).theme).toEqual(THEME_PRESETS.Ember);
+    expect(defaultSettings().theme.accent).toBe("#2B95FF");
+  });
   it("validates search engines", () => {
     expect(buildSearchUrl(GOOGLE, "joy chromium")).toBe("https://www.google.com/search?q=joy%20chromium");
     expect(isValidSearchTemplate("https://x.example/?q=")).toBe(false);

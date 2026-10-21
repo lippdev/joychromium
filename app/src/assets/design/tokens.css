@@ -10,11 +10,11 @@
 
 :root {
   /* Overridden at runtime from the user's theme and UI scale. */
-  --accent: #64ddb5;
-  --accent-text: #07120f;
-  --bg: #0c0e13;
-  --surface: #14171e;
-  --text: #f3f5f9;
+  --accent: #2b95ff;
+  --accent-text: #0a0f1a;
+  --bg: #1c1c1c;
+  --surface: #2b2b2b;
+  --text: #f3f3f3;
   --ui-scale: 1;
   --overscan: 0;
 
@@ -35,9 +35,9 @@
   --space-4: calc(16 * var(--u));
   --space-5: calc(24 * var(--u));
   --space-6: calc(32 * var(--u));
-  --radius-sm: calc(8 * var(--u));
-  --radius: calc(12 * var(--u));
-  --radius-lg: calc(18 * var(--u));
+  --radius-sm: calc(4 * var(--u));
+  --radius: calc(8 * var(--u));
+  --radius-lg: calc(12 * var(--u));
 
   /* Type scale: 24px body at 1080p, so text is readable from a sofa. */
   --text-xs: calc(13 * var(--u));

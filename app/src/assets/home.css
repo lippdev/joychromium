@@ -23,18 +23,9 @@ main {
 .hero { display: grid; gap: var(--space-4); justify-items: center; padding-top: var(--space-6); }
 
 .logo { display: flex; align-items: center; gap: var(--space-3); }
-.logo b {
-  display: grid;
-  place-items: center;
-  width: calc(56 * var(--u));
-  height: calc(56 * var(--u));
-  border-radius: calc(16 * var(--u));
-  background: var(--accent);
-  color: var(--accent-text);
-  font-size: calc(30 * var(--u));
-  font-weight: 900;
-}
-.logo span { font-size: var(--text-lg); font-weight: 700; letter-spacing: 0.18em; }
+.logo img { width: calc(64 * var(--u)); height: calc(64 * var(--u)); }
+.logo span { font-size: var(--text-2xl); font-weight: 800; letter-spacing: -0.02em; }
+.logo b { color: var(--accent); font-weight: inherit; }
 
 .search { display: flex; gap: var(--space-2); width: min(calc(900 * var(--u)), 100%); }
 .search input {
@@ -42,7 +33,7 @@ main {
   height: calc(64 * var(--u));
   padding: 0 var(--space-5);
   border: 1px solid var(--border);
-  border-radius: calc(999 * var(--u));
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
   font-size: var(--text-lg);
@@ -52,7 +43,7 @@ main {
   height: calc(64 * var(--u));
   padding: 0 var(--space-5);
   border: 0;
-  border-radius: calc(999 * var(--u));
+  border-radius: var(--radius);
   background: var(--accent);
   color: var(--accent-text);
   font-size: var(--text-base);
