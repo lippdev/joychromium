@@ -44,7 +44,12 @@ jobs:
         run: npm run test:e2e
       - name: End-to-end (real Electron, Linux under Xvfb)
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" npm run test:e2e
+        run: |
+          # Electron's SUID sandbox needs a root-owned helper; npm unpacks it without the setuid bit. Without it a plain
+          # second launch (launch.spec.ts) aborts, and so does the Wayland smoke below.
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+          xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" npm run test:e2e
       - name: End-to-end (real Electron, macOS)
         if: runner.os == 'macOS'
         run: npm run test:e2e
@@ -64,9 +69,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y weston
           npm run build
-          # Electron's SUID sandbox needs a root-owned helper; npm unpacks it without the setuid bit.
-          sudo chown root:root node_modules/electron/dist/chrome-sandbox
-          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
           node scripts/wayland-smoke.mjs
       - name: Package (no publish) to prove the installers build
         run: npm run build && npx electron-builder --publish never
