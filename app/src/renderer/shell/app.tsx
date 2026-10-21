@@ -1,5 +1,6 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { ShellState } from "../../shared/ipc";
+import type { ShellState, TabState } from "../../shared/ipc";
 import { applyShellStatePatch } from "../../shared/statePatch";
 import { buttonGlyphs } from "../../shared/controllerGlyphs";
 import { isBlockedStatus } from "../../shared/haptics";
@@ -7,7 +8,7 @@ import { t } from "../../shared/i18n";
 import { isInternal } from "../../shared/pages";
 import { bridge, cmd } from "./bridge";
 import {
-  BackIcon, CloseIcon, ForwardIcon, FullscreenIcon, GamepadIcon, HomeIcon, MenuIcon, PlusIcon, ReloadIcon,
+  BackIcon, CaptionCloseIcon, CaptionMaximizeIcon, CaptionMinimizeIcon, CloseIcon, ForwardIcon, GlobeIcon, FullscreenIcon, GamepadIcon, HomeIcon, MenuIcon, PlusIcon, ReloadIcon,
   SearchIcon, SettingsIcon, ShieldIcon, StarIcon, TabsIcon, TvIcon, VolumeIcon,
 } from "./icons";
 import { Keyboard } from "./keyboard";
@@ -19,7 +20,7 @@ import { vibrate } from "./haptics";
 
 const Empty: ShellState = {
   tabs: [], activeUrl: "", isFavorite: false, inputMode: "Spatial", adBlock: false, controllerConnected: false,
-  chromeVisible: true, theme: { accent: "#64DDB5", background: "#0C0E13", surface: "#14171E", text: "#F3F5F9" },
+  chromeVisible: true, theme: { accent: "#2B95FF", background: "#1C1C1C", surface: "#2B2B2B", text: "#F3F3F3" },
   status: "", suggestions: [], shortcutMod: "Ctrl", nativeWindowControls: false, windowMode: "tv",
   uiScale: 1, overscan: 0, highContrast: false, language: "pt-BR", controllerFamily: "generic",
 };
@@ -50,7 +51,7 @@ export function App() {
     root.setProperty("--ui-scale", String(state.uiScale));
     const v = parseInt(state.theme.accent.slice(1), 16);
     const lum = (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255;
-    root.setProperty("--accent-text", lum > 0.45 ? "#07120F" : "#FFFFFF");
+    root.setProperty("--accent-text", lum > 0.45 ? "#0A0F1A" : "#FFFFFF");
     document.body.dataset.contrast = state.highContrast ? "high" : "normal";
     document.body.dataset.mode = state.windowMode;
     document.documentElement.lang = state.language;
@@ -73,7 +74,6 @@ export function App() {
   useGamepad(state, overlay, setOverlay);
 
   const tr = (key: string) => t(state.language, key);
-  const activeTab = state.tabs.find((tab) => tab.isActive);
   const tv = state.windowMode === "tv";
   const overlayOpen = overlay !== "none" || Boolean(state.keyboard) || Boolean(state.permission);
 
@@ -85,7 +85,24 @@ export function App() {
       onFocusIn={() => bridge().focus()}
     >
       <div id="chrome" ref={chromeRef} class={state.chromeVisible ? "" : "hidden"}>
-        <div class="bar" style={{ marginLeft: "var(--safe-x)", marginRight: "var(--safe-x)" }}>
+        <div class={`tabstrip ${state.nativeWindowControls ? "traffic-lights" : ""}`} style={{ paddingLeft: "var(--safe-x)", paddingRight: state.nativeWindowControls ? "var(--safe-x)" : undefined }}>
+          <button
+            id="tabs-button" class="strip-btn" aria-label={tr("nav.tabs")} title={`${tr("nav.tabs")} · LT/RT`}
+            aria-haspopup="dialog" aria-expanded={overlay === "tabs"} onClick={() => setOverlay("tabs")}
+          >
+            <TabsIcon size={18} />
+            {state.tabs.length > 1 && <span class="badge">{state.tabs.length}</span>}
+          </button>
+          <TabStrip tabs={state.tabs} language={state.language} />
+          {!state.nativeWindowControls && (
+            <div class="window-controls">
+              <button class="window-btn" aria-label={tr("nav.minimize")} title={tr("nav.minimize")} onClick={() => cmd({ type: "window", action: "minimize" })}><CaptionMinimizeIcon /></button>
+              <button class="window-btn" aria-label={tr("nav.maximize")} title={tr("nav.maximize")} onClick={() => cmd({ type: "window", action: "maximize" })}><CaptionMaximizeIcon /></button>
+              <button class="window-btn close" aria-label={tr("nav.close")} title={tr("nav.close")} onClick={() => cmd({ type: "window", action: "close" })}><CaptionCloseIcon /></button>
+            </div>
+          )}
+        </div>
+        <div class="bar" style={{ paddingLeft: "calc(var(--safe-x) + var(--space-2))", paddingRight: "calc(var(--safe-x) + var(--space-2))" }}>
           <button class="icon-btn" aria-label={tr("nav.back")} title={`${tr("nav.back")} · LB`} onClick={() => cmd({ type: "back" })}>
             <BackIcon />
           </button>
@@ -96,41 +113,25 @@ export function App() {
             <ReloadIcon />
           </button>
 
-          <AddressBar url={state.activeUrl} focused={addressFocused} setFocused={setAddressFocused} language={state.language} keyboard={Boolean(state.keyboard?.target === "address")} />
-
-          <button
-            class={`icon-btn ${state.isFavorite ? "on" : ""}`}
-            aria-label={tr("nav.favorite")} aria-pressed={state.isFavorite}
-            title={`${tr("nav.favorite")} · ${state.shortcutMod}+D · LB+Y`}
-            onClick={() => cmd({ type: "toggle-favorite" })}
-          >
-            <StarIcon filled={state.isFavorite} />
-          </button>
-          <button
-            id="tabs-button" class="icon-btn with-badge" aria-label={tr("nav.tabs")} title={`${tr("nav.tabs")} · LT/RT`}
-            aria-haspopup="dialog" aria-expanded={overlay === "tabs"} onClick={() => setOverlay("tabs")}
-          >
-            <TabsIcon />
-            {state.tabs.length > 1 && <span class="badge">{state.tabs.length}</span>}
-          </button>
+          <AddressBar url={state.activeUrl} focused={addressFocused} setFocused={setAddressFocused} language={state.language} keyboard={Boolean(state.keyboard?.target === "address")}>
+            <button
+              class={`address-btn ${state.isFavorite ? "on" : ""}`}
+              aria-label={tr("nav.favorite")} aria-pressed={state.isFavorite}
+              title={`${tr("nav.favorite")} · ${state.shortcutMod}+D · LB+Y`}
+              onClick={() => cmd({ type: "toggle-favorite" })}
+            >
+              <StarIcon size={18} filled={state.isFavorite} />
+            </button>
+          </AddressBar>
           <button
             class="icon-btn" aria-label={tr("nav.menu")} title={`${tr("nav.menu")} · Start`}
             aria-haspopup="dialog" aria-expanded={overlay === "menu"} onClick={() => setOverlay("menu")}
           >
             <MenuIcon />
           </button>
-
-          {!state.nativeWindowControls && (
-            <div class="window-controls">
-              <button class="window-btn" aria-label={tr("nav.minimize")} onClick={() => cmd({ type: "window", action: "minimize" })}>─</button>
-              <button class="window-btn" aria-label={tr("nav.maximize")} onClick={() => cmd({ type: "window", action: "maximize" })}>□</button>
-              <button class="window-btn close" aria-label={tr("nav.close")} onClick={() => cmd({ type: "window", action: "close" })}>✕</button>
-            </div>
-          )}
         </div>
         {tv && (
           <div class="tab-hint">
-            <span>{activeTab?.title ?? ""}</span>
             <span class="pad-hints">
               {(() => {
                 const g = buttonGlyphs(state.controllerFamily);
@@ -155,7 +156,38 @@ export function App() {
   );
 }
 
-function AddressBar({ url, focused, setFocused, language, keyboard }: { url: string; focused: boolean; setFocused: (v: boolean) => void; language: string; keyboard: boolean }) {
+/** Edge's tab strip: every tab with its icon, title and close button, the active one joined to the toolbar below. */
+function TabStrip({ tabs, language }: { tabs: TabState[]; language: string }) {
+  return (
+    <nav class="tabs" aria-label={t(language, "nav.tabs")}>
+      {tabs.map((tab) => (
+        <div key={tab.id} class={`tab ${tab.isActive ? "active" : ""} ${tab.sleeping ? "sleeping" : ""}`}>
+          <button
+            class="tab-main"
+            title={tab.title || tab.url}
+            aria-current={tab.isActive ? "page" : undefined}
+            onClick={() => cmd({ type: "activate-tab", id: tab.id })}
+            onAuxClick={(e) => { if (e.button === 1) cmd({ type: "close-tab", id: tab.id }); }}
+          >
+            {tab.isLoading
+              ? <span class="tab-spinner" aria-hidden="true" />
+              : tab.favicon ? <img class="tab-icon" src={tab.favicon} alt="" /> : <GlobeIcon class="tab-icon" />}
+            <span class="tab-title">{tab.title || tab.url}</span>
+            {tab.isPlayingAudio && <VolumeIcon size={14} muted={tab.isMuted} class="tab-audio" />}
+          </button>
+          <button class="tab-x" aria-label={`${t(language, "tabs.close")}: ${tab.title || tab.url}`} title={t(language, "tabs.close")} onClick={() => cmd({ type: "close-tab", id: tab.id })}>
+            <CloseIcon size={14} />
+          </button>
+        </div>
+      ))}
+      <button class="new-tab" aria-label={t(language, "tabs.new")} title={`${t(language, "tabs.new")}`} onClick={() => cmd({ type: "new-tab" })}>
+        <PlusIcon size={18} />
+      </button>
+    </nav>
+  );
+}
+
+function AddressBar({ url, focused, setFocused, language, keyboard, children }: { url: string; focused: boolean; setFocused: (v: boolean) => void; language: string; keyboard: boolean; children?: ComponentChildren }) {
   const input = useRef<HTMLInputElement>(null);
   // The controller keyboard starts a search, not an edit: an internal URL is not something a viewer types, and
   // appending the query to "joychromium://newtab" would search for a string nobody asked for. On a web page the current
@@ -196,6 +228,7 @@ function AddressBar({ url, focused, setFocused, language, keyboard }: { url: str
           cmd({ type: "address-input", text });
         }}
       />
+      {children}
     </form>
   );
 }

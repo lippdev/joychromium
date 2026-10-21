@@ -10,7 +10,7 @@
     const parent = document.head || document.documentElement;
     if (!parent) return;
     const style = document.createElement('style');
-    style.textContent = '.__joy-focus{outline:3px solid #64DDB5 !important;outline-offset:2px !important;border-radius:4px;}';
+    style.textContent = '.__joy-focus{outline:3px solid #2B95FF !important;outline-offset:2px !important;border-radius:4px;}';
     parent.appendChild(style);
     styled = true;
   };
@@ -256,7 +256,7 @@
     el.id = '__joy-cursor';
     el.setAttribute('aria-hidden', 'true');
     el.style.cssText = 'position:fixed;left:0;top:0;width:18px;height:26px;z-index:2147483647;pointer-events:none;display:none;' +
-      'background:url("data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 28"><path d="M1 1 L1 23 L7 18 L11 27 L14 26 L10 17 L17 17 Z" fill="#64DDB5" stroke="#07120F" stroke-width="1.5"/></svg>') + '") no-repeat;';
+      'background:url("data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 28"><path d="M1 1 L1 23 L7 18 L11 27 L14 26 L10 17 L17 17 Z" fill="#2B95FF" stroke="#0A0F1A" stroke-width="1.5"/></svg>') + '") no-repeat;';
     (document.body || document.documentElement).appendChild(el);
     return el;
   };

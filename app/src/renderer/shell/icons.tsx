@@ -73,3 +73,12 @@ export const ShieldIcon = ({ size = 20, class: c }: Props) => (
 export const GamepadIcon = ({ size = 20, class: c }: Props) => (
   <svg {...base(size)} class={c}><path d="M6 8h12a4 4 0 0 1 3.9 4.9l-.6 2.8A2.6 2.6 0 0 1 16 17l-1.5-1.5h-5L8 17a2.6 2.6 0 0 1-5.3-1.3l-.6-2.8A4 4 0 0 1 6 8z" /><path d="M8 11v2M7 12h2M15.5 12h.01M17.5 13.5h.01" /></svg>
 );
+export const GlobeIcon = ({ size = 16, class: c }: Props) => (
+  <svg {...base(size)} class={c}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>
+);
+
+/** The caption buttons Windows 11 and Edge draw: hairline glyphs on a 10px grid. */
+const caption = { width: 10, height: 10, viewBox: "0 0 10 10", fill: "none", stroke: "currentColor", "stroke-width": 1, "aria-hidden": true };
+export const CaptionMinimizeIcon = () => <svg {...caption}><path d="M0 5.5h10" /></svg>;
+export const CaptionMaximizeIcon = () => <svg {...caption}><rect x="0.5" y="0.5" width="9" height="9" rx="1" /></svg>;
+export const CaptionCloseIcon = () => <svg {...caption}><path d="M0.5 0.5l9 9M9.5 0.5l-9 9" /></svg>;
