@@ -254,41 +254,91 @@
 })();
 
 // The controller's pointer: the left stick moves it and A clicks where it points (real mouse events at the same spot,
-// sent by the shell). It is a ring, not an arrow, so it never passes for the system mouse; the dot in the middle is the
-// spot that gets clicked.
+// sent by the shell). An arrow that turns into a pointing hand over anything clickable, like a mouse; white with a black
+// edge and a shadow so it reads on any page. The tip of the arrow and of the finger is the spot that gets clicked.
 (() => {
   if (window.__joyCursor) return;
-  const SIZE = 34;
-  const ring = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34">' +
-    '<circle cx="17" cy="17" r="12" fill="rgba(43,149,255,0.22)" stroke="#fff" stroke-width="5"/>' +
-    '<circle cx="17" cy="17" r="12" fill="none" stroke="#2B95FF" stroke-width="3"/>' +
-    '<circle cx="17" cy="17" r="3" fill="#2B95FF" stroke="#fff" stroke-width="1.5"/></svg>';
+  const svg = (box, body) => 'url("data:image/svg+xml;utf8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}">${body}</svg>`) + '")';
+  const SHAPES = {
+    arrow: {
+      width: 24, height: 34, tipX: 2.4, tipY: 2.4,
+      image: svg('0 0 20 28', '<path d="M2 2 L2 22.5 L7.3 17.6 L10.9 25.8 L14.3 24.3 L10.8 16.3 L17.8 16.3 Z" ' +
+        'fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/>'),
+    },
+    hand: {
+      width: 30, height: 35, tipX: 11.5, tipY: 2,
+      image: svg('0 0 26 30', '<path d="M10 1.6c1.1 0 2 .9 2 2v8.6h.6v-1.8c0-1.1.9-2 2-2s2 .9 2 2v2.2h.4v-1.4c0-1.1.9-2 2-2s2 .9 2 2v2h.3' +
+        'c0-1.1.9-2 2-2s2 .9 2 2V19c0 5.2-3.4 9.4-8.8 9.4h-1.7c-3.1 0-5.2-1.5-6.9-3.8L2 17.6c-.7-1-.5-2.4.5-3.1 1-.7 2.4-.5 3.1.5' +
+        'L8 18.4V3.6c0-1.1.9-2 2-2z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '<path d="M12 12.2V16.5M16.6 12.6V16.5M21 13.2V16.5" stroke="#000" stroke-width="1.2" stroke-linecap="round"/>'),
+    },
+  };
+  // What a mouse would show a hand over: links, buttons and the like, and anything a page gives cursor: pointer.
+  const CLICKABLE = 'a[href], button, summary, label, select, [role="button"], [role="link"], [role="tab"], [role="menuitem"], ' +
+    '[role="option"], input[type="submit"], input[type="button"], input[type="checkbox"], input[type="radio"]';
+  const overClickable = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    if (!el || el.tagName === 'IFRAME') return false;
+    return Boolean(el.closest(CLICKABLE)) || getComputedStyle(el).cursor === 'pointer';
+  };
   let el = null;
+  let shape = '';
   let at = { x: 0, y: 0 };
   const ensure = () => {
     if (el && document.contains(el)) return el;
     el = document.createElement('div');
     el.id = '__joy-cursor';
     el.setAttribute('aria-hidden', 'true');
-    el.style.cssText = `position:fixed;left:0;top:0;width:${SIZE}px;height:${SIZE}px;z-index:2147483647;pointer-events:none;display:none;` +
-      'filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));transition:scale 90ms ease-out;' +
-      'background:url("data:image/svg+xml;utf8,' + encodeURIComponent(ring) + '") no-repeat center / contain;';
+    el.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;display:none;will-change:transform;' +
+      'background-repeat:no-repeat;background-size:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45));' +
+      'transform-origin:var(--tip-x) var(--tip-y);transition:scale 90ms ease-out;';
+    shape = '';
     (document.body || document.documentElement).appendChild(el);
     return el;
+  };
+  const setShape = (c, name) => {
+    if (shape === name) return;
+    shape = name;
+    const s = SHAPES[name];
+    c.style.width = `${s.width}px`;
+    c.style.height = `${s.height}px`;
+    c.style.backgroundImage = s.image;
+    c.style.setProperty('--tip-x', `${s.tipX}px`);
+    c.style.setProperty('--tip-y', `${s.tipY}px`);
+  };
+  // Positions arrive from the shell a few dozen times a second, unevenly; the page draws the pointer on every frame of the
+  // screen instead, gliding the rest of the way to the newest one, so it moves smoothly whatever the arrival rate. A click
+  // goes to the newest position, never to the drawn one.
+  let drawn = null;
+  let frame = 0;
+  const paint = () => {
+    frame = 0;
+    if (!el || !drawn) return;
+    drawn.x += (at.x - drawn.x) * 0.5;
+    drawn.y += (at.y - drawn.y) * 0.5;
+    if (Math.abs(at.x - drawn.x) < 0.3 && Math.abs(at.y - drawn.y) < 0.3) drawn = { x: at.x, y: at.y };
+    const s = SHAPES[shape];
+    el.style.transform = `translate(${drawn.x - s.tipX}px, ${drawn.y - s.tipY}px)`;
+    if (drawn.x !== at.x || drawn.y !== at.y) frame = requestAnimationFrame(paint);
   };
   window.__joyCursor = {
     show(visible, x, y) {
       const c = ensure();
+      const appearing = c.style.display !== 'block';
       at = { x, y };
       c.style.display = visible ? 'block' : 'none';
-      // The click lands on (x, y): the ring is centred on it.
-      c.style.transform = `translate(${x - SIZE / 2}px, ${y - SIZE / 2}px)`;
+      if (!visible) return;
+      setShape(c, overClickable(x, y) ? 'hand' : 'arrow');
+      // Appearing, it shows up where it is rather than sliding in from where it was last seen.
+      if (appearing || !drawn) drawn = { x, y };
+      if (!frame) frame = requestAnimationFrame(paint);
     },
-    // A short squeeze on every click, so a press from the sofa is seen to land.
+    // A short squeeze around the tip on every click, so a press from the sofa is seen to land.
     press() {
       const c = ensure();
       if (c.style.display === 'none') this.show(true, at.x, at.y);
-      c.style.scale = '0.75';
+      c.style.scale = '0.82';
       setTimeout(() => { c.style.scale = '1'; }, 110);
     },
   };
