@@ -135,6 +135,8 @@ test("the new tab box opens an address and searches the rest", async () => {
   });
   const submit = async (text: string) => {
     await command({ type: "navigate", url: "joychromium://newtab" });
+    // A script run in a page still on its way in may never answer, so the new tab settles first.
+    await expect.poll(async () => { const tab = await activeTab(); return tab?.url === "joychromium://newtab" && !tab.isLoading; }, { timeout: 30_000 }).toBe(true);
     await expect.poll(() => pageEval("Boolean(document.getElementById('q'))"), { timeout: 15_000 }).toBe(true);
     await pageEval(`(() => { document.getElementById('q').value = ${JSON.stringify(text)}; document.getElementById('search').requestSubmit(); })()`);
   };
