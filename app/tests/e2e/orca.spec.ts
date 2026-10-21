@@ -21,7 +21,7 @@ import { join } from "node:path";
  */
 
 const XBOX = "Xbox Wireless Controller";
-const Button = { Y: 3 } as const;
+const Button = { Y: 3, DpadRight: 15 } as const;
 
 const CONF = `LogLevel 5
 AudioOutputMethod "alsa"
@@ -222,12 +222,12 @@ test("the search flow reaches the reader, element by element", async () => {
   // 1. The new tab page's search field has focus at boot, and it is announced in full: name, role and hint.
   await expectSpoken(/Search entry/, "the new tab search field");
 
-  // 2. Y on the controller opens the keyboard. The focus lands on its dialog, and every key is a named button.
+  // 2. Y on the controller opens the keyboard. The focus lands on its dialog, whose description carries the controls,
+  // and every key is a named button: the first D-pad press lands on "q", as on Xbox.
   await installPad();
   await press(Button.Y);
   await expectSpoken(/D-PAD MOVES/, "the controller keyboard's hints");
-  await pressKey("Tab");
-  await pressKey("Tab");
+  await press(Button.DpadRight);
   await expectSpoken(/q push button/, "a key in the controller keyboard grid");
   await command({ type: "keyboard-close" });
 

@@ -455,28 +455,34 @@ body {
 .tab-card.new { align-items: center; justify-content: center; border-color: var(--border); }
 .tab-card.new .thumb { width: 100%; font-size: var(--text-2xl); }
 
-/* ---- Controller keyboard: Edge's gamepad keyboard, flat keys on a near-black panel ---- */
+/* ---- Controller keyboard: Xbox's, one quiet grid on a near-black panel ---- */
 
-.keyboard {
-  width: min(1100px, 94vw);
-  margin-bottom: var(--space-5);
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--bg) 82%, #000);
-  box-shadow: 0 calc(16 * var(--u)) calc(48 * var(--u)) rgba(0, 0, 0, 0.5);
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
-.keyboard-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); padding-left: var(--space-1); }
-.keyboard-head .label { font-weight: 600; color: var(--accent); font-size: var(--text-sm); }
-.keyboard-head .hint { flex: 1; color: var(--faint); font-size: var(--text-xs); }
+.keyboard {
+  --key: calc(56 * var(--u));
+  --key-gap: calc(6 * var(--u));
+  margin-bottom: var(--space-5);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg) 70%, #000);
+  box-shadow: 0 calc(18 * var(--u)) calc(48 * var(--u)) rgba(0, 0, 0, 0.55);
+}
+
 .suggestions {
   display: flex;
   gap: var(--space-2);
+  max-width: calc(12 * var(--key) + 11 * var(--key-gap));
   margin-bottom: var(--space-3);
-  padding-bottom: var(--space-3);
   overflow-x: auto;
-  border-bottom: 1px solid var(--border);
 }
 
 .chip {
@@ -485,47 +491,67 @@ body {
   flex: 0 0 auto;
   max-width: calc(320 * var(--u));
   padding: var(--space-2) var(--space-3);
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   text-align: left;
 }
 
-.chip:focus-visible { background: var(--hover); border-color: var(--accent); }
+.chip:focus-visible { background: var(--text); color: var(--bg); outline: none; }
+.chip:focus-visible .chip-url { color: inherit; }
 .chip-title { font-size: var(--text-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-url { font-size: var(--text-xs); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.keyboard-rows { display: grid; gap: calc(6 * var(--u)); }
-
-.key-row { display: flex; gap: calc(6 * var(--u)); justify-content: center; }
+/* Twelve columns: a function key at each end and ten in the middle, every row lined up. */
+.keys {
+  display: grid;
+  grid-template-columns: repeat(12, var(--key));
+  grid-auto-rows: calc(50 * var(--u));
+  gap: var(--key-gap);
+}
 
 .key {
-  min-width: calc(56 * var(--u));
-  height: calc(48 * var(--u));
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   font-weight: 400;
-  transition: background var(--duration) var(--ease);
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease), transform var(--duration) var(--ease);
 }
 
 .key:hover { background: var(--hover); }
+/* The selected key turns white, as on Xbox: the one thing on the panel the eye finds from the sofa. */
 .key:focus-visible {
-  background: var(--hover);
-  outline: calc(2 * var(--u)) solid var(--accent);
-  outline-offset: 0;
-  box-shadow: inset 0 0 0 calc(2 * var(--u)) color-mix(in srgb, var(--bg) 80%, #000);
+  z-index: 1;
+  background: var(--text);
+  color: var(--bg);
+  outline: none;
+  transform: scale(1.06);
 }
+
 .key.on { background: var(--accent); color: var(--accent-text); }
-.key.wide { min-width: calc(96 * var(--u)); font-size: var(--text-sm); }
-.key.wider { min-width: calc(260 * var(--u)); font-size: var(--text-sm); }
-.key.small { min-width: calc(64 * var(--u)); font-size: var(--text-sm); }
-.key.primary { background: var(--accent); color: var(--accent-text); font-weight: 600; }
-.url-keys { margin-top: calc(6 * var(--u)); }
-.actions { margin-top: calc(6 * var(--u)); }
+.key.primary { background: var(--accent); color: var(--accent-text); }
+.key.primary:focus-visible { background: var(--text); color: var(--bg); }
+.key-label { font-size: inherit; line-height: 1; }
+.key-gap { pointer-events: none; }
+
+/* The controller button that presses this key, in the corner: X, Y, LT, the menu button, LS or B. */
+.key-glyph {
+  position: absolute;
+  top: calc(3 * var(--u));
+  right: calc(4 * var(--u));
+  font-size: calc(10 * var(--u));
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+}
 
 /* ---- Toasts ---- */
 

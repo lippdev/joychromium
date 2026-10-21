@@ -17,13 +17,17 @@ export interface ControllerGlyphs {
   keyboard: string;
   /** Clicking the right stick: the only way into Cursor mode, where the same stick moves a pointer. */
   stick: string;
+  /** The controller keyboard's shortcuts, as on Xbox: the left trigger shifts, the menu button confirms, the left stick's click changes the key layer. */
+  shift: string;
+  menu: string;
+  layer: string;
 }
 
 const GLYPHS: Record<ControllerFamily, ControllerGlyphs> = {
-  xbox: { select: "A", back: "B", reload: "X", keyboard: "Y", stick: "R3" },
-  playstation: { select: "✕", back: "○", reload: "□", keyboard: "△", stick: "R3" },
-  switch: { select: "A", back: "B", reload: "Y", keyboard: "X", stick: "R3" },
-  generic: { select: "A", back: "B", reload: "X", keyboard: "Y", stick: "R3" },
+  xbox: { select: "A", back: "B", reload: "X", keyboard: "Y", stick: "R3", shift: "LT", menu: "≡", layer: "LS" },
+  playstation: { select: "✕", back: "○", reload: "□", keyboard: "△", stick: "R3", shift: "L2", menu: "≡", layer: "L3" },
+  switch: { select: "A", back: "B", reload: "Y", keyboard: "X", stick: "R3", shift: "ZL", menu: "+", layer: "LS" },
+  generic: { select: "A", back: "B", reload: "X", keyboard: "Y", stick: "R3", shift: "LT", menu: "≡", layer: "LS" },
 };
 
 export function buttonGlyphs(family: ControllerFamily): ControllerGlyphs {
