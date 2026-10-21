@@ -82,13 +82,13 @@ export interface Shortcut {
   url: string;
 }
 
-export const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { name: "YouTube TV", url: "https://www.youtube.com/tv" },
-  { name: "Twitch", url: "https://www.twitch.tv" },
-  { name: "Netflix", url: "https://www.netflix.com" },
-  { name: "Prime Video", url: "https://www.primevideo.com" },
-  { name: "Disney+", url: "https://www.disneyplus.com" },
-  { name: "Spotify", url: "https://open.spotify.com" },
+/** The new tab shows only the user's own sites: no shortcut comes preinstalled. */
+export const DEFAULT_SHORTCUTS: Shortcut[] = [];
+
+/** The streaming shortcuts every install had before version 5, removed from settings that still hold them untouched. */
+const RETIRED_SHORTCUT_URLS = [
+  "https://www.youtube.com/tv", "https://www.twitch.tv", "https://www.netflix.com",
+  "https://www.primevideo.com", "https://www.disneyplus.com", "https://open.spotify.com",
 ];
 
 export function parseShortcut(value: unknown): Shortcut | undefined {
@@ -181,7 +181,7 @@ const bool = (value: unknown, fallback: boolean): boolean => (typeof value === "
 const webUrl = (value: unknown, fallback: string): string => (isWebUrl(value as string) ? (value as string) : fallback);
 
 /** Bumped whenever a stored file needs a new shape; migrations below bring older files forward. */
-export const SETTINGS_SCHEMA_VERSION = 4;
+export const SETTINGS_SCHEMA_VERSION = 5;
 
 /**
  * Old versions this app wrote. The file is plain JSON with every field optional, so the only migrations needed are
@@ -203,6 +203,9 @@ export function migrateSettings(raw: unknown): unknown {
     delete migrated.autofill;
   }
   if (version < 4 && typeof migrated.vibration !== "boolean") migrated.vibration = false;
+  // A list the user edited is theirs and stays; the untouched old defaults go.
+  if (version < 5 && Array.isArray(migrated.shortcuts)
+    && migrated.shortcuts.map((s) => (s as { url?: unknown })?.url).join("|") === RETIRED_SHORTCUT_URLS.join("|")) migrated.shortcuts = [];
   migrated.schemaVersion = SETTINGS_SCHEMA_VERSION;
   return migrated;
 }

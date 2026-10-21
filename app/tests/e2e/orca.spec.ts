@@ -160,6 +160,7 @@ test.beforeEach(async () => {
     join(data, "settings.json"),
     JSON.stringify({
       onboardingCompleted: true, startup: "NewTab", windowMode: "window", language: "en",
+      shortcuts: [{ name: "YouTube TV", url: "https://www.youtube.com/tv" }],
       favorites: [{ name: "Example", url: "https://example.com/" }],
     }),
   );
@@ -247,11 +248,11 @@ test("the search flow reaches the reader, element by element", async () => {
   // decoration, so a reader that spelled it would say "Y YouTube TV".
   await command({ type: "navigate", url: "joychromium://newtab" });
   await expect.poll(async () => (await activeTab())?.url, { timeout: 30_000 }).toBe("joychromium://newtab");
-  await expect.poll(() => pageEval<number>("document.querySelectorAll('#apps .card').length"), { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect.poll(() => pageEval<number>("document.querySelectorAll('#sites .card').length"), { timeout: 30_000 }).toBeGreaterThan(0);
   await command({ type: "keyboard-close" });
-  await pageEval("document.querySelector('#apps .card').focus()");
-  await expectSpoken(/List with \d+ items/, "the apps list");
-  await expectSpoken(/YouTube TV push button/, "the first app card");
+  await pageEval("document.querySelector('#sites .card').focus()");
+  await expectSpoken(/List with \d+ items/, "the quick links list");
+  await expectSpoken(/YouTube TV push button/, "the first quick link");
   expect(said.join(" ")).not.toMatch(/Y YouTube TV/);
 
   // 6. A page asks for a permission, and the prompt is a named dialog whose first button is announced.

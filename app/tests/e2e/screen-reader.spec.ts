@@ -130,6 +130,7 @@ test.beforeEach(async () => {
       startup: "NewTab",
       windowMode: "window",
       language: "pt-BR",
+      shortcuts: [{ name: "YouTube TV", url: "https://www.youtube.com/tv" }],
       favorites: [{ name: "Example", url: "https://example.com/" }],
     }),
   );
@@ -272,13 +273,13 @@ test("the new tab search field is named and its cards are a list", async () => {
   await command({ type: "navigate", url: "joychromium://newtab" });
   await expect.poll(async () => (await activeTab())?.url, { timeout: 30_000 }).toBe("joychromium://newtab");
   await settle();
-  await waitForPage("document.querySelectorAll('#apps .card').length > 0");
+  await waitForPage("document.querySelectorAll('#sites .card').length > 0");
 
   const summary = await pageEval<{
     name: string; landmark: string; list: string; label: string; items: number; cards: string[]; badgeHidden: string;
   }>(`(() => {
     const q = document.getElementById('q');
-    const apps = document.getElementById('apps');
+    const apps = document.getElementById('sites');
     const cards = [...apps.querySelectorAll('[role="listitem"] .card')];
     return {
       name: q.getAttribute('aria-label'),
@@ -293,7 +294,7 @@ test("the new tab search field is named and its cards are a list", async () => {
   expect(summary.name).toBe("Pesquisar");
   expect(summary.landmark).toBe("search");
   expect(summary.list).toBe("list");
-  expect(summary.label).toBe("Aplicativos");
+  expect(summary.label).toBe("Acesso rápido");
   expect(summary.items).toBeGreaterThan(0);
   // The initial is decoration: the card is named by its title, not by "Y" plus the title.
   expect(summary.cards[0]).toBe("YouTube TV");
@@ -367,7 +368,7 @@ test("the AT-SPI tree exposes the address field, the keyboard, the suggestions a
   expect(options[0]?.name).toContain("Example");
   await command({ type: "keyboard-close" });
 
-  // The new tab page: the search field is named, the search form is a landmark, and the apps are a list of buttons.
+  // The new tab page: the search field is named, the search form is a landmark, and the quick links are a list of buttons.
   await command({ type: "navigate", url: "joychromium://newtab" });
   await expect
     .poll(async () => (await flatTree()).some((n) => n.role === "entry" && n.name === "Pesquisar"), { timeout: 30_000 })
@@ -376,7 +377,7 @@ test("the AT-SPI tree exposes the address field, the keyboard, the suggestions a
   // The page fills its cards after the document is up, so the list is polled until it holds items.
   const items = async (): Promise<AxNode[]> => {
     try {
-      const list = find(readTree(), (n) => n.role === "list" && n.name === "Aplicativos");
+      const list = find(readTree(), (n) => n.role === "list" && n.name === "Acesso rápido");
       return (list?.children ?? []).filter((n) => n.role === "list item");
     } catch {
       return [];

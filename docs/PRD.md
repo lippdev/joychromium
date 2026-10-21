@@ -207,7 +207,7 @@ app/
 | **Barra (modo TV)** | Barra de título com abas pequenas + toolbar de desktop + status bar | Barra única e alta: voltar, campo de endereço grande, favorito, abas (contador) e menu; esconde-se automaticamente sobre o conteúdo |
 | **Barra (modo Janela)** | igual | Layout compacto parecido com o atual, já com tokens e ícones novos e controles de janela por SO |
 | **Seletor de abas** | Abas de 220 px na barra de título, LT/RT | Overlay em grade com miniaturas (`webContents.capturePage`), aberto por um botão; LT/RT continuam para alternar rápido |
-| **Tela inicial** (nova aba) | Busca + tiles de atalhos | Hub: busca em destaque, linha de "Continuar" (sessão e recentes), favoritos, apps de TV (YouTube TV, Twitch...) em cards grandes |
+| **Tela inicial** (nova aba) | Busca + tiles de atalhos | Logo e busca no centro e uma linha de tiles só com os sites do usuário (atalhos que ele adicionou, favoritos, recentes); nenhum app pré-instalado |
 | **Menu rápido** | — | Overlay no botão Guide/Start: recarregar, zoom, modo de entrada, tela cheia, silenciar, configurações |
 | **Teclado virtual** | Grade de 10 colunas fixa em inglês | QWERTY e ABC, layout PT-BR com acentos (segurar A para variantes), linha de `.com`, `www.`, `https://`, sugestões navegáveis acima das teclas, cursor e apagar palavra |
 | **Status** | Texto em caixa-alta no rodapé | Toasts curtos com ícone; a status bar só aparece no modo Janela |
