@@ -37,7 +37,3 @@ export function updateInstaller(platform: string, flatpakId: string | undefined)
   return platform === "linux" && flatpakId ? "flathub" : "app";
 }
 
-/** A URL handed to a second instance, if the argv contains one. */
-export function urlFromArgv(argv: readonly string[]): string | undefined {
-  return argv.find((arg) => /^https?:\/\//i.test(arg) || arg.startsWith("joychromium://"));
-}

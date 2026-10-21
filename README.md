@@ -30,7 +30,7 @@ Nothing here costs money ([PRD](docs/PRD.md), ADR-010): no code-signing certific
 
 Step-by-step instructions, including recovery when the system refuses to open the app, are in [docs/INSTALL.md](docs/INSTALL.md).
 
-The current state of the app — what is proven, what is not, and who owes what — is in [docs/STATUS.md](docs/STATUS.md). More documentation: [docs/RELEASE.md](docs/RELEASE.md) (how a release is cut and what each installer does), [docs/POLICY.md](docs/POLICY.md) (the signing key and the remote policy), [docs/CONTROLLER-TEST.md](docs/CONTROLLER-TEST.md) (the on-a-real-TV checklist), [docs/SCREEN-READER.md](docs/SCREEN-READER.md) (the screen-reader pass), [docs/WAYLAND.md](docs/WAYLAND.md) (native Wayland and the Steam Deck recipe) and [docs/PRD.md](docs/PRD.md) (architecture and backlog).
+The current state of the app — what is proven, what is not, and who owes what — is in [docs/STATUS.md](docs/STATUS.md). More documentation: [docs/RELEASE.md](docs/RELEASE.md) (how a release is cut and what each installer does), [docs/POLICY.md](docs/POLICY.md) (the signing key and the remote policy), [docs/CONTROLLER-TEST.md](docs/CONTROLLER-TEST.md) (the on-a-real-TV checklist), [docs/SCREEN-READER.md](docs/SCREEN-READER.md) (the screen-reader pass), [docs/WAYLAND.md](docs/WAYLAND.md) (native Wayland and the Steam Deck recipe), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) (command-line flags, the `joychromium://` scheme and launchers such as ConsoleMode) and [docs/PRD.md](docs/PRD.md) (architecture and backlog).
 
 ## Run from source
 

@@ -35,6 +35,18 @@ export function downloadsFolder(): string {
   return join(app.getPath("downloads"), "JoyChromium");
 }
 
+/**
+ * Right-click on the taskbar icon or the Start menu entry on Windows: one click to a new tab or to the mode a launcher
+ * would ask for, through the same command-line flags (see shared/launchArgs.ts).
+ */
+export function installJumpList(labels: { newTab: string; tv: string; window: string }): void {
+  if (platformId() !== "win32") return;
+  const task = (title: string, args: string) => ({
+    program: process.execPath, arguments: args, title, description: title, iconPath: process.execPath, iconIndex: 0,
+  });
+  app.setUserTasks([task(labels.newTab, "--new-tab"), task(labels.tv, "--tv"), task(labels.window, "--window")]);
+}
+
 /** Edit roles are what make Cmd+C/V/X/A and Cmd+Q work on macOS. Other platforms have no app menu. */
 export function installApplicationMenu(): void {
   if (platformId() !== "darwin") {

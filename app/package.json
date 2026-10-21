@@ -38,6 +38,14 @@
   "build": {
     "appId": "dev.lipp.joychromium",
     "productName": "JoyChromium",
+    "protocols": [
+      {
+        "name": "JoyChromium",
+        "schemes": [
+          "joychromium"
+        ]
+      }
+    ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "release",
