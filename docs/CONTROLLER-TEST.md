@@ -16,6 +16,7 @@ Para cada cenário: **passou / falhou**, quantos segundos demorou a primeira res
 1. **Primeiro boot.** Abre em tela cheia, onboarding na tela, o app mostra qual controle detectou e quais botões chegaram. Escolha o idioma e o buscador só com o D-pad e o A.
 2. **Tela inicial → YouTube TV.** Abra o app de TV pelo D-pad, entre num vídeo, veja se a barra se esconde sozinha sobre o conteúdo e se o B volta ao estado anterior. Anote se o foco "pula" algum card (pontuação do `spatial`).
 3. **Digitar sem teclado físico.** Pesquise "previsão do tempo" com o teclado virtual (incluindo uma palavra com acento, como "ação"), navegue pelas sugestões e abra o resultado. Marque se o cursor virtual (modo Spatial) chegou em tudo.
+   Em seguida aperte o analógico direito (R3): a barra troca o modo na ordem Spatial → Cursor → Arrows. No modo Cursor o analógico esquerdo move um ponteiro pela página, em vez de andar de foco em foco; aperte R3 de novo para sair. Compare qual dos dois é mais rápido de acertar um card pequeno no YouTube.
 4. **Três abas.** Abra três abas, alterne pelo seletor em grade e feche uma, só com o controle. Veja se as miniaturas aparecem e se o foco começa na aba ativa.
 5. **Permissão de microfone.** Abra um site que peça o microfone (ou o teste do WebRTC), percorra o prompt com o D-pad e escolha "permitir sempre". Confirme em Configurações que a permissão ficou salva para o site.
 6. **Atualização.** Em Windows/Linux: com uma versão nova publicada, deixe o download acontecer, feche o app e reabra; no `.deb`/`.rpm` use **Reiniciar e instalar** em Configurações → Sobre e confirme o pedido de senha. No macOS, o app deve avisar e abrir a página da release.
@@ -28,6 +29,7 @@ Leitor de tela é o outro lado da mesma sessão: o roteiro de Orca, Narrator e V
 - **Foco pulando ou preso:** a pontuação está em `spatial.js` (`score`), injetado em toda página; o ajuste vale para o app inteiro, então anote o site e o elemento.
 - **Cursor muito rápido ou lento:** velocidade máxima em `MAX_CURSOR_SPEED` (`src/shared/controllerInput.ts`), e o modo de entrada de cada site em Configurações → Entrada.
 - **Botão sem função:** o mapeamento está em `src/shared/controllerInput.ts` e `src/shared/shortcuts.ts`; o rótulo por família de controle em `src/shared/controllerGlyphs.ts`.
+- **Modo Cursor não aparece:** o R3 cicla o modo e grava a escolha por site; o pedido sai do shell em `cycle-input-mode` e o modo atual aparece no medidor do controle, na barra.
 - **Vibração:** `vibrationActuator` não está implementado (E6-09, Could). Se fizer falta, é o item do backlog a puxar.
 
 ## Resultado
