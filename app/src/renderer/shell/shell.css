@@ -328,7 +328,10 @@ body {
 }
 
 .overlay.center { align-items: center; justify-content: center; }
-.overlay.bottom { align-items: flex-end; justify-content: center; }
+/* The controller keyboard is not a modal: what is being typed shows in the address bar above it, or in the page, and
+   neither may be dimmed or blurred. The layer is transparent and only the keyboard panel takes the pointer. */
+.overlay.bottom { align-items: flex-end; justify-content: center; background: none; backdrop-filter: none; pointer-events: none; }
+.overlay.bottom > * { pointer-events: auto; }
 
 .dialog,
 .menu {
