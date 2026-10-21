@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
+    <img src="docs/assets/logo.png" alt="JoyChromium" width="320">
+  </picture>
+</p>
+
 # JoyChromium
 
 A controller-first browser for the TV, built on Electron (Chromium). Windows, macOS and Linux from one code base. Every page announces itself as a TV (`JoyChromiumTV/1.0 (TV; SmartTV)`), ads and trackers are blocked out of the box, and a gamepad is the primary way to browse: the app opens fullscreen in TV mode.
