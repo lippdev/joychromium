@@ -18,6 +18,11 @@ Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows
 - Lógica pura fica em `src/shared/` (ou módulos de `src/main/` sem Electron, como `history.ts`, `store.ts`, `log.ts`) e ganha teste unitário; o que toca o Electron é coberto pelo e2e.
 - Testes e2e leem o estado por `globalThis.joy` (`tabs()`, `command()`, `pageEval()`), porque as views das abas não são alcançáveis pelo Playwright.
 
+## Stack (lippstack)
+- `.claude/settings.json` liga o marketplace [lippdev/lippstack](https://github.com/lippdev/lippstack) e os plugins dele para o projeto: Claude Code pede para instalar ao abrir o repo.
+- Fluxo: `po-skills:brainstorming` → `po-skills:writing-plans` → build (`ponytail`) → `eng-skills:qa` / `eng-skills:investigate` → `eng-skills:ship`. UI: `design-skills` (`hallmark`, `break-ui`).
+- `ship` cumpre as regras acima (checks + PR); não dispensa o e2e. `jira-stories` e `release-notes` não se aplicam aqui (sem Jira/Confluence).
+
 ## Arquitetura
 - `src/shared/`: regras puras (settings, segurança, policy, sugestões, controle, páginas, plataforma).
 - `src/main/`: processo principal — `platform.ts` (opções de janela, menu, caminhos e extensões por SO), `shell.ts` (janela, layout das views, comandos, permissões, downloads), `tabs.ts` (uma `WebContentsView` por aba + hooks de segurança), `pageBridge.ts` (mensagens das páginas internas), `protocol.ts` (esquema `joychromium://`), `adblock.ts`, `policyService.ts`, `updater.ts`, `history.ts`, `store.ts`, `log.ts`.

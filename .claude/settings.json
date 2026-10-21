@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enabledPlugins": {
+    "savvy-progress@lippstack": true,
+    "stage-bar@lippstack": true,
+    "done-ping@lippstack": true,
+    "where-line@lippstack": true,
+    "guardrails@lippstack": true,
+    "design-skills@lippstack": true,
+    "po-skills@lippstack": true,
+    "eng-skills@lippstack": true,
+    "ponytail@lippstack": true
+  },
+  "extraKnownMarketplaces": {
+    "lippstack": {
+      "source": {
+        "source": "github",
+        "repo": "lippdev/lippstack"
+      }
+    }
+  }
+}

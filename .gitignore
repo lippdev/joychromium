@@ -7,3 +7,6 @@ app/playwright-report/
 flatpak/build/
 flatpak/repo/
 flatpak/state/
+
+# Claude Code: settings.json is shared (lippstack), settings.local.json is personal
+.claude/settings.local.json
