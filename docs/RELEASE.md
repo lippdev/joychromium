@@ -37,6 +37,10 @@ O motor vem do build **castLabs ECS** (`github:castlabs/electron-releases#v44.5.
 - Se mexeu na policy (`policy/policy.json`), assine de novo — veja [POLICY.md](POLICY.md) — e faça o push da assinatura junto, senão a policy remota é ignorada.
 - Se a conta da castLabs EVS existe, confira que a release assinou a CDM: o log do job `build` de Windows e macOS diz `VMP signed …` em vez de `VMP signing skipped: …`. O procedimento e o que fazer quando falta a conta estão em [DRM-EVS.md](DRM-EVS.md).
 
+## Custo
+
+Zero, por decisão (ADR-010). O repositório é público, então o GitHub Actions não cobra minutos — inclusive nos runners de macOS, que são os mais caros em repositório privado — e as GitHub Releases não cobram hospedagem dos instaladores. O único serviço externo no caminho é o EVS da castLabs, que assina a CDM do Widevine de graça, e o Flathub, que é gratuito. O que ficou de fora por ser pago: Developer ID e notarização no macOS, certificado no Windows e qualquer SaaS de telemetria ou crash reporting. Se um dia alguém propuser um desses, é uma decisão de gastar dinheiro, não uma tarefa de engenharia.
+
 ## Depois de publicada
 
 - Confira que os três primeiros itens do `latest*.yml` apontam para os arquivos certos: uma release com `latest.yml` vazio deixa quem já tem o app sem atualização.

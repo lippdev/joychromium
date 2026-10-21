@@ -10,7 +10,7 @@ O JoyChromium já roda em Electron com um único código para Windows e Linux. O
 1. **Multiplataforma completo.** O macOS não existe (sem target, sem CI, sem assinatura). Também há bugs de borda no Linux e no mac (botões da janela invisíveis, copiar/colar, atalhos e caminhos).
 2. **Arquitetura.** O `shell.ts` concentra quase tudo. A UI é HTML/TS sem bundler e sem componentes, os tokens de design estão duplicados em cada página, a persistência não é atômica e há configurações que não fazem nada desde a saída do WebView2.
 3. **Redesign 10-foot.** A interface atual é um navegador de desktop com fontes de 10 a 13 px, ícones em caracteres Unicode e emoji, e fontes do Windows. Para TV, a 3 metros de distância, ela precisa de outra escala, outra hierarquia e navegação por foco desenhada para o controle.
-4. **Distribuição e mídia.** Faltam arm64, mais formatos de Linux e Widevine (DRM) para os serviços de streaming. O app segue sem assinatura de código por enquanto (seção 13).
+4. **Distribuição e mídia.** Faltam arm64, mais formatos de Linux e Widevine (DRM) para os serviços de streaming. O app segue sem assinatura de código, que é decisão de custo e não muda (seção 13, ADR-010).
 
 O Electron continua sendo a base. A seção 5.1 explica por quê.
 
@@ -165,7 +165,7 @@ app/
 - **ADR-007: adaptador de plataforma.** Toda decisão por SO passa por `platform/`: opções da janela, menu de aplicação, modificador de atalho e rótulo, caminhos, extensões perigosas extras, comportamento ao fechar a última janela e integração de mídia. O resto do código não testa `process.platform`.
 - **ADR-008: modo TV como padrão (decidido).** O app abre em **tela cheia, no modo TV**, desenhado para o controle. O **modo Janela** (mouse e teclado) é secundário: entra-se nele por F11/Esc ou pelas configurações, e ele reaproveita os mesmos serviços e componentes com outra escala e densidade. Toda tela nova é desenhada e aceita primeiro no modo TV.
 - **ADR-009: DRM com castLabs ECS (decidido).** O pacote `electron` é trocado pelo Electron for Content Security da castLabs, que instala a CDM Widevine no primeiro uso. A assinatura VMP do serviço EVS (gratuito, conta na castLabs) é necessária para Widevine de produção no Windows e no macOS; ela é independente da assinatura de código da Apple e da Microsoft, que continua fora do escopo. No Linux a CDM não usa VMP. O ECS é distribuído pelo GitHub da castLabs e não pelo registro do npm, então o Dependabot deixa de cobrir o motor e um workflow agendado assume essa função (E10-03).
-- **ADR-010: sem assinatura de código por enquanto (decidido).** Os builds saem sem Developer ID e sem certificado Windows. Consequências aceitas: alerta do SmartScreen no Windows; no macOS, o Gatekeeper exige liberar o app em Ajustes do Sistema → Privacidade e Segurança → "Abrir Mesmo Assim", e o auto-update nativo (Squirrel.Mac) não funciona. Os builds de mac recebem assinatura ad-hoc (`identity: "-"`), sem a qual o Apple Silicon recusa o app como "danificado".
+- **ADR-010: sem assinatura de código (decidido).** Os builds saem sem Developer ID e sem certificado Windows. Consequências aceitas: alerta do SmartScreen no Windows; no macOS, o Gatekeeper exige liberar o app em Ajustes do Sistema → Privacidade e Segurança → "Abrir Mesmo Assim", e o auto-update nativo (Squirrel.Mac) não funciona. Os builds de mac recebem assinatura ad-hoc (`identity: "-"`), sem a qual o Apple Silicon recusa o app como "danificado".
 
 ### 5.5 Matriz de plataforma
 
@@ -245,12 +245,12 @@ app/
 | **Flathub / Snap Store** (opcional) | Alcance em distros e SteamOS | Contas e manifesto | Dono do projeto | E9 |
 | **castLabs ECS + EVS** | Widevine para streaming pago | Conta gratuita no EVS; cliente `castlabs-evs` (Python 3) no CI, com as credenciais da conta como secrets; assinatura VMP num hook `afterPack` do electron-builder | castLabs | E10 |
 | **Ghostery adblocker** | Listas de bloqueio | Já integrado (CDN da Ghostery) | — | — |
-| **Sentry (`@sentry/electron`)** ou endpoint próprio do `crashReporter` | Crashes e erros, opt-in | Projeto e DSN, fora do repositório | Dono do projeto | E8 |
+| **`crashReporter` do Electron** (endpoint próprio, opcional) | Crashes e erros, opt-in | Nenhum serviço de terceiros: sem `CRASH_SUBMIT_URL` os relatórios ficam na máquina de quem usa | — | E8 |
 | **Sugestões de busca** (Google/DuckDuckGo suggest) | Sugestões no teclado virtual | Endpoint público; desligado por padrão em abas privadas | — | E6 |
 | **Fontes e ícones** (Inter OFL, Lucide ISC) | Visual igual nos SOs | Licenças compatíveis com MIT; embutir no app | — | E5 |
 | **HDMI-CEC** (`libcec`, futuro) | Controle remoto da TV no Linux (Raspberry Pi, mini-PCs) | Módulo nativo ou ponte via `cec-client` | — | Futuro |
 
-Fora do escopo por decisão (ADR-010), para quando o app for assinado: Apple Developer Program (Developer ID + notarização), assinatura no Windows (Azure Trusted Signing ou certificado OV/EV) e GPG para `.deb`/`.rpm`.
+**Decisão de custo (21/10/2026): o projeto não paga nada, em nenhum ponto.** O repositório é público, então os runners do GitHub Actions — os de macOS incluídos — e as Releases não têm custo; o EVS da castLabs é gratuito; o Flathub é gratuito; as listas de bloqueio e as sugestões usam endpoints públicos; a policy remota mora no próprio repositório. O que fica **deliberadamente de fora por ser pago**, e não "para depois": Apple Developer Program (Developer ID + notarização, US$ 99/ano), Azure Trusted Signing ou certificado OV/EV para Windows, e qualquer SaaS de crash reporting. As consequências disso estão aceitas e medidas no ADR-010 — SmartScreen no Windows, Gatekeeper no macOS, sem auto-update no macOS — e não voltam à mesa sem uma decisão explícita de gastar. A assinatura GPG de `.deb`/`.rpm` (E9-03) não entra nessa lista: chave GPG não custa nada, ela está congelada por escopo, não por dinheiro.
 
 ## 9. Backlog
 
@@ -317,7 +317,7 @@ Somando: **35 de 37 Must**, **19 de 19 Should** e **10 de 10 Could**. O E2-07 (s
 **Fora deste ciclo (Could, sem bloqueio)**
 
 - **E4-03** pausar o polling do controle com a janela minimizada: pequeno e não bloqueia a distribuição.
-- **E9-01 a E9-03** seguem congelados pelo ADR-010: sem assinatura de código até a decisão mudar.
+- **E9-01 e E9-02** seguem congelados pelo ADR-010, que agora é uma decisão de custo e não um "por enquanto": não há plano de pagar Developer ID nem certificado Windows. O **E9-03** (GPG em `.deb`/`.rpm`) fica congelado por escopo, não por custo — chave GPG é gratuita.
 
 **O que o app faz hoje, em uma frase:** navegador de TV multiplataforma com tela cheia por padrão, controle como entrada principal (incluindo iframes e mídia), PT-BR e EN, bloqueio de anúncios e rastreadores por nível, DRM Widevine no Linux, atualização automática nos instaladores, e CI nos três sistemas que instala e abre o pacote de cada um.
 
@@ -411,20 +411,20 @@ Somando: **35 de 37 Must**, **19 de 19 Should** e **10 de 10 Could**. O E2-07 (s
 
 | ID | História | MoSCoW | Tamanho | Critérios de aceite |
 |---|---|---|---|---|
-| E8-01 | Envio de crashes e erros opt-in (Sentry ou `crashReporter` próprio), sem URLs nem dados pessoais | Must | M | Desligado por padrão; liga no onboarding ou nas configurações |
+| E8-01 | Envio de crashes e erros opt-in pelo `crashReporter` do Electron (sem serviço de terceiros), sem URLs nem dados pessoais | Must | M | Desligado por padrão; liga no onboarding ou nas configurações |
 | E8-02 | "Limpar dados" completo: histórico, cache, cookies, permissões, por período | Must | P | Cada item é limpo de verdade (teste) |
 | E8-03 | Proteção contra rastreamento real (se mantida no E1-09): listas de rastreadores do Ghostery por nível | Could | M | Cada nível muda o que é bloqueado |
 | E8-04 | Documentar o local da chave de assinatura da policy para os três SOs (`~/.joychromium/`) e o procedimento de backup | Should | P | `CLAUDE.md` sem caminhos só de Windows |
 
 ### E9 — Distribuição (Marco M4)
 
-Assinatura de código está fora do escopo (ADR-010); E9-01 a E9-03 ficam congelados até essa decisão mudar.
+Assinatura de código está fora do escopo por decisão de custo (ADR-010); E9-01 e E9-02 ficam congelados, e o E9-03 (GPG, gratuito) está congelado por escopo.
 
 | ID | História | MoSCoW | Tamanho | Critérios de aceite |
 |---|---|---|---|---|
-| E9-01 | ~~Assinatura e notarização no macOS~~ (congelado, ADR-010) | Won't | M | App abre sem alerta do Gatekeeper; auto-update do mac funciona |
-| E9-02 | ~~Assinatura no Windows~~ (congelado, ADR-010) | Won't | M | Instalador assinado |
-| E9-03 | ~~Assinatura GPG de deb/rpm~~ (congelado, ADR-010) | Won't | P | Updater recusa pacote sem assinatura |
+| E9-01 | ~~Assinatura e notarização no macOS~~ (congelado: exige conta paga, ADR-010) | Won't | M | App abre sem alerta do Gatekeeper; auto-update do mac funciona |
+| E9-02 | ~~Assinatura no Windows~~ (congelado: exige certificado pago, ADR-010) | Won't | M | Instalador assinado |
+| E9-03 | ~~Assinatura GPG de deb/rpm~~ (congelado por escopo; chave GPG é gratuita) | Won't | P | Updater recusa pacote sem assinatura |
 | E9-04 | Changelog gerado a partir dos Conventional Commits na release | Could | P | Notas da release preenchidas automaticamente |
 | E9-05 | Flatpak (Flathub) | Could | G | Publicado e atualizando pelo Flathub |
 
@@ -512,9 +512,10 @@ Valores medidos nesta máquina (Linux x64, Ubuntu 24.04, Xvfb 1600x900, Electron
 ### Tomadas (19/10/2026)
 1. **Framework de UI:** Preact (ADR-003).
 2. **DRM:** adotar o castLabs ECS (ADR-009).
-3. **Assinatura de código:** não assinar por enquanto (ADR-010).
+3. **Assinatura de código:** não assinar — decisão de custo, sem plano de rever (ADR-010).
 4. **Modo padrão:** tela cheia com controle, modo TV (ADR-008).
+
+6. **Telemetria:** relatório de crash local por padrão e envio só com opt-in e endpoint configurado; nada de serviço pago (E8-01).
 
 ### Em aberto
 1. **Versões mínimas de SO:** seguir as mínimas do Electron/ECS da vez ou fixar algo mais novo.
-2. **Telemetria:** Sentry hospedado ou endpoint próprio do `crashReporter`.

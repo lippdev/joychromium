@@ -1,6 +1,6 @@
 # Instalando o JoyChromium
 
-O app funciona nas três plataformas, mas ainda não é assinado com um certificado de código (ver `docs/PRD.md`, ADR-010). Por isso o sistema avisa na primeira abertura. Este guia mostra o que fazer.
+O app funciona nas três plataformas e o projeto inteiro é gratuito: nada aqui depende de certificado pago nem de serviço pago (ver ADR-010). Como o build não é assinado com um certificado de código, o sistema avisa na primeira abertura; este guia mostra o que fazer.
 
 ## Windows
 
@@ -12,11 +12,11 @@ O app funciona nas três plataformas, mas ainda não é assinado com um certific
 ## macOS
 
 1. Baixe o `JoyChromium-<versão>-mac-arm64.dmg` (Apple Silicon) ou `-mac-x64.dmg` (Intel) e abra.
-2. **Se aparecer "Não foi possível instalar — Este Mac não conseguiu verificar o app"**, isso é o instalador da imagem de disco recusando um app sem notarização. A assinatura do app é válida (`codesign --verify --deep --strict` passa); o que falta é o Developer ID, que o ADR-010 deixou de fora. Feche o aviso e use um destes caminhos:
+2. **Se aparecer "Não foi possível instalar — Este Mac não conseguiu verificar o app"**, isso é o instalador da imagem de disco recusando um app sem notarização. A assinatura do app é válida (`codesign --verify --deep --strict` passa); o que falta é o Developer ID, que o ADR-010 cortou por custo e não vai voltar. Feche o aviso e use um destes caminhos:
    - arraste o **JoyChromium** para a pasta Aplicativos, ou
    - dê dois cliques em **install-macos.command**, que copia o app para Aplicativos e limpa a marca de quarentena.
 3. Abra o app uma vez com o botão direito → **Abrir** (ou, se o macOS não oferecer essa opção, rode no Terminal `xattr -dr com.apple.quarantine /Applications/JoyChromium.app`). Depois disso ele abre normalmente.
-4. O app **não se atualiza sozinho** no macOS enquanto não houver assinatura. Quando sair uma versão nova, a tela *Sobre e atualizações* avisa e o botão **Download** abre a página da release.
+4. O app **não se atualiza sozinho** no macOS, porque isso exigiria a conta paga da Apple. Quando sair uma versão nova, a tela *Sobre e atualizações* avisa e o botão **Download** abre a página da release.
 
 Se o macOS disser que o app está **danificado**, ele foi baixado por um navegador que removeu a assinatura ad-hoc. Baixe de novo pela release e, se precisar, rode no Terminal:
 
