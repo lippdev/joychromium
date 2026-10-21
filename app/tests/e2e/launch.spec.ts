@@ -1,6 +1,6 @@
 import { _electron as electron, expect, test } from "@playwright/test";
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import electronPath from "electron";
@@ -28,9 +28,17 @@ test("command-line mode and URL, and a second launch handed to the running app",
       protocol.handle("https", () => new Response("<title>Launched</title>", { headers: { "content-type": "text/html" } }));
     });
     // A second launch exits at once and hands its flags and URL to this instance, which opens the URL in a new tab.
-    const second = spawn(electronPath as unknown as string, [".", "--tv", "joychromium://open?url=https%3A%2F%2Fexample.com%2F"], { env, stdio: "ignore" });
-    await new Promise((resolve) => second.on("exit", resolve));
-    await expect.poll(async () => (await tabs()).length, { timeout: 15_000 }).toBe(2);
+    const second = spawn(electronPath as unknown as string, [".", "--tv", "joychromium://open?url=https%3A%2F%2Fexample.com%2F"], { env });
+    let output = "";
+    second.stdout.on("data", (chunk) => (output += chunk));
+    second.stderr.on("data", (chunk) => (output += chunk));
+    const code = await new Promise((resolve) => second.on("exit", resolve));
+    try {
+      await expect.poll(async () => (await tabs()).length, { timeout: 15_000 }).toBe(2);
+    } catch (error) {
+      const logs = readdirSync(join(data, "logs")).map((f) => readFileSync(join(data, "logs", f), "utf8")).join("\n");
+      throw new Error(`second launch exited ${code}\n--- output\n${output}\n--- app log\n${logs}\n${error}`);
+    }
     expect(await active()).toBe("https://example.com/");
     await expect.poll(fullScreen, { timeout: 15_000 }).toBe(true);
   } finally {

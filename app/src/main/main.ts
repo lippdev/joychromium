@@ -220,6 +220,7 @@ let shellRef: Shell | undefined;
 let bootMs = 0;
 
 app.on("second-instance", (_event, argv) => {
+  log.info(`second launch: ${JSON.stringify(argv)}`);
   shellRef?.focusFromSecondInstance(parseLaunchArgs(argv));
 });
 
