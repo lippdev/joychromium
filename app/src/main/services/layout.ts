@@ -1,6 +1,6 @@
 import type { Tab } from "../tabs";
 
-/** Where the tab views go: below the chrome, above the status line. */
+/** Where the tab views go: below the chrome, above the controller keyboard while it is open. */
 export interface LayoutInsets {
   top: number;
   bottom: number;
@@ -16,7 +16,8 @@ export interface ViewBounds {
 /** Bounds for the tab views, or undefined when the window has no size yet. Pure so it can be unit tested. */
 export function tabViewBounds(size: { width: number; height: number }, insets: LayoutInsets, chromeVisible: boolean): ViewBounds {
   const top = chromeVisible ? insets.top : 0;
-  const bottom = chromeVisible ? insets.bottom : 0;
+  // The keyboard sits over the page whether or not the chrome is showing, so its room is kept either way.
+  const bottom = insets.bottom;
   return { x: 0, y: top, width: size.width, height: Math.max(0, size.height - top - bottom) };
 }
 
@@ -28,7 +29,7 @@ export interface LayoutHost {
 
 /** Keeps the tab views under the chrome and in step with fullscreen, page fullscreen and TV/window mode. */
 export class WindowLayout {
-  insets: LayoutInsets = { top: 90, bottom: 26 };
+  insets: LayoutInsets = { top: 90, bottom: 0 };
 
   constructor(private readonly host: LayoutHost) {}
 

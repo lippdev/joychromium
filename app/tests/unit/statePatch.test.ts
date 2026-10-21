@@ -35,6 +35,7 @@ function stateWithTabs(count: number): ShellState {
     status: "READY",
     shortcutMod: "Ctrl",
     nativeWindowControls: false,
+    maximized: false,
     windowMode: "tv",
     uiScale: 1,
     overscan: 0,

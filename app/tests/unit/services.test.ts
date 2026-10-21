@@ -55,6 +55,10 @@ describe("media", () => {
     expect(mediaCommandForKey("Enter")).toBeUndefined();
     expect(isShellCommand({ type: "media", action: "next" })).toBe(true);
     expect(isShellCommand({ type: "media", action: "stop" })).toBe(false);
+    expect(isShellCommand({ type: "chrome-height", height: 90, bottom: 380 })).toBe(true);
+    expect(isShellCommand({ type: "chrome-height", height: 90, bottom: -1 })).toBe(false);
+    expect(isShellCommand({ type: "page-cover", covered: true })).toBe(true);
+    expect(isShellCommand({ type: "page-cover", covered: "yes" })).toBe(false);
   });
   it("only turns the A button into play/pause on an explicit media decision", () => {
     expect(activateIntent("media")).toBe("media");
@@ -88,7 +92,9 @@ describe("downloads", () => {
 describe("window layout", () => {
   it("puts the tab views under the chrome", () => {
     expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 26 }, true)).toEqual({ x: 0, y: 90, width: 1920, height: 964 });
-    expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 26 }, false)).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
+    expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 0 }, false)).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
+    // The keyboard's room at the bottom stays when the chrome hides in TV mode.
+    expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 400 }, false)).toEqual({ x: 0, y: 0, width: 1920, height: 680 });
     expect(tabViewBounds({ width: 0, height: 0 }, { top: 90, bottom: 26 }, true).height).toBe(0);
   });
 });

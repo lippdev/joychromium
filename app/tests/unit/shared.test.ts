@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { readJsonFile } from "../../src/main/atomicFile";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { displayUrl, errorPageFor, internalPageFile, isDevOnlyFile, isInternal, isWebUrl, Pages } from "../../src/shared/pages";
@@ -118,6 +119,19 @@ describe("settings", () => {
     expect(withoutInputMode(modes, "a.example").siteInputModes).toEqual({});
     expect(parseShortcut({ name: "Bad", url: "ftp://x" })).toBeUndefined();
     expect(parseShortcut({ name: " ", url: "https://x.example" })).toBeUndefined();
+  });
+});
+
+describe("json files", () => {
+  it("reads a file saved with a byte order mark", () => {
+    const dir = mkdtempSync(join(tmpdir(), "joy-bom-"));
+    try {
+      const path = join(dir, "settings.json");
+      writeFileSync(path, "\uFEFF{\"language\":\"en\"}", "utf8");
+      expect(readJsonFile(path, () => undefined)).toEqual({ language: "en" });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

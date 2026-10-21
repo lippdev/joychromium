@@ -25,6 +25,9 @@ contextBridge.exposeInMainWorld("shell", {
   thumbnails(): Promise<{ id: number; dataUrl: string }[]> {
     return ipcRenderer.invoke(Channels.shellThumbnails);
   },
+  snapshot(): Promise<string> {
+    return ipcRenderer.invoke(Channels.shellSnapshot);
+  },
   onActivity(callback: (activity: ShellActivity) => void): () => void {
     const listener = (_event: unknown, activity: ShellActivity): void => callback(activity);
     ipcRenderer.on(Channels.shellActivity, listener);

@@ -79,7 +79,8 @@ export class CommandRouter {
         break;
       case "cycle-input-mode": h.cycleInputMode(); break;
       case "media": await mediaControl(wc, command.action); break;
-      case "chrome-height": h.setLayout(command.height, 0); break;
+      case "chrome-height": h.setLayout(command.height, command.bottom ?? 0); break;
+      case "page-cover": h.setPageCovered(command.covered); break;
       case "ui-settings": {
         const patch: Partial<AppSettings> = {};
         if (command.uiScale !== undefined) patch.uiScale = command.uiScale;
