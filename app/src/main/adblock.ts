@@ -2,7 +2,7 @@ import { Request } from "@ghostery/adblocker";
 import { ElectronBlocker } from "@ghostery/adblocker-electron";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type { Session } from "electron";
+import { ipcMain, type Session } from "electron";
 import type { TrackingLevel } from "../shared/settings";
 import { trackerListsFor } from "../shared/trackerLists";
 
@@ -68,9 +68,20 @@ export class AdBlock {
     });
   }
 
+  /**
+   * The engine registers its cosmetic-filter handlers on two channels of ipcMain, which are global: turning it on in a
+   * second session (a private tab's own) throws "Attempted to register a second handler" and the tab never opens. The
+   * handlers belong to the one engine whatever the session, so the earlier ones are dropped first.
+   */
+  private enableIn(engine: ElectronBlocker, session: Session): void {
+    ipcMain.removeHandler("@ghostery/adblocker/inject-cosmetic-filters");
+    ipcMain.removeHandler("@ghostery/adblocker/is-mutation-observer-enabled");
+    engine.enableBlockingInSession(session);
+  }
+
   enable(session: Session): void {
     if (!this.blocker || this.enabledOn.has(session)) return;
-    this.blocker.enableBlockingInSession(session);
+    this.enableIn(this.blocker, session);
     this.enabledOn.add(session);
   }
 
@@ -100,7 +111,7 @@ export class AdBlock {
   private install(engine: ElectronBlocker): void {
     for (const session of this.enabledOn) this.blocker?.disableBlockingInSession(session);
     this.blocker = engine;
-    for (const session of this.enabledOn) engine.enableBlockingInSession(session);
+    for (const session of this.enabledOn) this.enableIn(engine, session);
   }
 
   private cachePath(level: TrackingLevel): string {

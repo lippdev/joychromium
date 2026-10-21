@@ -5,6 +5,7 @@ import { displayUrl, errorPageFor, isInternal, isWebUrl, Pages } from "../shared
 import { hostOf, isHttp, isNavigationAllowed, upgradeToHttps } from "../shared/security";
 import type { TabState } from "../shared/ipc";
 import type { StatusId } from "../shared/status";
+import { faviconHost, pickFavicon, readFavicon, type FaviconStore } from "./favicons";
 
 export interface TabEnvironment {
   preloadDir: string;
@@ -14,6 +15,8 @@ export interface TabEnvironment {
   /** The agent a tab loads a URL with: the desktop one on a listed streaming host, the TV one elsewhere. */
   userAgentFor: (url: string) => string;
   prepareSession: (ses: Session) => void;
+  /** The site icons kept inside the app (see favicons.ts). */
+  favicons: FaviconStore;
   log: { info: (m: string) => void; warn: (m: string) => void; error: (m: string, e?: unknown) => void };
 }
 
@@ -61,6 +64,11 @@ export class Tab {
 
   get webContents(): WebContents {
     return this.viewRef.webContents;
+  }
+
+  /** The session this tab browses in: the private partition for a private tab. */
+  get session(): Session {
+    return this.ses;
   }
 
   /** Drops the renderer process; the URL and title stay so the tab can be restored on demand. */
@@ -273,6 +281,34 @@ export class TabManager extends EventEmitter<TabEvents> {
       .filter((u) => u !== Pages.welcome && u !== Pages.settings && !u.startsWith(Pages.error));
   }
 
+  /**
+   * Downloads the icon a page announced, through the session of the tab that loaded the page (so a private tab's request
+   * never touches the normal profile), keeps it for the host, and points the tab at the kept copy. A normal tab saves it to
+   * the profile; a private one only in memory.
+   */
+  private async saveFavicon(tab: Tab, iconUrl: string): Promise<void> {
+    if (tab.sleeping || tab.webContents.isDestroyed()) return;
+    const host = faviconHost(tab.webContents.getURL());
+    if (!host) return;
+    const icon = await readFavicon(iconUrl, (input, init) => tab.session.fetch(input, init));
+    if (!icon) return;
+    this.env.favicons.put(host, icon, !tab.isPrivate);
+    if (tab.sleeping || tab.webContents.isDestroyed() || faviconHost(tab.webContents.getURL()) !== host) return;
+    tab.favicon = this.env.favicons.urlFor(host);
+    this.emit("changed");
+  }
+
+  /** Pages without an icon link still often serve /favicon.ico: asked for once, after the page had time to announce its own. */
+  private fallbackFavicon(tab: Tab): void {
+    const host = faviconHost(tab.webContents.getURL());
+    if (!host || this.env.favicons.has(host)) return;
+    setTimeout(() => {
+      if (tab.sleeping || tab.webContents.isDestroyed() || this.env.favicons.has(host)) return;
+      const url = tab.webContents.getURL();
+      if (faviconHost(url) === host) void this.saveFavicon(tab, new URL("/favicon.ico", url).toString());
+    }, 2000).unref();
+  }
+
   private wire(tab: Tab): void {
     const wc = tab.webContents;
     wc.setWindowOpenHandler(({ url }) => {
@@ -313,6 +349,8 @@ export class TabManager extends EventEmitter<TabEvents> {
       if (!details.isMainFrame) return;
       tab.url = displayUrl(details.url);
       tab.isLoading = true;
+      // The icon of the page being left must not stay on the new one: show the saved icon of the new host, or the globe.
+      if (!details.isSameDocument) tab.favicon = this.env.favicons.urlFor(faviconHost(details.url));
       this.emit("changed");
     });
     wc.on("did-finish-load", () => {
@@ -320,6 +358,7 @@ export class TabManager extends EventEmitter<TabEvents> {
       tab.pendingHttpsUpgrade = undefined;
       tab.url = displayUrl(wc.getURL());
       if (!tab.isPrivate && isWebUrl(wc.getURL()) && !isInternal(wc.getURL())) this.emit("visited", wc.getURL(), wc.getTitle());
+      this.fallbackFavicon(tab);
       this.emit("changed");
     });
     wc.on("did-fail-load", (_event, code, description, url, isMainFrame) => {
@@ -338,8 +377,15 @@ export class TabManager extends EventEmitter<TabEvents> {
       this.emit("changed");
     });
     wc.on("page-favicon-updated", (_event, favicons) => {
-      tab.favicon = favicons.find((f) => f.startsWith("https://")) ?? favicons[0];
-      this.emit("changed");
+      // Our own pages announce a bundled file; a site's icon is downloaded once and kept (see saveFavicon).
+      const internal = favicons.find((f) => f.startsWith("joychromium://"));
+      if (internal) {
+        tab.favicon = internal;
+        this.emit("changed");
+        return;
+      }
+      const icon = pickFavicon(favicons);
+      if (icon) void this.saveFavicon(tab, icon);
     });
     wc.on("media-started-playing", () => {
       tab.isPlayingAudio = true;

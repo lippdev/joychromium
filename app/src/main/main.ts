@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AdBlock } from "./adblock";
 import { exportDiagnostics } from "./diagnostics";
+import { FaviconStore } from "./favicons";
 import { History } from "./history";
 import { Log } from "./log";
 import { PolicyService } from "./policyService";
@@ -35,7 +36,7 @@ export interface JoyState {
   adblockLevel: () => string | undefined;
   userAgent: string;
   wouldBlock: (url: string) => boolean;
-  tabs: () => { url: string; title: string; isActive: boolean; isLoading: boolean; isPlayingAudio: boolean }[];
+  tabs: () => { url: string; title: string; isActive: boolean; isLoading: boolean; isPlayingAudio: boolean; favicon?: string; isPrivate: boolean }[];
   command: (command: unknown) => Promise<void>;
   /** Sends a controller event through the same router a gamepad uses (tests only). */
   controller: (input: ControllerEvent) => Promise<void>;
@@ -68,6 +69,7 @@ const distDir = join(__dirname, "..");
 const log = new Log(join(dataDir, "logs"));
 const store = new SettingsStore(dataDir, (m) => log.warn(m));
 const history = new History(join(dataDir, "history.jsonl"), (m) => log.warn(m));
+const favicons = new FaviconStore(join(dataDir, "favicons"), (m) => log.warn(m));
 const policy = new PolicyService(dataDir, (m) => log.warn(m));
 const adblock = new AdBlock(dataDir, (m) => log.info(m));
 const updater = new Updater(log, () => policy.current.blockedAppVersions);
@@ -101,7 +103,7 @@ async function start(): Promise<void> {
   const settings = store.load();
   policy.loadCached();
   crashes.sync(settings.crashReports);
-  installProtocolHandler(distDir);
+  installProtocolHandler(distDir, favicons);
 
   const minimum = effectiveMinimumChromium(policy.current, MINIMUM_CHROMIUM);
   if (!versionAtLeast(process.versions.chrome, minimum)) log.warn(`Chromium ${process.versions.chrome} is below the minimum ${minimum}`);
@@ -143,6 +145,7 @@ async function start(): Promise<void> {
   const shell = new Shell({
     store,
     history,
+    favicons,
     policy,
     adblock,
     log,
@@ -167,7 +170,7 @@ async function start(): Promise<void> {
   shellRef = shell;
   globalThis.joy.exportDiagnostics = exportDiagnosticsReport;
   globalThis.joy.tabs = () =>
-    shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active, isLoading: t.isLoading, isPlayingAudio: t.isPlayingAudio }));
+    shell.tabs.tabs.map((t) => ({ url: t.url, title: t.title, isActive: t === shell.tabs.active, isLoading: t.isLoading, isPlayingAudio: t.isPlayingAudio, favicon: t.favicon, isPrivate: t.isPrivate }));
   globalThis.joy.command = (command) => shell.handle(command as never);
   globalThis.joy.controller = (input) => shell.handleController(input);
   globalThis.joy.pageEval = (script) => shell.activeWebContents?.executeJavaScript(script, true) ?? Promise.resolve(undefined);

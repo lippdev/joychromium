@@ -10,6 +10,7 @@ import { clearBrowsingData } from "./services/privacy";
 import type { ShellDeps } from "./shell";
 import type { Shell } from "./shell";
 import type { Tab } from "./tabs";
+import { faviconHost, readFavicon } from "./favicons";
 
 type Message = Record<string, unknown> & { type?: string };
 
@@ -29,6 +30,7 @@ export class PageBridge {
     const s = this.deps.store.current;
     return {
       theme: s.theme,
+      faviconKey: this.deps.favicons.key,
       presets: THEME_PRESETS,
       searchEngine: s.searchEngine,
       searchEngines: SEARCH_ENGINES,
@@ -73,6 +75,23 @@ export class PageBridge {
       adBlockUpdate: this.deps.adblock.status,
       policy: this.deps.policy.status,
     };
+  }
+
+  /** Hosts whose /favicon.ico gave no icon, and when: not asked again for a while, so a dropped connection does not decide it for good. */
+  private readonly noFavicon = new Map<string, number>();
+
+  /** The icon of a site the new tab lists but the app never saw load: /favicon.ico, once, through the asking tab's session. */
+  private async fetchFavicon(tab: Tab, host: string): Promise<boolean> {
+    if (faviconHost(`https://${host}/`) !== host) return false;
+    if (this.deps.favicons.has(host)) return true;
+    if (Date.now() - (this.noFavicon.get(host) ?? -Infinity) < 10 * 60_000) return false;
+    const icon = await readFavicon(`https://${host}/favicon.ico`, (input, init) => tab.session.fetch(input, init));
+    if (!icon) {
+      this.noFavicon.set(host, Date.now());
+      return false;
+    }
+    this.deps.favicons.put(host, icon, !tab.isPrivate);
+    return true;
   }
 
   async handle(tab: Tab, raw: unknown): Promise<void> {
@@ -167,6 +186,13 @@ export class PageBridge {
         if (typeof m.url === "string") store.update((s) => ({ ...s, favorites: s.favorites.filter((f) => f.url !== m.url) }));
         this.shell.broadcast();
         break;
+      case "favicon-fetch": {
+        const hosts = Array.isArray(m.hosts) ? m.hosts.slice(0, 8).filter((h): h is string => typeof h === "string") : [];
+        const found = await Promise.all(hosts.map((host) => this.fetchFavicon(tab, host)));
+        const arrived = hosts.filter((_, i) => found[i]);
+        if (arrived.length > 0) this.reply(tab, { type: "favicons", hosts: arrived });
+        break;
+      }
       case "history-search":
         this.reply(tab, { type: "history", entries: this.deps.history.search(typeof m.query === "string" ? m.query : "") });
         break;
@@ -201,7 +227,7 @@ export class PageBridge {
         }
         break;
       case "clear-data":
-        await clearBrowsingData({ session: tab.webContents.session, clearHistory: () => this.deps.history.clear() });
+        await clearBrowsingData({ session: tab.webContents.session, clearHistory: () => { this.deps.history.clear(); this.deps.favicons.clear(); } });
         this.shell.notify("browsingDataCleared");
         break;
       default:
