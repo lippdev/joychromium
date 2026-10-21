@@ -234,3 +234,58 @@ test("up from the top of the page reaches the toolbar and the tabs, and down com
   await expect.poll(shellHasWindowFocus).toBe(false);
   expect(await chrome.evaluate(() => document.activeElement === document.body)).toBe(true);
 });
+
+// ---- The stick's pointer, its clicks and the right stick's wheel ----
+
+/** A focusable button on top and, under it, a tall area that logs every mouse press and context menu it gets. */
+const POINTER_PAGE = `<title>Pointer</title><body style="margin:0;font:20px sans-serif">` +
+  `<button id="b" style="margin:20px" onclick="window.__log.push('button')">Focus me</button>` +
+  `<div id="area" style="height:4000px;background:#eee"></div>` +
+  `<script>window.__log = [];` +
+  `addEventListener('mousedown', (e) => { if (e.target.id === 'area') __log.push('down' + e.button); });` +
+  `addEventListener('contextmenu', (e) => { e.preventDefault(); __log.push('context'); });</script></body>`;
+
+const tilt = (axis: number, value: number) => chrome.evaluate(([a, v]) => {
+  (window as unknown as { __pads: { axes: number[] }[] }).__pads[0]!.axes[a] = v;
+}, [axis, value] as const);
+const pageLog = () => app.evaluate(() => globalThis.joy.pageEval("window.__log.join(',')")) as Promise<string>;
+const pointerShown = () => app.evaluate(() => globalThis.joy.pageEval("(document.getElementById('__joy-cursor') || {}).style?.display === 'block'"));
+
+test("the left stick points and A clicks there, twice for a right click, until the D-pad takes over", async () => {
+  await installPads([XBOX]);
+  await app.evaluate(({ protocol }, page) => {
+    protocol.handle("https", () => new Response(page, { headers: { "content-type": "text/html" } }));
+  }, POINTER_PAGE);
+  await app.evaluate(() => globalThis.joy.command({ type: "navigate", url: "https://pointer.example/" } as never));
+  await expect.poll(async () => {
+    const tab = (await tabs()).find((t) => t.isActive);
+    return tab?.url === "https://pointer.example/" && !tab.isLoading;
+  }, { timeout: 30_000 }).toBe(true);
+
+  // Spatial is the default mode: the stick still brings the pointer up, over the area.
+  await tilt(1, 1);
+  await expect.poll(pointerShown, { timeout: 10_000 }).toBe(true);
+  await chrome.waitForTimeout(300);
+  await tilt(1, 0);
+
+  // One A is a left click where the pointer is (after the short wait for a second press).
+  await press(0, Pad.A);
+  await expect.poll(pageLog, { timeout: 5_000 }).toBe("down0");
+  // Two quick ones are a right click, and no left click on the way.
+  await press(0, Pad.A);
+  await press(0, Pad.A);
+  await expect.poll(pageLog, { timeout: 5_000 }).toBe("down0,down2,context");
+
+  // The D-pad takes over: the pointer goes away and A presses what the D-pad focused, not the spot under the pointer.
+  await step(Pad.Down);
+  await expect.poll(pageFocus).toBe("b");
+  await expect.poll(pointerShown).toBe(false);
+  await step(Pad.A);
+  await expect.poll(pageLog).toBe("down0,down2,context,button");
+
+  // The right stick is the wheel.
+  expect(await app.evaluate(() => globalThis.joy.pageEval("scrollY"))).toBe(0);
+  await tilt(3, 1);
+  await expect.poll(() => app.evaluate(() => globalThis.joy.pageEval("scrollY")) as Promise<number>, { timeout: 10_000 }).toBeGreaterThan(0);
+  await tilt(3, 0);
+});

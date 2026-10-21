@@ -5,6 +5,8 @@ import type { InputMode } from "./settings";
 export const STICK_DEADZONE = 0.25;
 export const DIRECTION_THRESHOLD = 0.5;
 export const MAX_CURSOR_SPEED = 22; // px per 50 ms tick at full deflection
+/** Two A presses closer than this are a right click at the pointer; a single press waits this long to be a left click. */
+export const DOUBLE_PRESS_MS = 280;
 
 /** Hosts whose pages already implement arrow-key navigation (10-foot UIs). */
 const ARROW_HOSTS = ["youtube.com", "tv.youtube.com", "twitch.tv"];
