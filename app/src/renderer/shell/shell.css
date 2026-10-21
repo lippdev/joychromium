@@ -53,7 +53,8 @@ body {
 }
 
 .strip-btn:hover,
-.strip-btn:focus-visible { background: var(--hover); color: var(--text); }
+.strip-btn:focus-visible,
+:root[data-input="pad"] .strip-btn:focus { background: var(--hover); color: var(--text); }
 
 .strip-btn .badge {
   position: absolute;
@@ -177,12 +178,17 @@ body {
 }
 
 .tab-x:hover,
-.tab-x:focus-visible { background: var(--hover); color: var(--text); }
+.tab-x:focus-visible,
+:root[data-input="pad"] .tab-x:focus { background: var(--hover); color: var(--text); }
 
 .tab-main:focus-visible,
 .tab-x:focus-visible,
 .new-tab:focus-visible,
-.strip-btn:focus-visible { outline-offset: calc(-2 * var(--u)); }
+.strip-btn:focus-visible,
+:root[data-input="pad"] .tab-main:focus,
+:root[data-input="pad"] .tab-x:focus,
+:root[data-input="pad"] .new-tab:focus,
+:root[data-input="pad"] .strip-btn:focus { outline-offset: calc(-2 * var(--u)); }
 
 .new-tab {
   flex: none;
@@ -217,7 +223,8 @@ body {
 .window-btn:active { background: var(--border); }
 .window-btn.close:hover { background: #c42b1c; color: #fff; }
 .window-btn.close:active { background: #c42b1ccc; color: #fff; }
-.window-btn:focus-visible { outline-offset: calc(-3 * var(--u)); }
+.window-btn:focus-visible,
+:root[data-input="pad"] .window-btn:focus { outline-offset: calc(-3 * var(--u)); }
 
 /* ---- Toolbar ---- */
 
@@ -244,7 +251,8 @@ body {
 }
 
 .icon-btn:hover,
-.icon-btn:focus-visible { background: var(--hover); }
+.icon-btn:focus-visible,
+:root[data-input="pad"] .icon-btn:focus { background: var(--hover); }
 .icon-btn.on { color: var(--accent); }
 
 .address {
@@ -288,7 +296,8 @@ body {
 }
 
 .address-btn:hover,
-.address-btn:focus-visible { background: var(--hover); color: var(--text); }
+.address-btn:focus-visible,
+:root[data-input="pad"] .address-btn:focus { background: var(--hover); color: var(--text); }
 .address-btn.on { color: var(--accent); }
 
 .tab-hint {
@@ -389,7 +398,8 @@ body {
 }
 
 .menu-item:hover,
-.menu-item:focus-visible { background: var(--hover); }
+.menu-item:focus-visible,
+:root[data-input="pad"] .menu-item:focus { background: var(--hover); }
 
 /* ---- Tab switcher ---- */
 
@@ -498,8 +508,10 @@ body {
   text-align: left;
 }
 
-.chip:focus-visible { background: var(--text); color: var(--bg); outline: none; }
-.chip:focus-visible .chip-url { color: inherit; }
+.chip:focus-visible,
+:root[data-input="pad"] .chip:focus { background: var(--text); color: var(--bg); outline: none; }
+.chip:focus-visible .chip-url,
+:root[data-input="pad"] .chip:focus .chip-url { color: inherit; }
 .chip-title { font-size: var(--text-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-url { font-size: var(--text-xs); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -528,7 +540,8 @@ body {
 
 .key:hover { background: var(--hover); }
 /* The selected key turns white, as on Xbox: the one thing on the panel the eye finds from the sofa. */
-.key:focus-visible {
+.key:focus-visible,
+:root[data-input="pad"] .key:focus {
   z-index: 1;
   background: var(--text);
   color: var(--bg);
@@ -538,7 +551,8 @@ body {
 
 .key.on { background: var(--accent); color: var(--accent-text); }
 .key.primary { background: var(--accent); color: var(--accent-text); }
-.key.primary:focus-visible { background: var(--text); color: var(--bg); }
+.key.primary:focus-visible,
+:root[data-input="pad"] .key.primary:focus { background: var(--text); color: var(--bg); }
 .key-label { font-size: inherit; line-height: 1; }
 .key-gap { pointer-events: none; }
 
