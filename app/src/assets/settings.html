@@ -41,6 +41,18 @@
       <select id="overscan"><option value="0">0%</option><option value="2">2%</option><option value="4">4%</option><option value="6">6%</option><option value="8">8%</option></select>
     </div>
     <div class="row">
+      <div><label for="newTabBackground" data-i18n="settings.ntBackground">Fundo da nova aba</label></div>
+      <select id="newTabBackground">
+        <option value="Wallpaper" data-i18n="settings.ntWallpaper">Papel de parede</option>
+        <option value="Gradient" data-i18n="settings.ntGradient">Brilho da cor do tema</option>
+        <option value="Solid" data-i18n="settings.ntSolid">Cor sólida</option>
+      </select>
+    </div>
+    <div class="row">
+      <div><span id="newTabSitesLabel" data-i18n="settings.ntSites">Acesso rápido na nova aba</span><small data-i18n="settings.ntSitesHint">Seus atalhos, favoritos e sites recentes</small></div>
+      <label class="switch"><input type="checkbox" id="newTabSites" data-ui aria-labelledby="newTabSitesLabel"><span></span></label>
+    </div>
+    <div class="row">
       <div><span id="highContrastLabel" data-i18n="settings.contrast">Alto contraste</span></div>
       <label class="switch"><input type="checkbox" id="highContrast" data-ui aria-labelledby="highContrastLabel"><span></span></label>
     </div>
@@ -299,10 +311,11 @@
     post('ui-settings', {
       uiScale: Number($('uiScale').value), overscan: Number($('overscan').value),
       highContrast: $('highContrast').checked, language: $('language').value, crashReports: $('crashReports').checked,
+      newTabBackground: $('newTabBackground').value, newTabSites: $('newTabSites').checked,
     });
     flash('uiStatus', i18n.t('settings.saved'));
   };
-  for (const id of ['uiScale', 'overscan', 'highContrast', 'language', 'crashReports']) $(id).addEventListener('change', sendUi);
+  for (const id of ['uiScale', 'overscan', 'highContrast', 'language', 'crashReports', 'newTabBackground', 'newTabSites']) $(id).addEventListener('change', sendUi);
 
   function showUpdate(msg) {
     $('appUpdate').textContent = msg.appUpdate || '';
@@ -355,6 +368,8 @@
     $('uiScale').value = String(msg.uiScale ?? 1);
     $('overscan').value = String(msg.overscan ?? 0);
     $('highContrast').checked = !!msg.highContrast;
+    $('newTabBackground').value = msg.newTabBackground || 'Wallpaper';
+    $('newTabSites').checked = msg.newTabSites !== false;
     $('language').value = msg.language ?? 'pt-BR';
     $('crashReports').checked = !!msg.crashReports;
     $('streamingUa').checked = !!msg.streamingDesktopUa;

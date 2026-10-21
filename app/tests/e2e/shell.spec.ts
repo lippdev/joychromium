@@ -1,5 +1,5 @@
 import { _electron as electron, expect, test, type ElectronApplication } from "@playwright/test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -112,4 +112,18 @@ test("first run shows onboarding", async () => {
     await first.close();
     rmSync(fresh, { recursive: true, force: true });
   }
+});
+
+test("settings change the new tab: backdrop and quick links", async () => {
+  const pageEval = <T>(code: string) => app.evaluate(({}, c) => globalThis.joy.pageEval(c), code) as Promise<T>;
+  await expect.poll(tabs, { timeout: 30_000 }).toHaveLength(1);
+  await command({ type: "navigate", url: "joychromium://settings" });
+  await expect.poll(() => pageEval<string>("document.getElementById('newTabBackground').value"), { timeout: 15_000 }).toBe("Wallpaper");
+  await pageEval("(() => { const s = document.getElementById('newTabBackground'); s.value = 'Solid'; s.dispatchEvent(new Event('change')); })()");
+  await pageEval("document.getElementById('newTabSites').click()");
+  await expect.poll(() => JSON.parse(readFileSync(join(data, "settings.json"), "utf8")).newTabSites).toBe(false);
+  expect(JSON.parse(readFileSync(join(data, "settings.json"), "utf8")).newTabBackground).toBe("Solid");
+
+  await command({ type: "navigate", url: "joychromium://newtab" });
+  await expect.poll(() => pageEval<string>("document.body.dataset.bg"), { timeout: 15_000 }).toBe("Solid");
 });

@@ -1,7 +1,7 @@
 import { Channels } from "../shared/ipc";
 import { Pages } from "../shared/pages";
 import {
-  DEFAULT_SHORTCUTS, parseSearchEngine, parseShortcut, parseTheme, SEARCH_ENGINES, THEME_PRESETS, type AppSettings,
+  DEFAULT_SHORTCUTS, NEW_TAB_BACKGROUNDS, parseSearchEngine, parseShortcut, parseTheme, SEARCH_ENGINES, THEME_PRESETS, type AppSettings,
   withoutInputMode, withoutPermissions,
 } from "../shared/settings";
 import { currentShortcutMod } from "./platform";
@@ -62,6 +62,8 @@ export class PageBridge {
       highContrast: s.highContrast,
       crashReports: s.crashReports,
       streamingDesktopUa: s.streamingDesktopUa,
+      newTabBackground: s.newTabBackground,
+      newTabSites: s.newTabSites,
       vibration: s.vibration,
       appVersion: this.deps.appVersion,
       appUpdate: this.deps.updateStatus(),
@@ -145,6 +147,8 @@ export class PageBridge {
         if (typeof m.highContrast === "boolean") patch.highContrast = m.highContrast;
         if (m.language === "pt-BR" || m.language === "en") patch.language = m.language;
         if (typeof m.crashReports === "boolean") patch.crashReports = m.crashReports;
+        if ((NEW_TAB_BACKGROUNDS as readonly unknown[]).includes(m.newTabBackground)) patch.newTabBackground = m.newTabBackground as AppSettings["newTabBackground"];
+        if (typeof m.newTabSites === "boolean") patch.newTabSites = m.newTabSites;
         store.update((s) => ({ ...s, ...patch }));
         this.shell.broadcast();
         this.reply(tab, { type: "init", ...this.payloadFields() });

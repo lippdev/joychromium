@@ -166,6 +166,13 @@ describe("settings store", () => {
     expect(parseSettings({}).shortcuts).toEqual([]);
   });
 
+  it("parses the new tab look and falls back on anything unknown", () => {
+    expect(parseSettings({}).newTabBackground).toBe("Wallpaper");
+    expect(parseSettings({}).newTabSites).toBe(true);
+    expect(parseSettings({ newTabBackground: "Solid", newTabSites: false })).toMatchObject({ newTabBackground: "Solid", newTabSites: false });
+    expect(parseSettings({ newTabBackground: "Video", newTabSites: "no" })).toMatchObject({ newTabBackground: "Wallpaper", newTabSites: true });
+  });
+
   it("writes atomically and keeps the previous file as a backup", () => {
     const dir = temp();
     try {
