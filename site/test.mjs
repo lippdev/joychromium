@@ -1,0 +1,26 @@
+// node site/test.mjs — sign-up end to end against a throwaway data dir.
+import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "joy-site-"));
+process.env.ADMIN_TOKEN = "segredo";
+const { server, isEmail } = await import("./server.mjs");
+assert.ok(isEmail("a@b.co") && !isEmail("nope") && !isEmail("a@b"));
+await new Promise((r) => server.listen(0, r));
+const base = `http://127.0.0.1:${server.address().port}`;
+const post = (body) => fetch(`${base}/api/subscribe`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+assert.equal((await post({ email: "x" })).status, 422);
+assert.deepEqual(await (await post({ email: "Ana@Exemplo.com" })).json(), { ok: true, already: false });
+assert.deepEqual(await (await post({ email: "ana@exemplo.com" })).json(), { ok: true, already: true });
+await post({ email: "bot@spam.com", website: "x" });
+assert.equal((await fetch(`${base}/api/subscribers.csv`)).status, 401);
+const csv = await (await fetch(`${base}/api/subscribers.csv`, { headers: { Authorization: "Bearer segredo" } })).text();
+assert.match(csv, /^email,inscrito_em\nana@exemplo\.com,/);
+assert.ok(!csv.includes("bot@spam.com"));
+assert.equal((await fetch(`${base}/../server.mjs`)).status, 404);
+assert.equal((await fetch(`${base}/`)).status, 200);
+const range = await fetch(`${base}/img/demo.mp4`, { headers: { Range: "bytes=0-99" } });
+assert.equal(range.status, 206); assert.equal((await range.arrayBuffer()).byteLength, 100);
+server.close();
+console.log("site ok");
