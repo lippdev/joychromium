@@ -209,7 +209,10 @@ kbd.b-y { background: var(--btn-y); color: var(--paper); }
 .hero-title .accent { color: var(--accent); text-shadow: 0 0 60px oklch(66% 0.18 252 / 0.45); }
 .hero-lede { max-width: 38rem; color: var(--ink-2); font-size: var(--text-lg); line-height: 1.55; }
 .hero-form { width: min(32rem, 100%); margin-top: var(--space-xs); }
-.hero-try { display: inline-flex; align-items: center; gap: 10px; max-width: 34rem; margin-top: var(--space-lg); color: var(--ink-3); font-size: var(--text-sm); }
+.hero-github { display: inline-flex; align-items: center; gap: 8px; margin-top: var(--space-md); padding: 0.6rem 1rem; border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-2); font-size: var(--text-sm); font-weight: 500; text-decoration: none; white-space: nowrap; transition: color var(--dur-short) var(--ease-out), background var(--dur-short) var(--ease-out); }
+.hero-github:hover { color: var(--ink); background: oklch(100% 0 0 / 0.05); }
+.hero-github svg:last-child { color: var(--ink-3); }
+.hero-try { display: inline-flex; align-items: center; gap: 10px; max-width: 34rem; margin-top: var(--space-xs); color: var(--ink-3); font-size: var(--text-sm); }
 .hero-scroll { position: absolute; bottom: 28px; left: 50%; width: 26px; height: 42px; margin-left: -13px; border-radius: 14px; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
 .hero-scroll span { position: absolute; top: 8px; left: 50%; width: 3px; height: 8px; margin-left: -1.5px; border-radius: 2px; background: var(--ink-2); animation: wheel 1.8s var(--ease-in-out) 4; }
 @keyframes wheel { 0% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(12px); opacity: 0; } 100% { opacity: 0; } }
