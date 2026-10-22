@@ -1,0 +1,4 @@
+data
+dist
+web/node_modules
+*.md
