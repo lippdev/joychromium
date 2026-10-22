@@ -27,6 +27,19 @@ on:
         description: "Código de confirmação (só no mode=confirm)"
         type: string
         required: false
+      first_name:
+        description: "Nome (só no mode=signup)"
+        type: string
+        required: false
+      last_name:
+        description: "Sobrenome (só no mode=signup)"
+        type: string
+        required: false
+      organization:
+        description: "Organização (só no mode=signup)"
+        type: string
+        required: false
+        default: "JoyChromium"
 
 permissions:
   contents: read
@@ -51,12 +64,13 @@ jobs:
           EVS_ACCOUNT_NAME: ${{ secrets.EVS_ACCOUNT_NAME }}
           EVS_PASSWD: ${{ secrets.EVS_PASSWD }}
           EVS_EMAIL: ${{ secrets.EVS_EMAIL }}
-          EVS_FIRST_NAME: ${{ secrets.EVS_FIRST_NAME }}
-          EVS_LAST_NAME: ${{ secrets.EVS_LAST_NAME }}
-          EVS_ORGANIZATION: ${{ secrets.EVS_ORGANIZATION }}
+          # O cadastro exige nome, sobrenome e organização: vêm dos campos do workflow (ou de segredos com esses nomes).
+          EVS_FIRST_NAME: ${{ inputs.first_name || secrets.EVS_FIRST_NAME }}
+          EVS_LAST_NAME: ${{ inputs.last_name || secrets.EVS_LAST_NAME }}
+          EVS_ORGANIZATION: ${{ inputs.organization || secrets.EVS_ORGANIZATION }}
         run: |
           set +e
-          python -m castlabs_evs.account -n signup -A "$EVS_ACCOUNT_NAME" -P "$EVS_PASSWD" -E "$EVS_EMAIL"
+          python -m castlabs_evs.account -n signup -A "$EVS_ACCOUNT_NAME" -P "$EVS_PASSWD" -E "$EVS_EMAIL"             -F "$EVS_FIRST_NAME" -L "$EVS_LAST_NAME" -O "$EVS_ORGANIZATION"
           echo "signup exit: $?"
           echo "Se o código chegou por e-mail, rode de novo com mode=confirm e o código."
       - name: Confirmar a conta
