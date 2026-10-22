@@ -1,5 +1,6 @@
 import { useMotionValueEvent, useScroll } from "motion/react";
 import { useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 /**
  * A plain browser-vendor header (Helium, Brave, Vivaldi): mark and name, text links beside them, one solid action on the
@@ -27,6 +28,7 @@ export function Nav({ padConnected }: { padConnected: boolean }) {
           </a>
         </nav>
         <div className="nav-end">
+          <ThemeToggle />
           {padConnected && <span className="nav-pad"><span className="pad-live" aria-hidden="true" />Controle conectado</span>}
           <a className="nav-cta" href="#beta">
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 7h9a5 5 0 0 1 4.9 6l-.9 4.4a2.3 2.3 0 0 1-4 .9L14.6 16H9.4l-1.9 2.3a2.3 2.3 0 0 1-4-.9L2.6 13A5 5 0 0 1 7.5 7Z M8 10v3M6.5 11.5h3M15.5 11h.01M17.5 12.5h.01" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
