@@ -1,4 +1,4 @@
-// The JoyChromium site: serves public/ and keeps the beta sign-ups in one JSON-lines file on a volume.
+// The JoyChromium site: serves dist/ (the React build) and keeps the beta sign-ups in one JSON-lines file on a volume.
 //   PORT         port to listen on (default 3000)
 //   DATA_DIR     where subscribers.jsonl lives (default ./data; mount a volume here in Dokploy)
 //   ADMIN_TOKEN  required to download the list: GET /api/subscribers.csv with "Authorization: Bearer <token>" or ?token=
@@ -9,7 +9,8 @@ import { extname, join, normalize } from "node:path";
 import { timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
-const root = fileURLToPath(new URL("./public/", import.meta.url));
+// web/ builds into dist/ (npm run build in site/web).
+const root = fileURLToPath(new URL("./dist/", import.meta.url));
 const dataDir = process.env.DATA_DIR ?? fileURLToPath(new URL("./data/", import.meta.url));
 const listFile = join(dataDir, "subscribers.jsonl");
 const adminToken = process.env.ADMIN_TOKEN ?? "";
@@ -51,10 +52,11 @@ async function subscribers() {
 let queue = Promise.resolve();
 const subscribe = (email) => (queue = queue.then(async () => {
   const known = await subscribers();
-  if (known.some((s) => s.email === email)) return false;
+  const at = known.findIndex((s) => s.email === email);
+  if (at >= 0) return { added: false, position: at + 1 };
   await mkdir(dataDir, { recursive: true });
   await appendFile(listFile, JSON.stringify({ email, at: new Date().toISOString() }) + "\n");
-  return true;
+  return { added: true, position: known.length + 1 };
 }));
 
 function readBody(req, limit = 2048) {
@@ -89,11 +91,11 @@ const server = createServer(async (req, res) => {
       if (limited(ip)) return send(res, 429, { error: "Muitas tentativas. Tente de novo em um minuto." });
       let data;
       try { data = JSON.parse(await readBody(req)); } catch { return send(res, 400, { error: "Pedido inválido." }); }
-      if (data.website) return send(res, 200, { ok: true }); // honeypot: bots fill the hidden field
+      if (data.website) return send(res, 200, { ok: true, already: false, position: 0 }); // honeypot: bots fill the hidden field
       const email = String(data.email ?? "").trim().toLowerCase();
       if (!isEmail(email)) return send(res, 422, { error: "Esse e-mail não parece válido." });
-      const added = await subscribe(email);
-      return send(res, 200, { ok: true, already: !added });
+      const { added, position } = await subscribe(email);
+      return send(res, 200, { ok: true, already: !added, position });
     }
     if (url.pathname === "/api/subscribers.csv" && req.method === "GET") {
       if (!authorized(req, url)) return send(res, 401, { error: "unauthorized" });
@@ -108,7 +110,8 @@ const server = createServer(async (req, res) => {
     const info = await stat(path).catch(() => undefined);
     if (!info?.isFile()) return send(res, 404, "Página não encontrada", "text/plain; charset=utf-8");
     const type = TYPES[extname(path)] ?? "application/octet-stream";
-    const cache = extname(path) === ".html" ? "no-cache" : "public, max-age=86400";
+    // Vite fingerprints everything under /assets: those never change; the rest is revalidated daily.
+    const cache = extname(path) === ".html" ? "no-cache" : url.pathname.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "public, max-age=86400";
     // Safari only plays a video served in byte ranges.
     const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
     if (range && (range[1] || range[2])) {

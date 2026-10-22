@@ -1,12 +1,16 @@
 # Site do JoyChromium
 
-Página de apresentação com inscrição no beta. Um container Node sem dependências: serve `public/` e guarda os e-mails em `/data/subscribers.jsonl`.
+Página de apresentação com inscrição no beta. `web/` é a página em React (Vite, Motion, Lenis), compilada em `dist/`; `server.mjs` (Node, sem dependências) serve `dist/` e guarda os e-mails em `/data/subscribers.jsonl`.
+
+A página também responde a um gamepad: analógico esquerdo move o cursor, D-pad pula entre links e botões, A clica, analógico direito rola.
 
 ## Rodar local
 
 ```bash
-node site/server.mjs        # http://localhost:3000
-node site/test.mjs          # autoteste da inscrição
+cd site/web && npm ci && npm run build   # gera site/dist
+node site/server.mjs                     # http://localhost:3000
+node site/test.mjs                       # autoteste da inscrição
+# desenvolvendo: node site/server.mjs + (cd site/web && npm run dev)
 ```
 
 ## Dokploy
@@ -25,4 +29,4 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" https://SEU-DOMINIO/api/subscribers
 
 ## Imagens
 
-`public/img/*.png` e `demo.mp4` saem do motion em `docs/assets/motion/` (veja o cabeçalho de `render.cjs`).
+`web/public/img/watch.png` (imagem de compartilhamento) sai do motion em `docs/assets/motion/`; o app na TV é recriado ao vivo em `web/src/components/BrowserMock.tsx`.
