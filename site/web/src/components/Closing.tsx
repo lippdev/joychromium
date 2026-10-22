@@ -64,9 +64,18 @@ export function Closing() {
 
       <footer className="foot">
         <p className="foot-line">Feito para quem prefere o sofá.</p>
+        <a className="foot-story" href="https://filipemoreira.top/blog/joychromium-web-com-controle" target="_blank" rel="noreferrer">
+          <span className="foot-story-kicker">Bastidores</span>
+          <span>Por que navegar na web com um controle é mais difícil do que parece</span>
+          <span aria-hidden="true">↗</span>
+        </a>
         <div className="foot-meta">
+          <a className="foot-made" href="https://filipemoreira.top/" target="_blank" rel="noreferrer">
+            Made by <img src="/img/lippdev.png" alt="" width={22} height={22} /> <strong>lippdev</strong>
+          </a>
           <span>© 2026 JoyChromium</span>
-          <a href="https://github.com/lippdev/joychromium">GitHub</a>
+          <a href="https://github.com/lippdev/joychromium" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://filipemoreira.top/" target="_blank" rel="noreferrer">filipemoreira.top</a>
           <a href="#topo">Voltar ao topo</a>
         </div>
       </footer>
