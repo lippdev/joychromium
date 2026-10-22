@@ -49,14 +49,14 @@ export function PadLab() {
 
   return (
     <section className="padlab" id="controle" ref={ref}>
-      <div className="padlab-head">
-        <h2>Seu controle, <span className="dim">mapeado inteiro.</span></h2>
+      <header className="section-head">
+        <h2>Um controle, o navegador inteiro</h2>
         <p>
           {pad.connected
-            ? "Seu controle está conectado. Aperte qualquer botão e veja o que ele faz no JoyChromium."
-            : "Xbox, PlayStation, Switch Pro, 8BitDo. Cada botão tem um papel, e é o mesmo em qualquer site."}
+            ? "Seu controle está conectado: aperte qualquer botão e veja o que ele faz no JoyChromium."
+            : "Xbox, PlayStation, Switch Pro, 8BitDo ou genérico. Passe o mouse na lista, ou conecte um controle e aperte os botões."}
         </p>
-      </div>
+      </header>
 
       <div className="padlab-stage">
         <motion.svg

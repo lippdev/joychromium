@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { GitHubIcon } from "./Icons";
 import { SignupForm } from "./SignupForm";
 
 const FAQ = [
@@ -11,12 +12,18 @@ const FAQ = [
   { q: "O que eu recebo ao entrar no beta?", a: "Um e-mail com o instalador quando cada build de teste sair, e um canal para mandar o que achou. Nada além disso." },
 ];
 
+const STORY = "https://filipemoreira.top/blog/joychromium-web-com-controle";
+const REPO = "https://github.com/lippdev/joychromium";
+
 export function Closing() {
   const [open, setOpen] = useState<number | null>(0);
   return (
     <>
       <section className="faq" id="faq" aria-labelledby="faq-title">
-        <h2 id="faq-title">Perguntas honestas.</h2>
+        <header className="section-head left">
+          <h2 id="faq-title">Perguntas frequentes</h2>
+          <p>Não achou a sua? Abra uma <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">issue no GitHub</a>.</p>
+        </header>
         <div className="faq-list">
           {FAQ.map((item, i) => (
             <div className={`faq-item ${open === i ? "open" : ""}`} key={item.q}>
@@ -33,7 +40,7 @@ export function Closing() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ type: "spring", bounce: 0, duration: 0.45 }}
+                    transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   >
                     <p>{item.a}</p>
                   </motion.div>
@@ -45,39 +52,43 @@ export function Closing() {
       </section>
 
       <section className="beta" id="beta">
-        <div className="beta-halo" aria-hidden="true" />
-        <motion.img
-          className="beta-mark"
-          src="/img/mark.png"
-          alt=""
-          width={112}
-          height={112}
-          initial={{ opacity: 0, scale: 0.6, rotate: -90 }}
-          whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={{ type: "spring", bounce: 0.25, duration: 1.1 }}
-        />
-        <h2>Entre no beta.</h2>
-        <p>As vagas de cada rodada de teste são liberadas por ordem de inscrição. Deixe o e-mail e pegue o seu lugar na fila.</p>
+        <h2>Entre no beta</h2>
+        <p>Os convites de cada rodada de teste saem por ordem de inscrição. Deixe o e-mail e guarde o seu lugar na fila.</p>
         <SignupForm id="beta" />
       </section>
 
       <footer className="foot">
-        <p className="foot-line">Feito para quem prefere o sofá.</p>
-        <a className="foot-story" href="https://filipemoreira.top/blog/joychromium-web-com-controle" target="_blank" rel="noreferrer">
-          <span className="foot-story-kicker">Bastidores</span>
-          <span>Por que navegar na web com um controle é mais difícil do que parece</span>
-          <span aria-hidden="true">↗</span>
-        </a>
-        <div className="foot-meta">
-          <a className="foot-made" href="https://filipemoreira.top/" target="_blank" rel="noreferrer">
-            Made by <img src="/img/lippdev.png" alt="" width={22} height={22} /> <strong>lippdev</strong>
-          </a>
-          <span>© 2026 JoyChromium</span>
-          <a href="https://github.com/lippdev/joychromium" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="https://filipemoreira.top/" target="_blank" rel="noreferrer">filipemoreira.top</a>
-          <a href="#topo">Voltar ao topo</a>
+        <div className="foot-inner">
+          <div className="foot-brand">
+            <p className="foot-name">JoyChromium</p>
+            <p className="foot-tagline">Um navegador para a TV que você usa só com o controle. Grátis, com o código à vista.</p>
+            <a className="btn btn-light" href="#beta">Entrar no beta <span aria-hidden="true">→</span></a>
+          </div>
+          <nav className="foot-cols" aria-label="Rodapé">
+            <div>
+              <h2>Projeto</h2>
+              <a href={REPO} target="_blank" rel="noreferrer"><GitHubIcon size={14} /> GitHub</a>
+              <a href={`${REPO}/releases`} target="_blank" rel="noreferrer">Releases</a>
+              <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">Reportar um problema</a>
+            </div>
+            <div>
+              <h2>Conhecer</h2>
+              <a href="#como">Como funciona</a>
+              <a href="#controle">Controle</a>
+              <a href="#faq">Perguntas</a>
+            </div>
+            <div>
+              <h2>Bastidores</h2>
+              <a href={STORY} target="_blank" rel="noreferrer">Por que navegar com controle é difícil</a>
+              <a href="https://filipemoreira.top/" target="_blank" rel="noreferrer">filipemoreira.top</a>
+            </div>
+          </nav>
+          <p className="foot-made">
+            Made by <a href="https://filipemoreira.top/" target="_blank" rel="noreferrer"><img src="/img/lippdev.png" alt="" width={20} height={20} /> lippdev</a>
+            <span>© 2026 JoyChromium</span>
+          </p>
         </div>
+        <img className="foot-mark" src="/img/mark.png" alt="" aria-hidden="true" />
       </footer>
     </>
   );

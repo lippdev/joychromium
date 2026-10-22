@@ -1,12 +1,12 @@
 import Lenis from "lenis";
 import { useEffect, useRef, useState } from "react";
-import { Cinema } from "./components/Cinema";
 import { Closing } from "./components/Closing";
+import { Features } from "./components/Features";
 import { Hero } from "./components/Hero";
 import { Nav } from "./components/Nav";
 import { PadLab } from "./components/PadLab";
-import { Pillars } from "./components/Pillars";
 import { Arrow, Hand } from "./components/Pointer";
+import { Values } from "./components/Values";
 import { startPad, usePadConnected } from "./hooks/pad";
 
 export function App() {
@@ -16,7 +16,7 @@ export function App() {
 
   useEffect(() => {
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lenis = reduced ? null : new Lenis({ duration: 1.15, anchors: { offset: -80 } });
+    const lenis = reduced ? null : new Lenis({ duration: 1.1, anchors: { offset: -72 } });
     let frame = 0;
     const raf = (time: number) => { lenis?.raf(time); frame = requestAnimationFrame(raf); };
     if (lenis) frame = requestAnimationFrame(raf);
@@ -26,13 +26,12 @@ export function App() {
 
   return (
     <>
-      <div className="grain" aria-hidden="true" />
       <Nav padConnected={padConnected} />
       <main>
         <Hero padConnected={padConnected} />
-        <Cinema />
+        <Features />
         <PadLab />
-        <Pillars />
+        <Values />
         <Closing />
       </main>
       <div className={`pad-pointer ${hand ? "hand" : ""}`} ref={pointer} aria-hidden="true">{hand ? <Hand /> : <Arrow />}</div>

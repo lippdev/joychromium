@@ -1,5 +1,5 @@
-import "@fontsource-variable/inter";
-import "@fontsource-variable/sora";
+import "@fontsource/instrument-serif/400.css";
+import "@fontsource-variable/schibsted-grotesk";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
