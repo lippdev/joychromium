@@ -15,7 +15,7 @@ export function Closing() {
   const [open, setOpen] = useState<number | null>(0);
   return (
     <>
-      <section className="faq" aria-labelledby="faq-title">
+      <section className="faq" id="faq" aria-labelledby="faq-title">
         <h2 id="faq-title">Perguntas honestas.</h2>
         <div className="faq-list">
           {FAQ.map((item, i) => (

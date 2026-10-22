@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { Cinema } from "./components/Cinema";
 import { Closing } from "./components/Closing";
 import { Hero } from "./components/Hero";
-import { Manifesto } from "./components/Manifesto";
 import { Nav } from "./components/Nav";
 import { PadLab } from "./components/PadLab";
 import { Pillars } from "./components/Pillars";
@@ -32,7 +31,6 @@ export function App() {
       <main>
         <Hero padConnected={padConnected} />
         <Cinema />
-        <Manifesto />
         <PadLab />
         <Pillars />
         <Closing />
