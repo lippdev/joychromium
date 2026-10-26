@@ -24,7 +24,7 @@
     "@types/node": "26.6.5",
     "axe-core": "4.14.0",
     "electron": "github:castlabs/electron-releases#v44.5.1+wvcus",
-    "electron-builder": "26.15.3",
+    "electron-builder": "26.18.0",
     "esbuild": "^0.28.2",
     "preact": "^11.0.1",
     "typescript": "7.0.2",
@@ -33,7 +33,7 @@
   "dependencies": {
     "@ghostery/adblocker": "2.20.1",
     "@ghostery/adblocker-electron": "2.20.1",
-    "electron-updater": "6.8.9"
+    "electron-updater": "6.8.11"
   },
   "build": {
     "appId": "dev.lipp.joychromium",
