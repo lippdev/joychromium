@@ -129,7 +129,6 @@ export class Shell {
       hasShadow: false, show: false, backgroundColor: "#00000000",
     });
     this.pointerWindow.setIgnoreMouseEvents(true);
-    void this.pointerWindow.loadFile(join(deps.distDir, "assets", "pointer.html"));
     this.wireTabs();
     this.wireWindow();
     this.wireIpc();
@@ -139,6 +138,8 @@ export class Shell {
 
   async start(targets: readonly string[]): Promise<void> {
     await this.window.loadURL("joychromium://chrome/");
+    // The pointer loads after the shell, so the shell stays the app's first window (launchers and the e2e rely on it).
+    void this.pointerWindow.loadFile(join(this.deps.distDir, "assets", "pointer.html"));
     this.layout.applyMode(this.windowMode === "tv");
     this.window.show();
     const first = targets[0] === undefined ? undefined : this.tabs.open(targets[0], { activate: true });

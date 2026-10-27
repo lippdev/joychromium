@@ -302,7 +302,7 @@ test("first boot: onboarding tests the controller, then language and search engi
   await installPad(h);
   await expect.poll(() => pageEval<boolean>(h, "document.getElementById('pad').classList.contains('found')"), { timeout: 15_000 }).toBe(true);
   // The profile is still in its default language until the next step chooses one.
-  expect(await pageEval<string>(h, "document.getElementById('padText').textContent")).toBe("Controle encontrado · Xbox");
+  expect(await pageEval<string>(h, "document.getElementById('padText').textContent")).toBe("Controle detectado · Xbox");
 
   // Language: D-pad to English, A to choose it.
   await focusOn(h, "page", `[...document.querySelectorAll('#languages .opt')].find((b) => b.textContent.trim() === 'English')`, "English");
