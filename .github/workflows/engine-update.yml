@@ -23,7 +23,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG=$(gh api repos/castlabs/electron-releases/releases --jq '[.[] | select(.prerelease == false) | .tag_name] | first')
+          # castLabs publishes several major lines side by side, so the newest by date can be an older major: take the highest
+          # stable version instead, which never moves the app backwards.
+          TAG=$(gh api repos/castlabs/electron-releases/releases --jq '.[] | select(.prerelease == false) | .tag_name' | sort -V | tail -n1)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Newest ECS release: $TAG"
       - name: Compare with the installed engine
@@ -40,12 +42,17 @@ jobs:
         run: |
           git config user.name "joychromium-bot"
           git config user.email "bot@users.noreply.github.com"
+          BRANCH="chore/engine-${TAG//[^A-Za-z0-9.-]/_}"
+          # An earlier run already opened this bump: leave it to its pull request.
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then echo "$BRANCH already exists"; exit 0; fi
           cd app
           npm pkg set "devDependencies.electron=github:castlabs/electron-releases#$TAG"
           npm pkg set "build.electronDownload.customDir=$TAG"
+          # npm ci in the CI refuses a lockfile that no longer matches package.json.
+          npm install --package-lock-only --ignore-scripts
           cd ..
-          git checkout -b "chore/engine-${TAG//[^A-Za-z0-9.-]/_}"
-          git add app/package.json
+          git checkout -b "$BRANCH"
+          git add app/package.json app/package-lock.json
           git commit -m "chore(deps): bump electron to ${TAG} (castLabs ECS)"
           git push -u origin HEAD
           gh pr create --fill --title "chore(deps): bump electron to ${TAG}" \

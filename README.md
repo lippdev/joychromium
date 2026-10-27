@@ -7,88 +7,80 @@
 
 # JoyChromium
 
-A controller-first browser for the TV, built on Electron (Chromium). Windows, macOS and Linux from one code base. Every page announces itself as a TV (`JoyChromiumTV/1.0 (TV; SmartTV)`), ads and trackers are blocked out of the box, and a gamepad is the primary way to browse: the app opens fullscreen in TV mode.
+A web browser for the TV that you drive with a **game controller** from the couch. It opens full screen, walks pages with the D-pad, points and clicks with the stick, types with an Xbox-style on-screen keyboard and blocks ads out of the box.
 
-## Platforms
+English · [Português (Brasil)](README.pt-BR.md)
 
-| | Windows | macOS | Linux |
-|---|---|---|---|
-| Installers | `.exe` (NSIS, x64 + arm64) | `.dmg` / `.zip` (x64 + arm64) | `.AppImage`, `.deb`, `.rpm` (x64 + arm64); Flatpak bundle from CI (not on Flathub yet) |
-| Updates itself | yes | no, it points you to the release page (see below) | AppImage yes; `.deb`/`.rpm` ask for your password; inside the Flatpak, the host updates it |
-| Code signing | none yet | ad-hoc only | none |
-| Native window controls | drawn by the app | macOS traffic lights | drawn by the app |
-| DRM (Netflix, Prime Video) | Widevine from the castLabs build | same | same, without VMP |
-| Shortcuts | `Ctrl+…` | `Cmd+…` | `Ctrl+…` |
+![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
+![Version](https://img.shields.io/github/v/release/lippdev/joychromium?include_prereleases&label=version&color=orange)
+![License](https://img.shields.io/github/license/lippdev/joychromium)
 
-The first launch downloads the Widevine module in the background; playback of DRM services works from the next launch, and the version shows up in Settings → About. Windows and macOS builds still need the castLabs EVS signature (VMP) before paid streaming works reliably there; the Linux module does not use VMP.
+<img src="docs/assets/demo.gif" alt="JoyChromium tour: the left stick moves the pointer, the D-pad jumps between links, the on-screen keyboard types an address and the right stick scrolls the page." width="800">
 
-Nothing here costs money ([PRD](docs/PRD.md), ADR-010): no code-signing certificate, no paid service, and the whole pipeline runs on a public repository. The app works, but because the builds are unsigned the operating system warns the first time:
+## Download
 
-- **macOS**: the `.dmg` refuses its one-click install on macOS 15 with *"This Mac could not verify the app, so nothing was installed"* — the bundle's ad-hoc signature is intact (`codesign --verify --deep --strict` passes), what would fix it is a Developer ID and notarization, which this project deliberately does not buy. Drag JoyChromium to Applications (or double-click `install-macos.command` inside the disk image) and open it once with right-click → *Open*; if that option is not offered, run `xattr -dr com.apple.quarantine /Applications/JoyChromium.app`. After that it opens normally. Apple Silicon refuses a completely unsigned app, so every build gets the ad-hoc signature; that is enough to launch, but not enough for automatic updates.
-- **Windows**: SmartScreen shows *Windows protected your PC*; choose *More info → Run anyway*. The warning fades as the build gains reputation.
-- **Linux**: AppImage needs `chmod +x JoyChromium-*.AppImage`; if your distribution blocks the sandbox (Ubuntu 24.04 restricts user namespaces), install the `.deb` or the Flatpak bundle instead.
+Get **[0.1.0-alpha](https://github.com/lippdev/joychromium/releases/tag/v0.1.0-alpha)**, the first public test version:
 
-Step-by-step instructions, including recovery when the system refuses to open the app, are in [docs/INSTALL.md](docs/INSTALL.md).
+- **`JoyChromium-0.1.0-alpha-win-x64.exe`**: most PCs (Intel and AMD).
+- **`JoyChromium-0.1.0-alpha-win-arm64.exe`**: PCs with a Snapdragon (ARM) processor.
 
-The current state of the app — what is proven, what is not, and who owes what — is in [docs/STATUS.md](docs/STATUS.md). More documentation: [docs/RELEASE.md](docs/RELEASE.md) (how a release is cut and what each installer does), [docs/POLICY.md](docs/POLICY.md) (the signing key and the remote policy), [docs/CONTROLLER-TEST.md](docs/CONTROLLER-TEST.md) (the on-a-real-TV checklist), [docs/SCREEN-READER.md](docs/SCREEN-READER.md) (the screen-reader pass), [docs/WAYLAND.md](docs/WAYLAND.md) (native Wayland and the Steam Deck recipe), [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) (command-line flags, the `joychromium://` scheme and launchers such as ConsoleMode) and [docs/PRD.md](docs/PRD.md) (architecture and backlog).
+Per-user install, no admin. Windows 10 or 11 and a controller: Xbox, PlayStation (DualShock / DualSense), Switch Pro, 8BitDo or any pad Windows sees as a gamepad.
 
-## Run from source
+> **This is an alpha.** Expect rough edges. It does not update itself yet: new versions show up on the [releases page](https://github.com/lippdev/joychromium/releases) (watch the repo → *Custom* → *Releases* to be told). Netflix and other paid streaming services are not validated yet.
 
-Requirements: Node.js 24+.
+## How it works
 
-```bash
-cd app
-npm ci
-npm start
-```
+1. Install, plug in your controller and open JoyChromium. It starts full screen on the TV.
+2. Pick your language and search engine with the D-pad and A.
+3. Browse: the D-pad jumps from link to link, the left stick moves a pointer for everything else, and A clicks.
 
-`npm start` bundles the app with esbuild and launches Electron. Useful environment variables: `JOYCHROMIUM_DATA` (data folder, defaults to the OS user-data dir) and `JOYCHROMIUM_START` (first URL, skips onboarding).
+| Controller | Does | With the keyboard open |
+|---|---|---|
+| **Left stick** | Moves the pointer | Walks the keys |
+| **Right stick** | Scrolls the page (sideways too) | — |
+| **D-pad** | Jumps between links and buttons; up from the top reaches the toolbar and tabs | Walks the keys and suggestions |
+| **A** | Clicks (twice quickly at the pointer: right click) | Types the key |
+| **B** | Back, or closes a menu | Closes the keyboard |
+| **X** | Reloads | Backspace |
+| **Y** | Opens the keyboard on the address bar (**LB + Y**: favorite) | Space |
+| **LB / RB** | Back / forward | — |
+| **LT / RT** | Previous / next tab | **LT**: Shift |
+| **Start** | Quick menu | Go |
+| **Back / View** | Closes the tab | — |
+| **Right stick click** | Switches the D-pad mode: *Spatial → Cursor → Arrows* (remembered per site) | — |
+| **Left stick click** | — | Letters → symbols → accents |
 
-## Controller
+On a PlayStation pad the letters become ✕ ○ □ △; the keyboard's button glyphs follow the pad you last touched. A keyboard and mouse work too: `F11` switches between TV mode and a window, `Ctrl+T` opens a tab, `Ctrl+Shift+N` a private one, `Ctrl+W` closes it.
 
-Standard gamepads (Xbox, PlayStation, Switch Pro and anything the Gamepad API maps) work on every platform.
+## Features
 
-| Input | Action |
-|---|---|
-| D-pad / left stick | move (see *input modes*) |
-| A | select / activate |
-| B | back, or close the keyboard / prompt |
-| X | reload |
-| Y | controller keyboard (hold LB: toggle favorite) |
-| LB / RB | history back / forward |
-| LT / RT | previous / next tab |
-| Start | new tab |
-| Back / View | close tab |
-| Right stick click | cycle input mode |
+- **Three ways to move:** *Spatial* (the D-pad picks the nearest link in that direction), a smooth **pointer** on the left stick that turns into a hand over anything clickable, and *Arrows* for sites with their own TV interface, like YouTube TV
+- **Xbox-style on-screen keyboard** with the shortcuts on the controller's own buttons, address suggestions and Portuguese accents
+- **TV-first interface:** full screen, large text and a clear focus ring you can see from the couch, with overscan and size options for older TVs
+- **Ad and tracker blocking** built in (Ghostery engine with EasyList, EasyPrivacy and uBlock lists), turned on or off from the shield on the toolbar
+- Tabs with previews, private tabs, history, favorites and site icons
+- Opens from launchers: `--tv` / `--window` / `--new-tab` flags and `joychromium://` links, so [Console Mode](https://github.com/lippdev/consolemode), Playnite or Steam can start it ([integrations](docs/INTEGRATIONS.md))
+- English and Portuguese
 
-Keyboard: `Ctrl+L` address (`Cmd+L` on macOS), `Ctrl+T` new tab, `Ctrl+Shift+T` reopen closed, `Ctrl+Shift+N` private tab, `Ctrl+W` close, `Ctrl+Tab` switch, `Ctrl+D` favorite, `Ctrl+F` find, `Ctrl+H` history, `Ctrl+B` favorites, `Ctrl+M` mute, `Ctrl` `+`/`-`/`0` zoom, `F11` switches between TV mode (fullscreen) and window mode, `Ctrl+,` settings. On macOS every one of these uses `Cmd` instead of `Ctrl`.
+## What's new in 0.1.0-alpha
 
-### Input modes
+The first public build:
 
-Each site runs in one of three modes, remembered per host (Settings → Controller). **Spatial** (default): the D-pad jumps between links, buttons and fields using `spatial.js` (nearest element in that direction; scrolls when nothing is ahead). **Cursor**: the left stick moves a pointer, D-pad nudges, A clicks, right stick scrolls. **Arrows** (default for youtube.com and twitch.tv): D-pad and A are sent as arrow keys and Enter, for sites with their own 10-foot UI.
+- **A pointer on the left stick** that glides over the page, the toolbar and the menus, with A to click and the right stick as the wheel
+- **Xbox-style keyboard:** X deletes, Y adds a space, LT is Shift, Start sends, and the left stick click changes the layer
+- **The D-pad reaches everything:** up from the top of a page goes to the address bar, the buttons and the tabs; a new tab starts on the address bar
+- **Ad blocker on the toolbar:** the shield turns it on or off
+- **New onboarding** with your search engine (Google, DuckDuckGo, Bing, Brave or Startpage) and a controller test
 
-## Security defaults
+## Roadmap
 
-Ad and tracker blocking (Ghostery engine with the EasyList/EasyPrivacy/uBlock lists, refreshed daily), HTTPS-only with a per-host fallback prompt, certificate errors always blocked, only `http(s)` and `joychromium://` addresses navigate, camera/microphone/location prompt every time unless remembered, downloads go to `Downloads/JoyChromium` with risky extensions refused (including `.dmg`, `.pkg`, `.app` on macOS and `.desktop`, `.flatpakref`, `.snap` on Linux), popups rate-limited, private tabs, password saving and autofill off (the app never stores credentials). Optional DNS-over-HTTPS (Cloudflare/Quad9/Google) and three levels of tracking prevention that change the block lists themselves (Basic blocks ads, Balanced adds the tracker lists EasyPrivacy and uBlock privacy, Strict adds the social-widget list; Balanced and Strict also ask sites not to track and send Global Privacy Control, and Strict blocks third-party cookies). Everything is in Settings → Privacy & security.
+**Now:** Windows 10/11 · **Next:** macOS ([#108](https://github.com/lippdev/joychromium/issues/108)), Linux, Wayland and Flathub ([#109](https://github.com/lippdev/joychromium/issues/109)), Steam Deck ([#110](https://github.com/lippdev/joychromium/issues/110)) · [All platforms](docs/ROADMAP.md)
 
-## Staying up to date without waiting for a release
+## More
 
-- **Engine**: the app runs on the castLabs Electron for Content Security build, which brings Chromium plus the Widevine module that streaming services need. It is not on npm, so `.github/workflows/engine-update.yml` looks for a new release every day and opens a bump PR; CI (Windows, macOS and Linux: typecheck, unit tests, an end-to-end run of the real app, and a packaging build) gates it; a green run merges automatically and `release.yml` publishes a new version. Installed apps update themselves, except on macOS.
-- **Block lists**: the engine re-downloads the lists every 24 hours from the official CDN.
-- **Policy**: `policy/policy.json` (signed with `app/scripts/policy-sign.mjs`; public key embedded in `src/shared/policy.ts`) can raise the minimum Chromium, block hosts, add risky download extensions, mark broken app versions so the updater skips them, and show a message. It is fetched from `main`, verified, cached and can only tighten the defaults.
+- [Install and troubleshooting](docs/INSTALL.md) · [Current status](docs/STATUS.md) · [Release process](docs/RELEASE.md) · [Controller test script](docs/CONTROLLER-TEST.md)
+- **Feedback and bugs:** [open an issue](https://github.com/lippdev/joychromium/issues/new). A ⭐ helps other couch browsers find the project.
+- **Build from source:** Node.js 24, then `cd app && npm ci && npm start`. Tests: `npm run typecheck`, `npm test`, `npm run test:e2e`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+- The installer is not code-signed yet, so Windows SmartScreen may say *"Windows protected your PC"*: click **More info → Run anyway**. The source is all here.
 
-## Development
-
-```bash
-cd app
-npm run typecheck
-npm test          # vitest: the pure modules in src/shared and src/main
-npm run test:e2e  # Playwright launches the real app with a throwaway profile
-npm run dist      # local installer in app/release (no publish; rpm needs rpmbuild)
-```
-
-Layout: `src/shared` (pure rules, tests next to them), `src/main` (Electron main process and its services), `src/preload` (bundled bridges), `src/renderer/shell` (Preact UI), `src/assets` (internal pages and the design tokens). See `CONTRIBUTING.md` for the branch and commit conventions and `docs/PRD.md` for the architecture, platform matrix, redesign and backlog (`docs/history/CHECKLIST-webview2.md` is the historical WebView2-era checklist).
-
-## History
-
-The first prototype was a WPF + WebView2 app (see the git history before the Electron migration). It was replaced because the WebView2 engine is Windows-only and the maintained C# bridges to a bundled Chromium lag years behind upstream; Electron keeps the engine current on every platform.
+[MIT License](LICENSE)

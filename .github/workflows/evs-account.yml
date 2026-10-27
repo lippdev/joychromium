@@ -1,6 +1,6 @@
 # Criação da conta castLabs EVS (a assinatura VMP do Widevine) sem instalar nada na sua máquina.
 #
-# O E10-02 depende de uma conta gratuita na castLabs: sem ela, os builds de Windows e macOS saem com uma CDM que os
+# O E10-02 depende de uma conta gratuita na castLabs: sem ela, os builds de Windows saem com uma CDM que os
 # serviços de streaming não verificam. Este workflow existe para que criar essa conta custe dois cliques e nenhum
 # Python local. O passo a passo está em docs/DRM-EVS.md.
 #
@@ -81,4 +81,4 @@ jobs:
         run: |
           python -m castlabs_evs.account -n confirm-signup \
             -A "$EVS_ACCOUNT_NAME" -P "$EVS_PASSWD" -C "${{ inputs.code }}"
-          echo "Conta confirmada. A próxima release assina a CDM nos builds de Windows e macOS."
+          echo "Conta confirmada. A próxima release assina a CDM nos builds de Windows."

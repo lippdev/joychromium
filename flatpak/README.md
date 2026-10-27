@@ -1,5 +1,7 @@
 # Flatpak
 
+> **Escopo:** Flatpak e Flathub são trabalho futuro de Linux e não fazem parte do alpha Windows. Este documento é mantido como referência técnica; veja o [roadmap](../docs/ROADMAP.md).
+
 `dev.lipp.joychromium.yml` builds the app from this checkout and packages `app/dist` + `app/package.json`, its runtime
 dependencies and the Electron runtime. The engine is the `node_modules/electron` build — the castLabs Electron for
 Content Security, the same one the other installers ship (ADR-009) — because
@@ -25,8 +27,8 @@ The build needs network: `npm ci` fetches the dependency tree and `electron/inst
 manifest grants it with `build-args: --share=network`, which is fine for a local build and for the `Flatpak` workflow,
 and not accepted by Flathub — see below.
 
-`.github/workflows/flatpak.yml` runs the same two commands on every change to `flatpak/` or `app/` and uploads the
-bundle as an artifact. It publishes nothing.
+The former Flatpak CI workflow is archived at `.github/roadmap-workflows/flatpak.yml`; it is not an active workflow and
+does not build or publish bundles in the current Windows-only alpha.
 
 ## What is left for Flathub
 

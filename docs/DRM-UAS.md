@@ -1,5 +1,7 @@
 # UA de TV × DRM: resolução por serviço (E10-05)
 
+> **Escopo:** medição por serviço é trabalho futuro. DRM/streaming não está validado para o alpha Windows e não deve ser anunciado como pronto. Veja [STATUS.md](STATUS.md).
+
 O JoyChromium se identifica como TV em toda requisição (`JoyChromiumTV/1.0 (TV; SmartTV)`, ver
 `app/src/main/tvIdentity.ts`, ADR-009). Alguns serviços escolhem o player, a variante do manifesto ou o nível de
 DRM a partir desse cabeçalho — para melhor (interface de 10 pés) ou para pior (resolução menor). Este documento

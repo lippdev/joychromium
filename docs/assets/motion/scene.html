@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url("../../../app/src/assets/fonts/inter-latin.woff2") format("woff2"); font-weight: 100 900; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1280px; height: 720px; overflow: hidden; background: #070b14; font-family: Inter, system-ui, sans-serif; color: #f3f3f3; }
+#stage { position: absolute; inset: 0; background: radial-gradient(900px 520px at 30% 20%, #0f2a52 0%, #091428 55%, #060a12 100%); }
+.abs { position: absolute; }
+
+/* Intro / outro */
+#intro, #outro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+.glow { position: absolute; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(43,149,255,.35), rgba(43,149,255,0) 65%); }
+.mark { width: 168px; height: 168px; border-radius: 44px; background: #f4f6fa; display: grid; place-items: center; box-shadow: 0 30px 80px rgba(0,0,0,.5); position: relative; }
+.mark img { width: 140px; height: 140px; }
+.title { font-size: 64px; font-weight: 800; letter-spacing: -0.03em; position: relative; }
+.title b { color: #2b95ff; font-weight: inherit; }
+.tag { font-size: 24px; color: #b9c3d3; position: relative; }
+.chips { display: flex; gap: 12px; position: relative; }
+.chip { padding: 10px 18px; border-radius: 999px; background: rgba(43,149,255,.14); border: 1px solid rgba(43,149,255,.45); font-size: 18px; font-weight: 600; color: #dbe9ff; }
+.cta { font-size: 18px; color: #8fa0b8; position: relative; }
+
+/* TV */
+#main { position: absolute; inset: 0; }
+#tv { left: 36px; top: 74px; width: 848px; height: 498px; border-radius: 18px; background: #0d0f13; box-shadow: 0 40px 90px rgba(0,0,0,.6), 0 0 0 2px #23262d inset; }
+#stand { left: 400px; top: 572px; width: 120px; height: 22px; background: linear-gradient(#1a1d23, #0e1014); border-radius: 0 0 10px 10px; }
+#foot { left: 330px; top: 592px; width: 260px; height: 8px; border-radius: 6px; background: #1a1d23; }
+#screen { left: 52px; top: 90px; width: 816px; height: 459px; overflow: hidden; border-radius: 6px; background: #1c1c1c; }
+
+.tabs { position: absolute; left: 0; top: 0; width: 816px; height: 34px; background: #141414; display: flex; align-items: flex-end; padding-left: 8px; gap: 2px; }
+.tab { height: 28px; width: 170px; border-radius: 8px 8px 0 0; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 12px; color: #c9c9c9; }
+.tab.on { background: #2b2b2b; color: #fff; }
+.tab .fav { width: 14px; height: 14px; border-radius: 4px; background: #2b95ff; flex: none; }
+.tab .x { margin-left: auto; color: #8a8a8a; font-size: 12px; }
+.plus { width: 28px; height: 28px; display: grid; place-items: center; color: #c9c9c9; font-size: 18px; }
+.bar { position: absolute; left: 0; top: 34px; width: 816px; height: 40px; background: #2b2b2b; display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+.ib { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; color: #d0d0d0; font-size: 15px; }
+.addr { position: relative; height: 28px; width: 590px; border-radius: 14px; background: #1c1c1c; display: flex; align-items: center; padding: 0 12px; font-size: 13px; color: #e8e8e8; border: 1px solid #3a3a3a; }
+.addr .ph { color: #8a8a8a; }
+.caret { display: inline-block; width: 1.5px; height: 15px; background: #2b95ff; margin-left: 1px; vertical-align: middle; }
+
+.page { position: absolute; left: 0; top: 74px; width: 816px; height: 385px; overflow: hidden; }
+#home { background: radial-gradient(600px 300px at 50% -10%, rgba(43,149,255,.16), transparent), #1c1c1c; }
+.hlogo { position: absolute; left: 0; right: 0; top: 46px; display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 26px; font-weight: 800; }
+.hlogo b { color: #2b95ff; font-weight: inherit; }
+.hlogo i { width: 34px; height: 34px; border-radius: 10px; background: #f4f6fa url("../../../app/src/assets/logo.png") center / 28px no-repeat; }
+.search { position: absolute; left: 178px; top: 104px; width: 460px; height: 42px; border-radius: 10px; background: #2b2b2b; border: 1px solid #3a3a3a; display: flex; align-items: center; padding: 0 14px; color: #8a8a8a; font-size: 14px; }
+.tile { position: absolute; top: 176px; width: 80px; height: 80px; border-radius: 10px; background: rgba(43,43,43,.8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; font-size: 11px; color: #ddd; }
+.tile i { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: 15px; color: #fff; }
+.tile.hover { background: #333; }
+
+#video { background: #0f0f0f; }
+#vscroll { position: absolute; left: 0; top: 0; width: 816px; }
+.player { position: absolute; left: 18px; top: 14px; width: 520px; height: 292px; border-radius: 10px; background: linear-gradient(135deg, #1d3c6e, #0b1a33 60%, #2b95ff22); overflow: hidden; }
+.player .play { position: absolute; left: 232px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.9); }
+.player .play::after { content: ""; position: absolute; left: 22px; top: 16px; border-left: 18px solid #111; border-top: 12px solid transparent; border-bottom: 12px solid transparent; }
+.player .prog { position: absolute; left: 0; bottom: 0; height: 4px; background: #ff3b3b; }
+.line { position: absolute; height: 12px; border-radius: 6px; background: #2c2c2c; }
+.thumb { position: absolute; left: 556px; width: 240px; height: 74px; border-radius: 8px; display: flex; gap: 8px; }
+.thumb i { width: 120px; height: 74px; border-radius: 8px; flex: none; }
+.thumb span { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+.thumb span em { height: 9px; border-radius: 5px; background: #2c2c2c; }
+
+#focus { position: absolute; border: 3px solid #2b95ff; border-radius: 12px; box-shadow: 0 0 0 4px rgba(43,149,255,.25), 0 0 24px rgba(43,149,255,.45); pointer-events: none; }
+#cursor { position: absolute; left: 0; top: 0; width: 24px; height: 34px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); transform-origin: 2.4px 2.4px; }
+#cursor svg { position: absolute; left: 0; top: 0; }
+#ripple { position: absolute; width: 10px; height: 10px; border-radius: 50%; border: 3px solid #2b95ff; }
+
+/* Controller keyboard */
+#keyboard { position: absolute; left: 118px; width: 580px; height: 176px; border-radius: 14px 14px 0 0; background: rgba(32,32,32,.97); box-shadow: 0 -10px 40px rgba(0,0,0,.5); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; gap: 6px; justify-content: center; }
+.key { width: 48px; height: 30px; border-radius: 6px; background: #3a3a3a; display: grid; place-items: center; font-size: 14px; color: #eee; font-weight: 600; }
+.key.wide { width: 110px; }
+.key.on { background: #fff; color: #111; transform: scale(1.08); }
+
+/* Right column */
+#pad { left: 920px; top: 110px; width: 330px; height: 230px; }
+#cap { left: 920px; top: 370px; width: 330px; }
+.step { font-size: 14px; font-weight: 700; letter-spacing: .12em; color: #2b95ff; text-transform: uppercase; }
+.capt { margin-top: 10px; font-size: 30px; font-weight: 800; line-height: 1.12; letter-spacing: -0.02em; }
+.sub { margin-top: 12px; font-size: 17px; line-height: 1.45; color: #b9c3d3; }
+.btn { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 13px; font-size: 13px; font-weight: 800; color: #0b0b0b; vertical-align: 1px; margin: 0 2px; }
+.dots { display: flex; gap: 8px; margin-top: 22px; }
+.dots i { width: 28px; height: 4px; border-radius: 2px; background: #2a3446; }
+.dots i.on { background: #2b95ff; }
+#brand { left: 36px; top: 24px; display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; }
+#brand i { width: 30px; height: 30px; border-radius: 8px; background: #f4f6fa url("../../../app/src/assets/logo.png") center / 25px no-repeat; }
+#brand b { color: #2b95ff; font-weight: inherit; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="main">
+    <div id="brand" class="abs"><i></i><span>Joy<b>Chromium</b></span></div>
+    <div id="tv" class="abs"></div><div id="stand" class="abs"></div><div id="foot" class="abs"></div>
+    <div id="screen" class="abs">
+      <div class="tabs">
+        <div class="tab on" id="tab1"><span class="fav" id="fav1"></span><span id="tab1t">Nova aba</span><span class="x">✕</span></div>
+        <div class="tab" id="tab2"><span class="fav"></span><span>Nova aba</span><span class="x">✕</span></div>
+        <div class="plus">+</div>
+      </div>
+      <div class="bar">
+        <div class="ib">‹</div><div class="ib">›</div><div class="ib">⟳</div>
+        <div class="addr" id="addr"><span id="addrText"></span></div>
+        <div class="ib">☆</div><div class="ib" style="color:#2b95ff">⛉</div><div class="ib">•••</div>
+      </div>
+      <div class="page" id="home">
+        <div class="hlogo"><i></i><span>Joy<b>Chromium</b></span></div>
+        <div class="search">Pesquisar ou digitar endereço</div>
+        <div class="tile" id="t0" style="left:176px"><i style="background:#ff0033">▶</i>YouTube</div>
+        <div class="tile" id="t1" style="left:272px"><i style="background:#9146ff">T</i>Twitch</div>
+        <div class="tile" id="t2" style="left:368px"><i style="background:#e50914">N</i>Netflix</div>
+        <div class="tile" id="t3" style="left:464px"><i style="background:#2b95ff">G</i>GitHub</div>
+        <div class="tile" id="t4" style="left:560px"><i style="background:#3a3a3a">W</i>Wikipédia</div>
+      </div>
+      <div class="page" id="video">
+        <div id="vscroll">
+          <div class="player"><div class="play"></div><div class="prog" id="prog"></div></div>
+          <div class="line" style="left:18px;top:322px;width:420px;height:16px;background:#3a3a3a"></div>
+          <div class="line" style="left:18px;top:348px;width:260px"></div>
+          <div class="line" style="left:18px;top:380px;width:500px"></div>
+          <div class="line" style="left:18px;top:402px;width:470px"></div>
+          <div class="line" style="left:18px;top:424px;width:380px"></div>
+          <div class="line" style="left:18px;top:470px;width:520px;height:60px;border-radius:10px"></div>
+          <div class="line" style="left:18px;top:544px;width:520px;height:60px;border-radius:10px"></div>
+          <div class="thumb" style="top:14px"><i style="background:linear-gradient(135deg,#7a2bff,#2b95ff)"></i><span><em></em><em style="width:70%"></em></span></div>
+          <div class="thumb" style="top:98px"><i style="background:linear-gradient(135deg,#ff3b3b,#ffb02b)"></i><span><em></em><em style="width:60%"></em></span></div>
+          <div class="thumb" style="top:182px"><i style="background:linear-gradient(135deg,#1fb36b,#2b95ff)"></i><span><em></em><em style="width:75%"></em></span></div>
+          <div class="thumb" style="top:266px"><i style="background:linear-gradient(135deg,#ffb02b,#ff3b8b)"></i><span><em></em><em style="width:55%"></em></span></div>
+          <div class="thumb" style="top:350px"><i style="background:linear-gradient(135deg,#2b95ff,#0b1a33)"></i><span><em></em><em style="width:65%"></em></span></div>
+          <div class="thumb" style="top:434px"><i style="background:linear-gradient(135deg,#9146ff,#ff3b3b)"></i><span><em></em><em style="width:50%"></em></span></div>
+          <div class="thumb" style="top:518px"><i style="background:linear-gradient(135deg,#1fb36b,#ffb02b)"></i><span><em></em><em style="width:70%"></em></span></div>
+        </div>
+      </div>
+      <div id="focus"></div>
+      <div id="keyboard">
+        <div class="row" data-row="qwertyuiop"></div>
+        <div class="row" data-row="asdfghjkl"></div>
+        <div class="row" data-row="zxcvbnm."></div>
+        <div class="row"><div class="key wide" id="k.com">.com</div><div class="key wide" style="width:180px">espaço</div><div class="key" id="kdel">⌫</div><div class="key wide" id="kgo" style="background:#2b95ff;color:#fff">Ir ➜</div></div>
+      </div>
+      <div id="ripple"></div>
+      <div id="cursor"></div>
+    </div>
+
+    <svg id="pad" class="abs" viewBox="0 0 330 230">
+      <defs>
+        <filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+      </defs>
+      <rect id="LT" x="46" y="8" width="64" height="22" rx="10" fill="#2a2f3a"/>
+      <rect id="RT" x="220" y="8" width="64" height="22" rx="10" fill="#2a2f3a"/>
+      <text x="78" y="23" font-size="11" font-weight="800" fill="#9aa6b8" text-anchor="middle">LT</text>
+      <text x="252" y="23" font-size="11" font-weight="800" fill="#9aa6b8" text-anchor="middle">RT</text>
+      <path d="M70 40 C 30 40 14 90 10 140 C 6 190 30 222 58 218 C 84 214 96 178 118 168 L 212 168 C 234 178 246 214 272 218 C 300 222 324 190 320 140 C 316 90 300 40 260 40 Z" fill="#e9edf3"/>
+      <path d="M70 40 C 30 40 14 90 10 140 C 6 190 30 222 58 218 C 84 214 96 178 118 168 L 212 168 C 234 178 246 214 272 218 C 300 222 324 190 320 140 C 316 90 300 40 260 40 Z" fill="none" stroke="#c4ccd8" stroke-width="2"/>
+      <!-- left stick -->
+      <circle cx="82" cy="96" r="26" fill="#cfd6e0"/>
+      <g id="LS"><circle id="LSc" cx="82" cy="96" r="18" fill="#2a2f3a"/><circle cx="82" cy="96" r="11" fill="#3a404d"/></g>
+      <!-- dpad -->
+      <g transform="translate(124 140)">
+        <circle r="26" fill="#cfd6e0"/>
+        <rect id="DU" x="-8" y="-22" width="16" height="16" rx="3" fill="#2a2f3a"/>
+        <rect id="DD" x="-8" y="6" width="16" height="16" rx="3" fill="#2a2f3a"/>
+        <rect id="DL" x="-22" y="-8" width="16" height="16" rx="3" fill="#2a2f3a"/>
+        <rect id="DR" x="6" y="-8" width="16" height="16" rx="3" fill="#2a2f3a"/>
+        <rect x="-8" y="-8" width="16" height="16" fill="#2a2f3a"/>
+      </g>
+      <!-- right stick -->
+      <circle cx="206" cy="140" r="26" fill="#cfd6e0"/>
+      <g id="RS"><circle id="RSc" cx="206" cy="140" r="18" fill="#2a2f3a"/><circle cx="206" cy="140" r="11" fill="#3a404d"/></g>
+      <!-- face buttons -->
+      <circle id="BY" cx="250" cy="72" r="12" fill="#e2b714"/><text x="250" y="77" font-size="13" font-weight="900" fill="#fff" text-anchor="middle">Y</text>
+      <circle id="BX" cx="226" cy="96" r="12" fill="#2b7bff"/><text x="226" y="101" font-size="13" font-weight="900" fill="#fff" text-anchor="middle">X</text>
+      <circle id="BB" cx="274" cy="96" r="12" fill="#e5413b"/><text x="274" y="101" font-size="13" font-weight="900" fill="#fff" text-anchor="middle">B</text>
+      <circle id="BA" cx="250" cy="120" r="12" fill="#25a55f"/><text x="250" y="125" font-size="13" font-weight="900" fill="#fff" text-anchor="middle">A</text>
+      <circle id="ST" cx="184" cy="84" r="7" fill="#2a2f3a"/>
+      <circle cx="146" cy="84" r="7" fill="#2a2f3a"/>
+      <circle cx="165" cy="60" r="11" fill="#2a2f3a"/><circle cx="165" cy="60" r="5" fill="#2b95ff"/>
+      <circle id="halo" r="22" fill="#2b95ff" opacity="0" filter="url(#g)"/>
+    </svg>
+
+    <div id="cap" class="abs">
+      <div class="step" id="step"></div>
+      <div class="capt" id="capt"></div>
+      <div class="sub" id="sub"></div>
+      <div class="dots"><i></i><i></i><i></i><i></i></div>
+    </div>
+  </div>
+
+  <div id="intro">
+    <div class="glow"></div>
+    <div class="mark"><img src="../../../app/src/assets/logo.png" alt=""></div>
+    <div class="title">Joy<b>Chromium</b></div>
+    <div class="tag">O navegador da sua TV, feito para o controle.</div>
+  </div>
+
+  <div id="outro">
+    <div class="glow"></div>
+    <div class="mark"><img src="../../../app/src/assets/logo.png" alt=""></div>
+    <div class="title">Joy<b>Chromium</b></div>
+    <div class="chips"><span class="chip">🎮 Controle em primeiro lugar</span><span class="chip">🛡 Sem anúncios</span><span class="chip">📺 Tela cheia na TV</span></div>
+    <div class="cta">Windows 10/11 · alpha gratuita</div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+for (const row of document.querySelectorAll("[data-row]")) {
+  for (const ch of row.dataset.row) { const k = document.createElement("div"); k.className = "key"; k.id = "k" + ch; k.textContent = ch; row.appendChild(k); }
+}
+const ARROW = '<svg width="24" height="34" viewBox="0 0 20 28"><path d="M2 2 L2 22.5 L7.3 17.6 L10.9 25.8 L14.3 24.3 L10.8 16.3 L17.8 16.3 Z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const HAND = '<svg width="30" height="35" viewBox="0 0 26 30"><path d="M10 1.6c1.1 0 2 .9 2 2v8.6h.6v-1.8c0-1.1.9-2 2-2s2 .9 2 2v2.2h.4v-1.4c0-1.1.9-2 2-2s2 .9 2 2v2h.3c0-1.1.9-2 2-2s2 .9 2 2V19c0 5.2-3.4 9.4-8.8 9.4h-1.7c-3.1 0-5.2-1.5-6.9-3.8L2 17.6c-.7-1-.5-2.4.5-3.1 1-.7 2.4-.5 3.1.5L8 18.4V3.6c0-1.1.9-2 2-2z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 12.2V16.5M16.6 12.6V16.5M21 13.2V16.5" stroke="#000" stroke-width="1.2" stroke-linecap="round"/></svg>';
+
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const ease = (p) => (p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const lerp = (a, b, p) => a + (b - a) * p;
+const pulse = (t, at, len = .32) => (t >= at && t < at + len ? Math.sin(Math.PI * (t - at) / len) : 0);
+
+// Screen coordinates of the targets (inside #screen).
+const TILE = (i) => ({ x: 176 + i * 96, y: 74 + 176, w: 80, h: 80 });
+const ADDR = { x: 106, y: 40, w: 590, h: 28 };
+const center = (r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+const KEYS = { lastPress: -1 };
+
+const TOTAL = 18.6;
+const TYPE = ["y", "o", "u", "t", "u", "b", "e", ".com"];
+const TYPE_AT = (i) => 10.15 + i * 0.27;
+
+const CAPS = [
+  { from: 3.0, step: "1 · Cursor", capt: "O analógico é o seu mouse", sub: 'Mova o cursor por todo o app — abas, barra e página — e clique com <span class="btn" style="background:#25a55f;color:#fff">A</span>. Dois toques em A: clique direito.' },
+  { from: 6.5, step: "2 · Foco", capt: "O D-pad pula de item em item", sub: "Cada direção leva ao próximo link ou botão, e o cursor vai junto, como no Edge do Xbox." },
+  { from: 9.45, step: "3 · Teclado", capt: "Digite com o teclado do console", sub: '<span class="btn" style="background:#e2b714;color:#fff">Y</span> abre o teclado. <span class="btn" style="background:#2b7bff;color:#fff">X</span> apaga, <span class="btn" style="background:#2a2f3a;color:#fff">LT</span> maiúsculas, Start envia.' },
+  { from: 13.0, step: "4 · Assistir", capt: "Role, troque de aba, relaxe", sub: 'Analógico direito rola a página. <span class="btn" style="background:#2a2f3a;color:#fff">LT</span> <span class="btn" style="background:#2a2f3a;color:#fff">RT</span> trocam de aba, <span class="btn" style="background:#e5413b;color:#fff">B</span> volta.' },
+];
+
+function setFill(id, base, on) { $(id).setAttribute("fill", on > 0 ? "#2b95ff" : base); }
+
+function render(t) {
+  // ---- layers
+  const introOut = ease(seg(t, 2.4, 3.0));
+  $("intro").style.opacity = 1 - introOut;
+  const introIn = ease(seg(t, 0, .8));
+  $("intro").style.transform = `scale(${lerp(.92, 1, introIn) + introOut * .06})`;
+  document.querySelector("#intro .mark").style.transform = `translateY(${lerp(30, 0, introIn)}px) rotate(${lerp(-12, 0, introIn)}deg)`;
+  document.querySelector("#intro .title").style.opacity = ease(seg(t, .35, 1.0));
+  document.querySelector("#intro .tag").style.opacity = ease(seg(t, .7, 1.4));
+  const mainIn = ease(seg(t, 2.6, 3.2)), mainOut = ease(seg(t, 16.2, 16.8));
+  $("main").style.opacity = mainIn * (1 - mainOut);
+  $("main").style.transform = `translateY(${lerp(24, 0, mainIn) - mainOut * 16}px)`;
+  const outIn = ease(seg(t, 16.6, 17.3));
+  $("outro").style.opacity = outIn * (1 - ease(seg(t, 18.25, 18.6)));
+  $("outro").style.transform = `scale(${lerp(.94, 1, outIn)})`;
+  document.querySelector("#outro .chips").style.opacity = ease(seg(t, 17.0, 17.6));
+  document.querySelector("#outro .cta").style.opacity = ease(seg(t, 17.3, 17.9));
+
+  // ---- caption
+  let cap = CAPS[0]; let ci = 0;
+  CAPS.forEach((c, i) => { if (t >= c.from) { cap = c; ci = i; } });
+  if ($("capt").dataset.i !== String(ci)) { $("step").textContent = cap.step; $("capt").textContent = cap.capt; $("sub").innerHTML = cap.sub; $("capt").dataset.i = ci; }
+  const capIn = ease(seg(t, cap.from, cap.from + .35));
+  $("cap").style.opacity = capIn; $("cap").style.transform = `translateX(${lerp(18, 0, capIn)}px)`;
+  document.querySelectorAll(".dots i").forEach((d, i) => d.classList.toggle("on", i === ci));
+
+  // ---- pointer path (screen coords)
+  const start = { x: 408, y: 300 };
+  const tile0 = center(TILE(0)), tile1 = center(TILE(1)), tile2 = center(TILE(2)), addr = { x: 330, y: 54 };
+  let p = start;
+  if (t >= 3.4) p = { x: lerp(start.x, tile0.x, ease(seg(t, 3.4, 5.0))), y: lerp(start.y, tile0.y, ease(seg(t, 3.4, 5.0))) };
+  if (t >= 6.9) p = { x: lerp(tile0.x, tile1.x, ease(seg(t, 6.9, 7.2))), y: tile0.y };
+  if (t >= 7.7) p = { x: lerp(tile1.x, tile2.x, ease(seg(t, 7.7, 8.0))), y: tile0.y };
+  if (t >= 8.5) { const q = ease(seg(t, 8.5, 8.85)); p = { x: lerp(tile2.x, addr.x, q), y: lerp(tile0.y, addr.y, q) }; }
+  if (t >= 13.4) { const q = ease(seg(t, 13.4, 13.9)); p = { x: lerp(addr.x, 300, q), y: lerp(addr.y, 200, q) }; }
+    const overTile = t > 4.6 && t < 8.6;
+  const shape = overTile ? HAND : ARROW;
+  if ($("cursor").dataset.s !== (overTile ? "h" : "a")) { $("cursor").innerHTML = shape; $("cursor").dataset.s = overTile ? "h" : "a"; }
+  const tip = overTile ? { x: 11.5, y: 2 } : { x: 2.4, y: 2.4 };
+  const press = pulse(t, 5.55, .3);
+  $("cursor").style.transform = `translate(${p.x - tip.x}px, ${p.y - tip.y}px) scale(${1 - press * .18})`;
+  $("cursor").style.opacity = t > 9.9 && t < 13.3 ? 0.0 : 1;
+  const rip = t < 6.1 ? seg(t, 5.6, 6.1) : 0;
+  $("ripple").style.opacity = rip > 0 ? 1 - rip : 0;
+  const rs = 10 + rip * 60;
+  $("ripple").style.width = $("ripple").style.height = rs + "px";
+  $("ripple").style.transform = `translate(${p.x - rs / 2}px, ${p.y - rs / 2}px)`;
+
+  // ---- hover / focus ring
+  document.querySelectorAll(".tile").forEach((el) => el.classList.remove("hover"));
+  if (t > 4.6 && t < 6.9) $("t0").classList.add("hover");
+  let f = null;
+  if (t >= 6.6 && t < 6.9) f = TILE(0);
+  if (t >= 6.9 && t < 7.7) f = TILE(1);
+  if (t >= 7.7 && t < 8.5) f = TILE(2);
+  if (t >= 8.5 && t < 13.1) f = ADDR;
+  if (f) {
+    let from = f;
+    if (t >= 6.9 && t < 7.2) from = TILE(0);
+    if (t >= 7.7 && t < 8.0) from = TILE(1);
+    if (t >= 8.5 && t < 8.85) from = TILE(2);
+    const move = from === f ? 1 : ease(t < 7.2 ? seg(t, 6.9, 7.2) : t < 8.0 ? seg(t, 7.7, 8.0) : seg(t, 8.5, 8.85));
+    const r = { x: lerp(from.x, f.x, move), y: lerp(from.y, f.y, move), w: lerp(from.w, f.w, move), h: lerp(from.h, f.h, move) };
+    $("focus").style.opacity = 1;
+    $("focus").style.left = r.x - 4 + "px"; $("focus").style.top = r.y - 4 + "px";
+    $("focus").style.width = r.w + 8 + "px"; $("focus").style.height = r.h + 8 + "px";
+    $("focus").style.borderRadius = f === ADDR ? "18px" : "13px";
+  } else $("focus").style.opacity = 0;
+
+  // ---- keyboard and typing
+  const kbUp = ease(seg(t, 9.55, 10.0)) * (1 - ease(seg(t, 12.75, 13.1)));
+  $("keyboard").style.top = lerp(459, 459 - 176, kbUp) + "px";
+  document.querySelectorAll(".key.on").forEach((k) => k.classList.remove("on"));
+  let typed = "";
+  TYPE.forEach((ch, i) => {
+    if (t >= TYPE_AT(i)) typed += ch;
+    if (t >= TYPE_AT(i) - .12 && t < TYPE_AT(i) + .12) $("k" + ch)?.classList.add("on");
+  });
+  if (t >= 12.35 && t < 12.65) $("kgo").classList.add("on");
+  const onVideo = t >= 12.7 && t < 15.4;
+  let addrHtml = '<span class="ph">Pesquisar ou digitar endereço</span>';
+  if (t >= 9.6 && t < 12.7) addrHtml = (typed ? typed : "") + (t < 12.7 ? '<span class="caret" style="opacity:' + (Math.floor(t * 2.5) % 2 ? 1 : .2) + '"></span>' : "");
+  if (onVideo) addrHtml = '<span style="color:#8a8a8a">https://</span>youtube.com/watch';
+  if ($("addrText").innerHTML !== addrHtml) $("addrText").innerHTML = addrHtml;
+
+  // ---- pages
+  const vid = ease(seg(t, 12.75, 13.15));
+  const backHome = ease(seg(t, 15.4, 15.7));
+  $("video").style.opacity = vid * (1 - backHome);
+  $("home").style.opacity = 1 - vid * (1 - backHome);
+  $("tab1t").textContent = t >= 12.8 ? "YouTube" : "Nova aba";
+  $("fav1").style.background = t >= 12.8 ? "#ff0033" : "#2b95ff";
+  const scroll = ease(seg(t, 13.9, 14.9)) * 150;
+  $("vscroll").style.transform = `translateY(${-scroll}px)`;
+  $("prog").style.width = `${clamp((t - 13.1) / 6) * 100}%`;
+  const tab2 = t >= 15.4 && t < 16.9;
+  $("tab1").classList.toggle("on", !tab2); $("tab2").classList.toggle("on", tab2);
+  if (tab2) { $("home").style.opacity = 1; $("video").style.opacity = 0; }
+
+  // ---- controller
+  const lsTilt = seg(t, 3.3, 3.5) * (1 - seg(t, 4.9, 5.1));
+  const dir = { x: tile0.x - start.x, y: tile0.y - start.y }; const len = Math.hypot(dir.x, dir.y);
+  const lsx = dir.x / len * 7 * lsTilt, lsy = dir.y / len * 7 * lsTilt;
+  $("LS").setAttribute("transform", `translate(${lsx} ${lsy})`);
+  setFill("LSc", "#2a2f3a", lsTilt > .05 ? 1 : 0);
+  const rsOn = t > 13.9 && t < 14.9;
+  $("RS").setAttribute("transform", `translate(0 ${rsOn ? 7 : 0})`);
+  setFill("RSc", "#2a2f3a", rsOn ? 1 : 0);
+  setFill("DR", "#2a2f3a", pulse(t, 6.85) + pulse(t, 7.65));
+  setFill("DU", "#2a2f3a", pulse(t, 8.45));
+  setFill("DD", "#2a2f3a", 0); setFill("DL", "#2a2f3a", 0);
+  const aOn = pulse(t, 5.5, .35) + TYPE.reduce((s, _, i) => s + pulse(t, TYPE_AT(i) - .1, .22), 0);
+  setFill("BA", "#25a55f", aOn > .1 ? 1 : 0);
+  setFill("BY", "#e2b714", pulse(t, 9.45, .35) > .1 ? 1 : 0);
+  setFill("ST", "#2a2f3a", pulse(t, 12.3, .35) > .1 ? 1 : 0);
+  setFill("RT", "#2a2f3a", pulse(t, 15.2, .4) > .1 ? 1 : 0);
+  // a soft halo marks whatever is pressed
+  const halo = [[82 + lsx, 96 + lsy, lsTilt], [206, 147, rsOn ? 1 : 0], [146, 140, pulse(t, 6.85) + pulse(t, 7.65)], [124, 126, pulse(t, 8.45)],
+    [250, 120, aOn], [250, 72, pulse(t, 9.45, .35)], [184, 84, pulse(t, 12.3, .35)], [252, 19, pulse(t, 15.2, .4)]].sort((a, b) => b[2] - a[2])[0];
+  $("halo").setAttribute("cx", halo[0]); $("halo").setAttribute("cy", halo[1]); $("halo").setAttribute("opacity", clamp(halo[2]) * .55);
+}
+window.render = render;
+window.TOTAL = TOTAL;
+render(0);
+</script>
+</body>
+</html>

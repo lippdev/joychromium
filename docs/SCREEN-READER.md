@@ -1,5 +1,7 @@
 # Roteiro de teste com leitor de tela (E7-03)
 
+> **Escopo:** documentação de validação histórica e futura. Orca (Linux) e VoiceOver (macOS) estão fora do alpha Windows e não são gates atuais. Qualquer validação Windows com Narrator também deve ser tratada como trabalho explícito, não como evidência já concluída. Veja [ROADMAP.md](ROADMAP.md).
+
 O critério do item é o fluxo de busca utilizável com leitor de tela — Orca no Linux, Narrator no Windows e VoiceOver no macOS. Três camadas dão evidência disso, e cada uma prova uma coisa diferente:
 
 | Camada | Onde | O que prova |

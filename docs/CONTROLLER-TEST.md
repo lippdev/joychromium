@@ -1,5 +1,7 @@
 # Roteiro de teste com controle físico (E6-07)
 
+> **Escopo:** execute agora apenas a sessão Windows em TV com controle físico, que é gate do alpha. Etapas e resultados de macOS/Linux/Steam Deck ficam para o [roadmap](ROADMAP.md).
+
 Este é o roteiro da seção 3 do [PRD](PRD.md) para rodar em uma TV de verdade, com o controle na mão. Os cenários 1 a 5 rodam antes no e2e (`app/tests/e2e/journeys.spec.ts`) com um gamepad sintético, e o 6 tem lá só a parte decidível; o que continua sendo só aqui é o que o navegador não consegue simular: o controle físico, a TV, a latência, a pontuação real da navegação espacial, a velocidade do cursor, cada SO e o que cada botão faz em cada serviço.
 
 ## Antes de começar

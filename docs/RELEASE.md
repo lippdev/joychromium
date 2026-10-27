@@ -1,55 +1,26 @@
-# Release
+# Release do alpha Windows
 
-O app se distribui sozinho: o CI constrói os instaladores dos três sistemas, publica na GitHub Release e as instalações existentes se atualizam. Este arquivo explica o caminho inteiro e o que fazer quando algo quebra.
+Este documento descreve o processo de release destinado ao alpha Windows. Builds para macOS/Linux, Flathub e suas atualizações são trabalho futuro listado em [ROADMAP.md](ROADMAP.md).
 
 ## Quando uma release acontece
 
-Só dois gatilhos, ambos em `.github/workflows/release.yml`:
+O workflow de release tem dois gatilhos: push na `main` de um commit `chore(deps): bump electron ...` para atualizar o motor, ou execução manual (`workflow_dispatch`) com nível de bump `patch`, `minor` ou `major`. A execução manual também aceita uma versão SemVer exata. Sem uma versão exata, o workflow avança da release publicada mais recente; se não houver releases publicadas, usa a versão do `package.json`. Tags históricas sem uma release correspondente não definem o próximo número. A primeira versão alpha é `0.1.0-alpha`; versões alpha ficam fora do canal `latest`.
 
-1. **Push na `main` cujo commit começa com `chore(deps): bump electron `** — o motor mudou, então sai uma versão patch. É o PR que o Dependabot abre e o `auto-merge.yml` mergeia quando os três checks passam.
-2. **`workflow_dispatch`** com o nível de bump (`patch`, `minor` ou `major`) — para uma release de funcionalidade.
+## Artefatos Windows
 
-Qualquer outro commit na `main` roda o CI e para por aí: nada é publicado.
+As releases Windows publicam instaladores x64 e arm64 (`.exe`) e o metadado do atualizador (`latest.yml`). Consulte a [página de releases](https://github.com/lippdev/joychromium/releases) e confirme os nomes efetivamente publicados. Versões abaixo de 1.0 são pré-releases e não alimentam o canal `latest`: quem está no alpha 0.x precisa baixar manualmente. A partir da 1.0, versões estáveis podem ser oferecidas pelo atualizador e aplicadas ao fechar.
 
-## O que o workflow faz
+O instalador não tem certificado de assinatura; o SmartScreen pode exibir um aviso. A presença do instalador não prova DRM funcional: Widevine e reprodução em serviços pagos continuam gates de validação do alpha.
 
-1. `decide` lê a última tag `v*`, aplica o bump e calcula a versão (nada é commitado de volta na `main`, que é protegida).
-2. `tag` cria e envia a tag anotada.
-3. `build` roda nos três runners com a tag marcada, roda os testes unitários, carimba a versão no `package.json` (`npm version`, sem commit) e chama `electron-builder --publish always`.
-4. `notes` gera as notas da release a partir dos Conventional Commits entre a tag anterior e esta (`app/scripts/release-notes.mjs`, com teste unitário) e substitui o corpo da release: novidades, correções, desempenho, por dentro, documentação, empacotamento, CI e manutenção, com as mudanças que quebram na frente. `chore(deps): bump …` e merges ficam de fora — quem lê a release quer saber o que mudou no app, não que o motor subiu de versão.
+## Antes de publicar uma versão de alpha
 
-Os artefatos publicados na release:
+- Valide a branch e os workflows ativos; a proteção atual exige `electron (windows-latest)`.
+- Gere e instale o `.exe` Windows; confirme que abre e que a atualização funciona no sistema-alvo.
+- Confirme a tag e o número de versão do build; não reutilize uma tag já publicada. Versões 0.x e versões SemVer com sufixo de pré-release permanecem fora do canal `latest`.
+- Complete a sessão de TV com controle físico descrita em [CONTROLLER-TEST.md](CONTROLLER-TEST.md).
+- Registre separadamente o resultado de DRM no Windows. Não declare streaming pronto sem uma reprodução real verificada.
+- Confirme que os arquivos e notas da release correspondem aos artefatos realmente gerados.
 
-| Plataforma | Arquivos | Auto-update |
-|---|---|---|
-| Windows | `JoyChromium-<versão>-win-x64.exe`, `…-win-arm64.exe`, `latest.yml` | sim, ao fechar (NSIS instala sozinho) |
-| macOS | `JoyChromium-<versão>-mac-x64.dmg` / `…-mac-arm64.dmg`, `…-mac-x64.zip` / `…-arm64.zip`, `latest-mac.yml` | não (ADR-010): o app avisa e abre a página da release |
-| Linux | `JoyChromium-<versão>-linux-amd64.deb`, `…-linux-aarch64.rpm`, `…-linux-x86_64.AppImage` (e os arm64), `latest-linux.yml`, `latest-linux-arm64.yml` | AppImage sim; `.deb`/`.rpm` com **Reiniciar e instalar** em Configurações → Sobre |
+## Plataformas futuras
 
-A assinatura Widevine de produção (VMP) vem do serviço EVS da castLabs e é aplicada pelo hook `afterPack` quando a conta existe: [DRM-EVS.md](DRM-EVS.md).
-
-O motor vem do build **castLabs ECS** (`github:castlabs/electron-releases#v44.5.1+wvcus`), apontado em dois lugares no `app/package.json`: `devDependencies.electron` e `build.electronDownload.customDir`. Os dois precisam mudar juntos; `.github/workflows/engine-update.yml` faz isso todo dia quando a castLabs publica uma versão nova.
-
-## Antes de uma release de funcionalidade
-
-- `main` verde nos três sistemas, com os checks obrigatórios (`electron (windows-latest)`, `electron (ubuntu-latest)`, `electron (macos-latest)`).
-- Se mexeu em empacotamento, rode o caminho de instalação pelo menos no seu sistema: o CI instala e abre o pacote de cada runner, mas não substitui um teste na máquina onde o app vai rodar.
-- Se mexeu na policy (`policy/policy.json`), assine de novo — veja [POLICY.md](POLICY.md) — e faça o push da assinatura junto, senão a policy remota é ignorada.
-- Se a conta da castLabs EVS existe, confira que a release assinou a CDM: o log do job `build` de Windows e macOS diz `VMP signed …` em vez de `VMP signing skipped: …`. O procedimento e o que fazer quando falta a conta estão em [DRM-EVS.md](DRM-EVS.md).
-
-## Custo
-
-Zero, por decisão (ADR-010). O repositório é público, então o GitHub Actions não cobra minutos — inclusive nos runners de macOS, que são os mais caros em repositório privado — e as GitHub Releases não cobram hospedagem dos instaladores. O único serviço externo no caminho é o EVS da castLabs, que assina a CDM do Widevine de graça, e o Flathub, que é gratuito. O que ficou de fora por ser pago: Developer ID e notarização no macOS, certificado no Windows e qualquer SaaS de telemetria ou crash reporting. Se um dia alguém propuser um desses, é uma decisão de gastar dinheiro, não uma tarefa de engenharia.
-
-## Depois de publicada
-
-- Confira que os três primeiros itens do `latest*.yml` apontam para os arquivos certos: uma release com `latest.yml` vazio deixa quem já tem o app sem atualização.
-- A instalação existente recebe a versão nova na próxima checagem (o app checa no boot e a cada 6 horas).
-- Versão quebrada publicada: coloque a versão em `blockedAppVersions` na policy assinada; o updater passa a pular essa versão e mantém quem já está nela.
-
-## Versões e tags
-
-- A tag é a fonte da verdade (`v<maior>.<menor>.<patch>`); o `package.json` do repositório fica em `0.1.0` de propósito, e o workflow carimba a versão do build.
-- Tag publicada não é reaproveitada. Se um build saiu quebrado, publique o próximo patch com a correção em vez de mover a tag.
-- **Toda versão abaixo de 1.0 sai como pré-release** (`--prerelease --latest=false`): aparece na lista de releases com o selo *Pre-release*, não vira `latest` e não é oferecida pelo canal de atualização a quem já tem o app instalado. É o que uma alpha significa aqui — dá para baixar e testar, mas ninguém é atualizado para ela sem escolher.
-- Uma release pode ser derrubada (`gh release delete v<versão> --yes --cleanup-tag`) quando o número não faz mais sentido, como foi o caso da `v1.0.0` substituída pela `0.1.0` enquanto o produto ainda está em alpha. Quem já baixou não perde o app; o que deixa de existir é o download e a tag.
+Os procedimentos anteriores de macOS, Linux, DRM/EVS multiplataforma e Flatpak permanecem nos guias especializados como referência. Eles não são gates do alpha Windows. Veja [ROADMAP.md](ROADMAP.md).

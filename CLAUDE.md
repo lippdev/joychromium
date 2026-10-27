@@ -1,6 +1,6 @@
 # JoyChromium
 
-Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows, macOS e Linux com o mesmo código; abre em tela cheia (modo TV) por padrão. Todo o app vive em `app/`.
+Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows é a plataforma atual do produto; macOS e Linux ficam no roadmap. Abre em tela cheia (modo TV) por padrão. Todo o app vive em `app/`.
 
 ## Comandos (em `app/`)
 - Build: `npm run build` (esbuild empacota main, preloads e shell, e copia `src/assets`)
@@ -11,9 +11,9 @@ Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows
 - Instalador local (sem publicar): `npm run dist`
 
 ## Regras
-- Siga `CONTRIBUTING.md`: GitHub Flow, branch `tipo/descricao`, PR com squash, sem push direto na `main` (protegida; exige os checks `electron (windows-latest)`, `electron (ubuntu-latest)` e `electron (macos-latest)`).
+- Siga `CONTRIBUTING.md`: GitHub Flow, branch `tipo/descricao`, PR com squash, sem push direto na `main` (protegida; exige o check `electron (windows-latest)`).
 - Commits em Conventional Commits.
-- Antes de concluir uma tarefa: `npm run typecheck`, `npm test` e `npm run test:e2e` passando (no Linux, o e2e roda sob `xvfb-run`).
+- Antes de concluir uma tarefa: `npm run typecheck`, `npm test` e `npm run test:e2e` passando no Windows.
 - Decisão por sistema operacional só em `src/shared/platform.ts` (puro, testado) ou `src/main/platform.ts` (único lugar que lê `process.platform`).
 - Lógica pura fica em `src/shared/` (ou módulos de `src/main/` sem Electron, como `history.ts`, `store.ts`, `log.ts`) e ganha teste unitário; o que toca o Electron é coberto pelo e2e.
 - Testes e2e leem o estado por `globalThis.joy` (`tabs()`, `command()`, `pageEval()`), porque as views das abas não são alcançáveis pelo Playwright.
@@ -32,9 +32,9 @@ Navegador controller-first para TV, em Electron (Chromium) + TypeScript. Windows
 
 ## Atualizações e release
 - O motor é o castLabs ECS (`github:castlabs/electron-releases#v…+wvcus`), fora do npm: `engine-update.yml` abre o PR de bump. A versão fica em `devDependencies.electron` e em `build.electronDownload.customDir`, e as duas precisam mudar juntas.
-- PR de bump (`chore(deps): bump electron …`) → `ci.yml` → `auto-merge.yml` mergeia → `release.yml` deriva a versão da última tag, cria a tag, gera nsis/dmg-zip/AppImage/deb/rpm e publica na GitHub Release → `electron-updater` instala no usuário. Release manual: `workflow_dispatch` em `release.yml`.
+- PR de bump (`chore(deps): bump electron …`) → `ci.yml` → `auto-merge.yml` após o check Windows exigido → `release.yml` gera instaladores Windows x64 e arm64. A versão pode ser SemVer exata no `workflow_dispatch`; sem ela, deriva da release publicada mais recente ou do `package.json` quando não há releases. Tags históricas não definem o número. A primeira alpha é `0.1.0-alpha`; pré-releases não entram no canal estável do `electron-updater`.
 - Sem assinatura de código, por decisão de custo (ver `docs/PRD.md`, ADR-010): no macOS o build recebe assinatura ad-hoc via `scripts/after-pack.mjs` e o updater só avisa da versão nova. Nada no projeto pode depender de conta ou serviço pago — a assinatura VMP do Widevine (EVS) é gratuita e é a única conta do caminho.
 - `policy/policy.json` é assinado com `node app/scripts/policy-sign.mjs sign <keyfile> policy/policy.json` (chave em `~/.joychromium/policy-signing.key` no Linux e no macOS, `%USERPROFILE%\.joychromium\policy-signing.key` no Windows, sempre fora do repo — procedimento e backup em `docs/POLICY.md`).
-- Flatpak: `flatpak/dev.lipp.joychromium.yml` (runtime freedesktop 26.08 + `org.electronjs.Electron2.BaseApp`, Electron do `node_modules`) e `.github/workflows/flatpak.yml`, que só constrói o bundle como artefato. Dentro do Flatpak o updater não baixa nada: a tela de atualizações diz que quem atualiza é o Flathub (`FLATPAK_UPDATE_STATUS`). Publicar no Flathub depende de conta e revisão — o que falta está em `flatpak/README.md`.
+- Plataformas futuras: o workflow Flatpak arquivado em `.github/roadmap-workflows/flatpak.yml` e os adaptadores/configuração de macOS e Linux são referências de roadmap; não fazem parte do produto ou CI atuais.
 - Release e instaladores: `docs/RELEASE.md`. Estado atual do produto (cobertura do PRD, provas, pendências por dono): `docs/STATUS.md` — mantenha-o atualizado junto de cada entrega. Roteiro de teste com controle na TV: `docs/CONTROLLER-TEST.md`. Wayland nativo (smoke do CI) e Steam Deck: `docs/WAYLAND.md`. Launchers (flags `--tv`/`--window`/`--new-tab`, esquema `joychromium://`, ConsoleMode): `docs/INTEGRATIONS.md` — o parser é `src/shared/launchArgs.ts`.
 - Não subir `node_modules/`, `dist/`, `release/`.

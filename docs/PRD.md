@@ -1,11 +1,28 @@
-# JoyChromium — PRD 2.0: arquitetura, multiplataforma e redesign
+# JoyChromium — PRD: alpha Windows e roadmap de plataformas
 
-> Documento vivo. Substitui o `docs/CHECKLIST.md` como fonte de verdade do que falta fazer.
-> Estado de referência: `main` em a1de202 (Electron 44.8.0 / Chromium 152), outubro de 2026.
+> Documento vivo. A seção inicial define o escopo atual do alpha; o backlog multiplataforma abaixo é preservado como planejamento histórico/deferred e não amplia o escopo atual.
+> Retrato de escopo: 21/10/2026. A branch atual ainda precisa de validação, descrita em [STATUS.md](STATUS.md).
 
-## 1. Resumo
+## Escopo vigente: alpha Windows
 
-O JoyChromium já roda em Electron com um único código para Windows e Linux. O CI verde nas duas plataformas prova isso: typecheck, 20 testes unitários, 3 e2e com o app real e um build de instalador. O que falta para ser um produto multiplataforma de verdade, e um navegador de TV bom de usar, cai em quatro frentes:
+O alpha em desenvolvimento destina-se exclusivamente ao Windows 10/11. macOS, Linux, Steam Deck, Flathub, Wayland, Orca e VoiceOver ficam para o roadmap e não bloqueiam este alpha. Resultados e contagens de uma revisão anterior são históricos; o status e as validações parciais da branch atual estão em [STATUS.md](STATUS.md).
+
+Os gates do alpha Windows são: validação da branch atual, instalação e abertura do `.exe`, sessão em TV com controle físico e validação real de DRM no Windows. Enquanto o último gate não passar, streaming pago não é anunciado como pronto.
+
+O roadmap futuro está em [ROADMAP.md](ROADMAP.md): [macOS #108](https://github.com/lippdev/joychromium/issues/108), [Linux/Wayland/Flathub #109](https://github.com/lippdev/joychromium/issues/109) e [Steam Deck/SteamOS #110](https://github.com/lippdev/joychromium/issues/110), que depende do trabalho Linux.
+
+### Matriz de plataforma vigente
+
+| Plataforma | Escopo do alpha | Gate de release atual |
+|---|---|---|
+| Windows 10/11 x64 e arm64 | Plataforma-alvo | Validar a branch, instalar e abrir o `.exe`, testar atualização, validar controle físico em TV e registrar o resultado real de DRM. |
+| macOS | Diferido | Nenhum gate para o alpha Windows; acompanhar [#108](https://github.com/lippdev/joychromium/issues/108). |
+| Linux / Wayland / Flathub | Diferido | Nenhum gate para o alpha Windows; acompanhar [#109](https://github.com/lippdev/joychromium/issues/109). |
+| Steam Deck / SteamOS Gaming | Diferido; depende de Linux | Nenhum gate para o alpha Windows; acompanhar [#110](https://github.com/lippdev/joychromium/issues/110). |
+
+## 1. Resumo e histórico do plano amplo
+
+O plano original buscava um navegador de TV multiplataforma com Electron. As seções de arquitetura e backlog seguintes preservam esse planejamento e suas decisões; itens de macOS/Linux passam a ser explicitamente diferidos para issues do [roadmap](ROADMAP.md). O trabalho de produto segue focado em um alpha Windows.
 
 1. **Multiplataforma completo.** O macOS não existe (sem target, sem CI, sem assinatura). Também há bugs de borda no Linux e no mac (botões da janela invisíveis, copiar/colar, atalhos e caminhos).
 2. **Arquitetura.** O `shell.ts` concentra quase tudo. A UI é HTML/TS sem bundler e sem componentes, os tokens de design estão duplicados em cada página, a persistência não é atômica e há configurações que não fazem nada desde a saída do WebView2.
@@ -16,21 +33,24 @@ O Electron continua sendo a base. A seção 5.1 explica por quê.
 
 ## 2. Objetivos e não-objetivos
 
-### Objetivos
-- **O1.** Mesma experiência em Windows 10/11, macOS (Apple Silicon e Intel) e Linux (X11 e Wayland; Ubuntu/Debian, Fedora, Arch e SteamOS), em x64 e arm64.
+### Objetivos atuais do alpha Windows
+- **O1.** Entregar e validar o alpha em Windows 10/11 x64 e arm64, conforme os instaladores efetivamente disponíveis. macOS, Linux e Steam Deck ficam diferidos no [roadmap](ROADMAP.md).
+- **O1a.** Instalar e iniciar o `.exe` no Windows, operar o fluxo principal com controle físico em TV e documentar limites conhecidos.
 - **O2.** Uso completo só com controle, do primeiro boot até assistir a um vídeo, sem teclado nem mouse.
 - **O3.** Interface legível a 3 m numa TV 1080p e 4K, com área segura de overscan.
-- **O4.** Atualização automática no Windows e no Linux; no macOS, aviso de nova versão com download manual enquanto o app não for assinado.
+- **O4.** Atualização do instalador Windows e validação do fluxo instalado.
 - **O6.** Streaming com DRM (Netflix, Prime Video, Disney+) funcionando via castLabs ECS.
 - **O5.** Uma arquitetura em que cada responsabilidade tem um módulo, com contrato de IPC tipado e lógica pura testável sem Electron.
 
-### Não-objetivos (nesta versão)
+### Não-objetivos (alpha atual)
 - Extensões de navegador (Chrome Web Store).
 - Sincronização de conta entre dispositivos.
-- Builds para Android TV, tvOS ou webOS. Eles exigiriam outro motor e outro produto.
+- Builds para macOS, Linux, Steam Deck, Android TV, tvOS ou webOS. macOS/Linux/Deck ficam no roadmap; Android TV/tvOS/webOS exigiriam outro motor e produto.
 - Motor próprio ou fork do Chromium.
 
 ## 3. Personas e cenários
+
+Para o alpha atual, a persona de sofá usa um PC Windows ligado à TV. As personas Mac e HTPC/Steam Deck abaixo registram o plano anterior e ficam adiadas; seus cenários não são critérios de aceite do alpha Windows.
 
 | Persona | Contexto | O que precisa |
 |---|---|---|
@@ -49,7 +69,9 @@ Cenários de aceite de ponta a ponta (servem de roteiro para os testes manuais c
 6. Windows/Linux: atualização baixada em segundo plano → aplicada ao fechar → o app reabre na versão nova. macOS: o app avisa que há versão nova e abre a página da release.
 7. Abrir a Netflix, entrar na conta e assistir a um título com DRM.
 
-## 4. Diagnóstico do estado atual
+> **Nota de leitura:** as seções de diagnóstico, arquitetura, épicos e métricas a seguir preservam o PRD multiplataforma anterior. Evidências, porcentagens e critérios nelas não descrevem a validação da branch atual e não mudam o escopo vigente do alpha Windows acima. Itens de outras plataformas estão diferidos para as issues do roadmap.
+
+## 4. Diagnóstico histórico do plano amplo
 
 ### 4.1 O que já está bom
 - Electron 44 com sandbox, `contextIsolation` e preloads isolados. As páginas web não recebem nenhuma API.
@@ -167,7 +189,9 @@ app/
 - **ADR-009: DRM com castLabs ECS (decidido).** O pacote `electron` é trocado pelo Electron for Content Security da castLabs, que instala a CDM Widevine no primeiro uso. A assinatura VMP do serviço EVS (gratuito, conta na castLabs) é necessária para Widevine de produção no Windows e no macOS; ela é independente da assinatura de código da Apple e da Microsoft, que continua fora do escopo. No Linux a CDM não usa VMP. O ECS é distribuído pelo GitHub da castLabs e não pelo registro do npm, então o Dependabot deixa de cobrir o motor e um workflow agendado assume essa função (E10-03).
 - **ADR-010: sem assinatura de código (decidido).** Os builds saem sem Developer ID e sem certificado Windows. Consequências aceitas: alerta do SmartScreen no Windows; no macOS, o Gatekeeper exige liberar o app em Ajustes do Sistema → Privacidade e Segurança → "Abrir Mesmo Assim", e o auto-update nativo (Squirrel.Mac) não funciona. Os builds de mac recebem assinatura ad-hoc (`identity: "-"`), sem a qual o Apple Silicon recusa o app como "danificado".
 
-### 5.5 Matriz de plataforma
+### 5.5 Matriz multiplataforma legada
+
+Esta matriz registra decisões técnicas do plano anterior. A matriz vigente do produto está no início deste documento; nenhum alvo abaixo de macOS ou Linux está incluído no alpha atual.
 
 | Tema | Windows | macOS | Linux |
 |---|---|---|---|
@@ -284,9 +308,9 @@ Regras de escopo:
 6. **Branch e PR** seguem o `CONTRIBUTING.md`: branch `tipo/eX-YY-descricao` (ex.: `feat/e1-03-menu-macos`), título em Conventional Commits e `Closes #N` no corpo. Tamanho **G** deve ser quebrado em PRs menores dentro da mesma issue.
 7. **Definição de pronto:** critérios de aceite atendidos; `npm run typecheck`, `npm test` e `npm run test:e2e` verdes nos três SOs do CI; teste com controle quando mexe em entrada ou UI; PRD atualizado se o escopo mudou.
 
-### 9.3 Status por item
+### 9.3 Status histórico por item
 
-Retrato do que está no app em 20/10/2026 (tudo o que está marcado como entregue tem código na `main` e teste). O resumo executivo — o que está provado, o que não está e de quem é cada pendência — está em [STATUS.md](STATUS.md). O que falta está separado entre o que exige conta, hardware ou permissão de administrador e o que simplesmente ficou fora deste ciclo.
+Retrato legado de 20/10/2026, anterior ao escopo Windows-only. Os totais e pendências abaixo não são o status da branch atual e não servem como gate do alpha. O resumo atual está em [STATUS.md](STATUS.md).
 
 | Épico | Must | Should | Could | O que falta |
 |---|---|---|---|---|
@@ -318,9 +342,9 @@ Somando: **35 de 37 Must**, **19 de 19 Should** e **10 de 10 Could**. O E2-07 (s
 
 - **E9-01 e E9-02** seguem congelados pelo ADR-010, que agora é uma decisão de custo e não um "por enquanto": não há plano de pagar Developer ID nem certificado Windows. O **E9-03** (GPG em `.deb`/`.rpm`) fica congelado por escopo, não por custo — chave GPG é gratuita.
 
-**O que o app faz hoje, em uma frase:** navegador de TV multiplataforma com tela cheia por padrão, controle como entrada principal (incluindo iframes e mídia), PT-BR e EN, bloqueio de anúncios e rastreadores por nível, DRM Widevine no Linux, atualização automática nos instaladores, e CI nos três sistemas que instala e abre o pacote de cada um.
+**Escopo do alpha atual:** Windows 10/11, com instalação e abertura do `.exe`, validação da branch e sessão física em TV/controle ainda a registrar. DRM/streaming Windows ainda não está comprovado. As afirmações multiplataforma abaixo descrevem evidência e objetivos históricos, não suporte do alpha.
 
-### E1 — Correções multiplataforma (Marco M1)
+### E1 — Correções multiplataforma (planejamento diferido)
 
 | ID | História | MoSCoW | Tamanho | Critérios de aceite |
 |---|---|---|---|---|
@@ -335,7 +359,7 @@ Somando: **35 de 37 Must**, **19 de 19 Should** e **10 de 10 Could**. O E2-07 (s
 | E1-08 | Remover as referências ao WebView2 da tela de configurações; mostrar a versão do Chromium e do Electron | Must | P | Nenhuma menção a WebView2 no app (D12) |
 | E1-09 | Configurações sem efeito: implementar ou remover `trackingPrevention`, `passwordAutosave` e `autofill` | Must | M | Cada opção visível tem efeito verificável, ou some da tela e do schema com migração (D11) |
 
-### E2 — Empacotamento e CI multiplataforma (Marco M1)
+### E2 — Empacotamento e CI multiplataforma (planejamento diferido)
 
 | ID | História | MoSCoW | Tamanho | Critérios de aceite |
 |---|---|---|---|---|
@@ -446,7 +470,9 @@ Assinatura de código está fora do escopo por decisão de custo (ADR-010); E9-0
 | E11-02 | README com Windows, macOS e Linux; requisitos e formatos por SO | Must | P | Instruções verificadas nos três SOs |
 | E11-03 | `docs/adr/` com os ADRs 001 a 008 | Should | P | Um arquivo por decisão |
 
-## 10. Roadmap
+## 10. Roadmap legado
+
+O cronograma multiplataforma abaixo preserva o plano anterior. Para compromissos atuais por plataforma, use [ROADMAP.md](ROADMAP.md); estas etapas não são gates do alpha Windows.
 
 ```mermaid
 gantt

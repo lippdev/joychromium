@@ -1,11 +1,10 @@
 name: Release
 
 # Two ways in:
-#   1. A push to main whose commit bumped Electron (Dependabot's "chore(deps): bump electron ...") — the engine
-#      changed, so users get a new build automatically (patch bump).
-#   2. A manual dispatch with a bump level, for feature releases.
-# The version is derived from the latest v* tag (main is protected, so nothing is committed back to it); only the new
-# tag is pushed. Both OSes build with that version injected, then installers + update metadata go to a GitHub Release
+#   1. A push to main whose commit bumped Electron (Dependabot's "chore(deps): bump electron ...") — patch bump.
+#   2. A manual dispatch with an optional exact SemVer version or a bump level.
+# Versions advance from published GitHub Releases, never historic tags. Windows builds with that version injected,
+# then installers + update metadata go to a GitHub Release
 # and installed apps pick it up through electron-updater. Anything below 1.0 is published as a pre-release: 0.x builds
 # are for trying out, not for the `latest` channel an installed app follows.
 on:
@@ -18,6 +17,10 @@ on:
         type: choice
         options: [patch, minor, major]
         default: patch
+      version:
+        description: "Exact SemVer version (optional; defaults to the package version on a clean release reset)"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -32,15 +35,18 @@ jobs:
     outputs:
       release: ${{ steps.decide.outputs.release }}
       version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - id: decide
         env:
           MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"; echo "bump=${{ inputs.bump }}" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "bump=${{ inputs.bump }}" >> "$GITHUB_OUTPUT"
           elif printf '%s' "$MESSAGE" | grep -qiE '^chore\(deps\): bump electron '; then
-            echo "release=true" >> "$GITHUB_OUTPUT"; echo "bump=patch" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "bump=patch" >> "$GITHUB_OUTPUT"
           else
             echo "release=false" >> "$GITHUB_OUTPUT"
           fi
@@ -52,17 +58,13 @@ jobs:
         if: steps.decide.outputs.release == 'true'
         env:
           BUMP: ${{ steps.decide.outputs.bump }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n1)
-          LATEST=${LATEST#v}; LATEST=${LATEST:-0.0.0}
-          IFS=. read -r MA MI PA <<< "$LATEST"
-          case "$BUMP" in
-            major) MA=$((MA+1)); MI=0; PA=0 ;;
-            minor) MI=$((MI+1)); PA=0 ;;
-            *) PA=$((PA+1)) ;;
-          esac
-          echo "version=$MA.$MI.$PA" >> "$GITHUB_OUTPUT"
-          echo "Next version: $MA.$MI.$PA (from v$LATEST, $BUMP)"
+          LATEST=$(gh release list --limit 100 --json tagName,isDraft --jq '[.[] | select(.isDraft | not)][0].tagName // ""')
+          CURRENT=$(node -p 'require("./app/package.json").version')
+          CURRENT_VERSION="$CURRENT" LATEST_RELEASE_VERSION="$LATEST" node app/scripts/release-version.mjs
+          echo "Selected release version from latest published release '${LATEST:-none}' (bump: $BUMP)"
 
   tag:
     needs: decide
@@ -82,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -96,16 +98,10 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: app/package-lock.json
-      - name: RPM tools (Linux only, for the rpm target)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y rpm
-        working-directory: .
       - run: npm ci
-      - name: EVS client (VMP signing for Windows and macOS)
-        if: runner.os != 'Linux'
+      - name: EVS client (VMP signing)
         run: python -m pip install --upgrade castlabs-evs
       - name: EVS account present?
-        if: runner.os != 'Linux'
         shell: bash
         env:
           EVS_ACCOUNT_NAME: ${{ secrets.EVS_ACCOUNT_NAME }}
@@ -122,6 +118,7 @@ jobs:
         run: npm run build && npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EP_PRE_RELEASE: ${{ needs.decide.outputs.prerelease }}
           # The VMP hook (app/scripts/after-pack.mjs) signs the CDM when these exist and logs the reason when they do
           # not; the EVS client reads them from the environment so they never reach a command line or the build log.
           EVS_ACCOUNT_NAME: ${{ secrets.EVS_ACCOUNT_NAME }}
@@ -139,14 +136,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: v${{ needs.decide.outputs.version }}
+          PRERELEASE: ${{ needs.decide.outputs.prerelease }}
         run: |
-          previous=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v "^$VERSION$" | head -n1)
+          previous_release=$(gh release list --limit 100 --json tagName,isDraft --jq "[.[] | select((.isDraft | not) and .tagName != env.VERSION)][0].tagName // \"\"")
+          previous=${previous_release:-}
           echo "Notas de ${previous:-o começo} até $VERSION"
           git log --no-merges --pretty=format:%s "${previous:+$previous..}$VERSION" \
             | node app/scripts/release-notes.mjs "${previous:-}" "${VERSION#v}" > notes.md
-          # No installed app should pick up a pre-1.0 build through the update channel.
-          major=$(printf '%s' "${VERSION#v}" | cut -d. -f1)
-          if [ "$major" = "0" ]; then
+          # Alpha and other prerelease builds stay out of the installed app's latest update channel.
+          if [ "$PRERELEASE" = "true" ]; then
             gh release edit "$VERSION" --notes-file notes.md --prerelease --latest=false
           else
             gh release edit "$VERSION" --notes-file notes.md
