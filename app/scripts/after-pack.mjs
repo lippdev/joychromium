@@ -24,8 +24,9 @@ export default async function afterPack(context) {
 }
 
 /**
- * Sign the CDM through castLabs EVS, when this platform needs it and an account is present. A failure here is fatal:
- * a build that claims Widevine but ships an unverifiable CDM is worse than a build that stops.
+ * Sign the CDM through castLabs EVS, when this platform needs it and an account is present. A refusal from EVS does not
+ * stop the build: the app ships with an unverifiable CDM, as it does without an account, so DRM services decline to
+ * play while everything else works. The log says so, and the docs do not promise paid streaming until it is signed.
  * @param {import("electron-builder").AfterPackContext} context
  */
 function vmpSign(context) {
@@ -36,8 +37,12 @@ function vmpSign(context) {
     return;
   }
   const { command, args } = vmpCommand(electronPlatformName, appOutDir);
-  execFileSync(command, args, { stdio: "inherit" });
-  console.log(`VMP signed ${appOutDir} with the EVS account ${plan.account}`);
+  try {
+    execFileSync(command, args, { stdio: "inherit" });
+    console.log(`VMP signed ${appOutDir} with the EVS account ${plan.account}`);
+  } catch (error) {
+    console.log(`::warning::VMP signing refused for the EVS account ${plan.account}; this build ships an unsigned CDM (${error.message})`);
+  }
 }
 
 /** Where the packaged executable sits for each platform. */

@@ -10,7 +10,7 @@ O alpha destina-se somente ao Windows 10/11, x64 e arm64. macOS, Linux, Steam De
 
 - CI Windows (`electron (windows-latest)`) verde no commit da release: typecheck, unitários, teste do script de versão, e2e com o Electron real e o smoke test do instalador, que instala o `.exe` e confirma que o app abre.
 - Motor castLabs ECS `v44.9.3+wvcus`, que corrige o alerta de certificados eMudhra (Electron < 44.9.1).
-- CDM assinada pela conta EVS no build da release (o log do job `build` registra a assinatura VMP).
+- **CDM sem assinatura VMP:** a conta EVS autentica, mas a castLabs recusou a assinatura `streaming` ("Binary signature denied"). A alpha sai com a CDM sem assinatura, então Netflix, Prime e outros serviços com Widevine não tocam. O build registra a recusa como aviso e segue; quando a conta for liberada, a próxima release sai assinada sem mudar código.
 
 ## O que ainda fecha o alpha
 
