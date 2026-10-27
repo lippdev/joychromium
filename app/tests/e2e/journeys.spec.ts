@@ -419,7 +419,10 @@ test("searching with the virtual keyboard and its suggestions, then opening the 
   await expect.poll(() => chips.count(), { timeout: 15_000 }).toBeGreaterThan(0);
   expect(await chips.first().textContent()).toContain("Previsão do tempo — INMET");
 
-  // The suggestions sit above the keys: up from the keyboard enters the list, A opens the selected one.
+  // The suggestions sit above the keys: up from the top row (the digits, above the "o" typed last) enters the list, and A
+  // opens the selected one.
+  await move(h, "up");
+  await expect.poll(() => h.chrome.evaluate(() => document.activeElement?.textContent?.trim())).toBe("9");
   await move(h, "up");
   await expect(chips.first()).toBeFocused();
   await press(h, Pad.A);
@@ -503,12 +506,10 @@ test("a site asks for the microphone, the pad walks the prompt and chooses Alway
   await serveHttps(h, MICROPHONE);
   await installPad(h);
 
-  // The site is opened from the couch: https://sala.com, typed on the controller keyboard.
+  // The site is opened from the couch: sala.com, typed on the controller keyboard (the bar adds the https:// itself).
   await press(h, Pad.Y);
   await expect.poll(() => h.chrome.locator("#keyboard").isVisible(), { timeout: 15_000 }).toBe(true);
   const key = (label: string) => `[...document.querySelectorAll('#keyboard .key')].find((k) => k.textContent.trim() === ${JSON.stringify(label)})`;
-  await focusOn(h, "shell", key("https://"), "the https:// key");
-  await press(h, Pad.A);
   for (const character of "sala") {
     await focusOn(h, "shell", key(character), `key ${character}`);
     await press(h, Pad.A);
