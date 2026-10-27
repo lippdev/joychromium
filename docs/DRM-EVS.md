@@ -34,6 +34,8 @@ A partir daí, toda release de Windows e macOS assina a CDM no `afterPack`. A pr
 
 Regras de conduta do serviço, do próprio wiki da castLabs: uma conta basta (use redefinição de senha se perder o acesso), não force assinatura nova quando a existente vale, e a assinatura correta para este app é `streaming` — o `sign-pkg` usa esse tipo por padrão, e o suporte a licença persistente saiu da CDM do navegador a partir do ECS v42.
 
+O EVS gratuito só assina um binário idêntico ao da castLabs, com uma exceção: o conjunto fixo de fuses da [FAQ](https://github.com/castlabs/electron-releases/wiki/FAQ#can-i-use-electronfuses-with-the-free-version-of-ecs-and-evs). O `after-pack.mjs` grava exatamente esse conjunto. Qualquer fuse a mais, a menos ou com outro valor faz o serviço responder `ValidityError: Binary signature denied`; foi o que derrubou a assinatura da 0.1.0-alpha.
+
 ## Como conferir depois de assinar
 
 Na máquina, com o app instalado:

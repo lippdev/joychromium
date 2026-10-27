@@ -7,13 +7,18 @@ import { evsPlan, vmpCommand } from "./evs.mjs";
 
 /** @param {import("electron-builder").AfterPackContext} context */
 export default async function afterPack(context) {
+  // The free EVS signs only this exact fuse wire (castLabs FAQ, "Can I use @electron/fuses"); any other set, including
+  // a subset, is refused with "Binary signature denied". Fuses outside it stay at their defaults.
   await flipFuses(executablePath(context), {
     version: FuseVersion.V1,
     [FuseV1Options.RunAsNode]: false,
+    [FuseV1Options.EnableCookieEncryption]: true,
     [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
     [FuseV1Options.EnableNodeCliInspectArguments]: false,
     [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
     [FuseV1Options.OnlyLoadAppFromAsar]: true,
+    [FuseV1Options.LoadBrowserProcessSpecificV8Snapshot]: false,
+    [FuseV1Options.GrantFileProtocolExtraPrivileges]: true,
   });
   vmpSign(context);
   if (context.electronPlatformName !== "darwin") return;
