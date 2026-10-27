@@ -142,8 +142,6 @@ export type ControllerEvent =
   | { type: "cursor-move"; dx: number; dy: number }
   /** A at the pointer: a left click, or a right click when A was pressed twice in a row. */
   | { type: "cursor-click"; button?: "left" | "right" }
-  /** The D-pad took over: the pointer goes away until the stick moves it again. */
-  | { type: "cursor-hide" }
   /** The right stick: wheel notches down (positive) and to the right (`sideways`, positive). */
   | { type: "scroll"; notches: number; sideways?: number }
   | { type: "connected"; connected: boolean; family?: "xbox" | "playstation" | "switch" | "generic" };
