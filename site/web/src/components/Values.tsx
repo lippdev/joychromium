@@ -16,7 +16,7 @@ export function Values() {
     <section className="values" id="valores">
       <header className="section-head">
         <h2>O que não muda</h2>
-        <p>Três compromissos que valem para toda versão, da primeira beta em diante.</p>
+        <p>Três compromissos que valem para toda versão, da primeira alpha em diante.</p>
       </header>
       <div className="chips" role="tablist" aria-label="Compromissos">
         {VALUES.map((item, i) => (

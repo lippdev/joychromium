@@ -42,9 +42,8 @@ export function SignupForm({ id }: { id: string }) {
         >
           <span className="done-check" aria-hidden="true">✓</span>
           <div>
-            <strong>{state.already ? "Você já está na lista." : "Você está dentro."}</strong>
-            {state.position > 0 && <span> Sua posição na fila do beta: <b>nº {state.position}</b>.</span>}
-            <span> O convite chega por e-mail quando a próxima build sair.</span>
+            <strong>{state.already ? "Você já está na lista." : "Combinado."}</strong>
+            <span> O e-mail chega quando a próxima versão sair.</span>
           </div>
         </motion.div>
       ) : (
@@ -71,7 +70,7 @@ export function SignupForm({ id }: { id: string }) {
           />
           <input className="hp" tabIndex={-1} autoComplete="off" aria-hidden="true" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
           <button type="submit" disabled={state.kind === "loading"}>
-            {state.kind === "loading" ? <span className="spinner" aria-label="Enviando" /> : "Quero testar"}
+            {state.kind === "loading" ? <span className="spinner" aria-label="Enviando" /> : "Me avise"}
           </button>
           <p className="signup-msg" id={`msg-${id}`} role="alert">{state.kind === "error" ? state.message : ""}</p>
         </motion.form>

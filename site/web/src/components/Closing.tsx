@@ -1,19 +1,20 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { DOWNLOADS, RELEASE, REPO, SHORT } from "../release";
 import { GitHubIcon } from "./Icons";
 import { SignupForm } from "./SignupForm";
 
 const FAQ = [
-  { q: "Em que sistema funciona?", a: "Windows 10 e 11, em PCs x64 e ARM. Linux, Steam Deck e macOS estão no roteiro, depois do beta." },
+  { q: "Em que sistema funciona?", a: "Windows 10 e 11, em PCs x64 e ARM. macOS, Linux e Steam Deck estão no roadmap, logo acima." },
   { q: "Quanto custa?", a: "Nada. O JoyChromium é gratuito, sem conta e sem assinatura." },
-  { q: "Netflix, Prime Video e Disney+ funcionam?", a: "O motor tem o Widevine, o DRM desses serviços, com a assinatura que eles exigem no Windows. Validar cada serviço na TV é justamente parte do beta." },
+  { q: "O Windows mostrou um aviso ao abrir o instalador. É normal?", a: "É. O instalador não tem assinatura digital, então o SmartScreen avisa. Clique em \"Mais informações\" e depois em \"Executar assim mesmo\"." },
+  { q: "Netflix, Prime Video e Disney+ funcionam?", a: "Ainda não. Esses serviços usam o Widevine, e o módulo de DRM ainda não vem assinado nesta build. Está nas próximas versões do roadmap." },
   { q: "E o YouTube?", a: "Funciona, inclusive a versão de TV do YouTube, em que o D-pad vira as setas nativas do site." },
   { q: "Preciso de um controle específico?", a: "Não. Xbox, PlayStation, Switch Pro, 8BitDo e controles genéricos funcionam. Mouse e teclado continuam funcionando também." },
-  { q: "O que eu recebo ao entrar no beta?", a: "Um e-mail com o instalador quando cada build de teste sair, e um canal para mandar o que achou. Nada além disso." },
+  { q: "Como eu atualizo?", a: "O alpha ainda não se atualiza sozinho: cada versão nova sai nas releases do GitHub e se instala por cima. Deixe o e-mail no fim da página para saber quando sair." },
 ];
 
 const STORY = "https://filipemoreira.top/blog/joychromium-web-com-controle";
-const REPO = "https://github.com/lippdev/joychromium";
 
 export function Closing() {
   const [open, setOpen] = useState<number | null>(0);
@@ -51,10 +52,28 @@ export function Closing() {
         </div>
       </section>
 
-      <section className="beta" id="beta">
-        <h2>Entre no beta</h2>
-        <p>Os convites de cada rodada de teste saem por ordem de inscrição. Deixe o e-mail e guarde o seu lugar na fila.</p>
-        <SignupForm id="beta" />
+      <section className="get" id="baixar" aria-labelledby="get-title">
+        <p className="get-badge"><span className="pad-live" aria-hidden="true" /> Alpha {SHORT} · Windows 10 e 11</p>
+        <h2 id="get-title">Baixe o alpha</h2>
+        <p>É a primeira build pública: espere arestas e conte o que quebrar. Escolha o instalador do seu PC.</p>
+        <div className="get-options">
+          {DOWNLOADS.map((d) => (
+            <a key={d.id} className={`get-card ${d.id === "x64" ? "get-main" : ""}`} href={d.href}>
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <span><strong>{d.name}</strong><span>{d.note}</span></span>
+            </a>
+          ))}
+        </div>
+        <ul className="get-notes">
+          <li>Não se atualiza sozinho ainda: as versões novas saem nas <a href={`${REPO}/releases`} target="_blank" rel="noreferrer">releases</a>.</li>
+          <li>Netflix, Prime e outros serviços com Widevine ainda não tocam.</li>
+          <li>O SmartScreen pode avisar: <b>Mais informações → Executar assim mesmo</b>.</li>
+        </ul>
+        <div className="get-notify">
+          <h3>Avise-me da próxima versão</h3>
+          <p>Um e-mail quando cada build nova sair. Nada além disso.</p>
+          <SignupForm id="avisos" />
+        </div>
       </section>
 
       <footer className="foot">
@@ -62,12 +81,13 @@ export function Closing() {
           <div className="foot-brand">
             <p className="foot-name">JoyChromium</p>
             <p className="foot-tagline">Um navegador para a TV que você usa só com o controle. Grátis, com o código à vista.</p>
-            <a className="btn btn-light" href="#beta">Entrar no beta <span aria-hidden="true">→</span></a>
+            <a className="btn btn-light" href="#baixar">Baixar o alpha <span aria-hidden="true">→</span></a>
           </div>
           <nav className="foot-cols" aria-label="Rodapé">
             <div>
               <h2>Projeto</h2>
               <a href={REPO} target="_blank" rel="noreferrer"><GitHubIcon size={14} /> GitHub</a>
+              <a href={RELEASE} target="_blank" rel="noreferrer">Notas da versão {SHORT}</a>
               <a href={`${REPO}/releases`} target="_blank" rel="noreferrer">Releases</a>
               <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">Reportar um problema</a>
             </div>
@@ -75,6 +95,7 @@ export function Closing() {
               <h2>Conhecer</h2>
               <a href="#como">Como funciona</a>
               <a href="#controle">Controle</a>
+              <a href="#roadmap">Roadmap</a>
               <a href="#faq">Perguntas</a>
             </div>
             <div>

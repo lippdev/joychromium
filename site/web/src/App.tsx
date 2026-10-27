@@ -6,6 +6,7 @@ import { Hero } from "./components/Hero";
 import { Nav } from "./components/Nav";
 import { PadLab } from "./components/PadLab";
 import { Arrow, Hand } from "./components/Pointer";
+import { Roadmap } from "./components/Roadmap";
 import { Values } from "./components/Values";
 import { startPad, usePadConnected } from "./hooks/pad";
 
@@ -32,6 +33,7 @@ export function App() {
         <Features />
         <PadLab />
         <Values />
+        <Roadmap />
         <Closing />
       </main>
       <div className={`pad-pointer ${hand ? "hand" : ""}`} ref={pointer} aria-hidden="true">{hand ? <Hand /> : <Arrow />}</div>
