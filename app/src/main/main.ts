@@ -11,6 +11,7 @@ import { installProtocolHandler, registerScheme } from "./protocol";
 import { Shell } from "./shell";
 import { SettingsStore } from "./store";
 import { ensureTvIdentity } from "./tvIdentity";
+import { chromeUserAgent } from "../shared/streamingUa";
 import { Updater } from "./updater";
 import { diagnosticsLines } from "../shared/diagnostics";
 import { firstScreenLine } from "../shared/metrics";
@@ -121,8 +122,9 @@ async function start(): Promise<void> {
   if (doh) app.configureHostResolver({ secureDnsMode: "secure", secureDnsServers: [doh] });
 
   // The Chrome agent without the marker is what a streaming host gets in place of the TV one (shared/streamingUa.ts).
-  const desktopUserAgent = session.defaultSession.getUserAgent();
-  session.defaultSession.setUserAgent(ensureTvIdentity(desktopUserAgent));
+  const electronUserAgent = session.defaultSession.getUserAgent();
+  const desktopUserAgent = chromeUserAgent(electronUserAgent);
+  session.defaultSession.setUserAgent(ensureTvIdentity(electronUserAgent));
   globalThis.joy.userAgent = session.defaultSession.getUserAgent();
 
   try {

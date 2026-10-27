@@ -15,7 +15,7 @@ repositório). Toda linha da tabela está como *a medir*.
 - Lista curada em `app/src/shared/streamingUa.ts` (`STREAMING_HOSTS`): host exato ou subdomínio. Um domínio que só
   *parece* um da lista (`netflix.com.exemplo`) não casa.
 - **Configurações → Mídia e DRM → "UA de desktop nos serviços de streaming"** (`streamingDesktopUa` em
-  `settings.json`, desligado por padrão). Ligado, um host da lista carrega com o UA do Chromium **sem** o marcador de
+  `settings.json`, **ligado por padrão** desde 27/10/2026). Ligado, um host da lista carrega com o UA do Chrome, sem os tokens `Electron/` e `JoyChromium/` e **sem** o marcador de
   TV; todo o resto continua com o UA de TV.
 - A decisão é por documento: vale para o carregamento que o shell inicia e para um link clicado dentro da página.
   Outras abas e outros hosts da mesma sessão não mudam.
@@ -77,8 +77,10 @@ Todas as linhas estão **a medir**. `—` significa que ninguém mediu ainda.
 
 ## Decisão
 
-- Enquanto nenhuma linha mostrar ganho, `streamingDesktopUa` fica `false` (o padrão) e `STREAMING_HOSTS` não muda.
-  O UA de TV é o que entrega a interface de 10 pés e é o que os atalhos da tela inicial esperam.
+- **27/10/2026:** com a CDM assinada (0.1.1-alpha), o Prime Video recusou tocar com o UA de TV: erro 7132, "versão
+  antiga ou incompatível deste navegador". Por isso `streamingDesktopUa` passou a `true` por padrão, a migração 5 → 6
+  liga a regra nos perfis existentes, e o UA de desktop passou a ser o do Chrome, sem os tokens do Electron e do app.
+- Fora de `STREAMING_HOSTS`, o UA de TV continua valendo: é o que entrega a interface de 10 pés (`youtube.com/tv`).
 - Uma linha com ganho mantém o host na lista, com data e autor registrados. Se o ganho valer para todo mundo, o
   padrão de `defaultSettings()` passa a `true` no mesmo PR que atualiza a tabela.
 - Um host sem ganho sai de `STREAMING_HOSTS`; a tabela registra que os dois lados empataram.

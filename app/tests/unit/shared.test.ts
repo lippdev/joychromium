@@ -93,10 +93,10 @@ describe("settings", () => {
     expect(parseSettings("garbage")).toEqual(d);
   });
   it("parses the per-site streaming agent and migrates an older file", () => {
-    expect(defaultSettings().streamingDesktopUa).toBe(false);
-    expect(parseSettings({ schemaVersion: 2, httpsOnly: false }).streamingDesktopUa).toBe(false);
-    expect(parseSettings({ streamingDesktopUa: true }).streamingDesktopUa).toBe(true);
-    expect(parseSettings({ streamingDesktopUa: "yes" }).streamingDesktopUa).toBe(false);
+    expect(defaultSettings().streamingDesktopUa).toBe(true);
+    expect(parseSettings({ schemaVersion: 5, streamingDesktopUa: false }).streamingDesktopUa).toBe(true);
+    expect(parseSettings({ schemaVersion: 6, streamingDesktopUa: false }).streamingDesktopUa).toBe(false);
+    expect(parseSettings({ schemaVersion: 6, streamingDesktopUa: "yes" }).streamingDesktopUa).toBe(true);
     expect(migrateSettings({ schemaVersion: 2, httpsOnly: false })).toMatchObject({ schemaVersion: SETTINGS_SCHEMA_VERSION, httpsOnly: false });
   });
   it("keeps vibration off unless the user asks for it", () => {

@@ -54,8 +54,9 @@ async function followFromPage(url: string): Promise<string> {
 
 test("a listed streaming host gets the desktop agent and every other host keeps the TV one", async () => {
   await launch({ streamingDesktopUa: true });
-  const desktop = (await app.evaluate(() => globalThis.joy.userAgent)).replace(` ${TV_MARKER}`, "");
+  const desktop = (await app.evaluate(() => globalThis.joy.userAgent)).replace(` ${TV_MARKER}`, "").replace(/\s(?:Electron|JoyChromium)\/\S+/gi, "");
   expect(desktop).not.toContain(TV_MARKER);
+  expect(desktop).not.toMatch(/Electron\//);
 
   expect(await openAndRead("https://www.netflix.com/browse")).toBe(desktop);
   const outside = await openAndRead("https://probe.example/");
@@ -68,6 +69,6 @@ test("a listed streaming host gets the desktop agent and every other host keeps 
 });
 
 test("with the rule off, the TV identity reaches the streaming hosts too", async () => {
-  await launch({});
+  await launch({ schemaVersion: 6, streamingDesktopUa: false });
   expect(await openAndRead("https://www.netflix.com/")).toContain(TV_MARKER);
 });
