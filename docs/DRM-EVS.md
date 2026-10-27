@@ -1,5 +1,7 @@
 # Widevine de produção: a assinatura VMP (EVS)
 
+> **Escopo:** procedimentos de assinatura de DRM preservados como referência. A assinatura ou presença da CDM, por si só, não prova reprodução de streaming no alpha Windows. Veja [STATUS.md](STATUS.md).
+
 O JoyChromium distribui o motor castLabs ECS, que instala a CDM Widevine, e no Linux isso basta: a CDM do Linux não usa VMP. Em **Windows e macOS** o caminho é outro — o Netflix, o Prime Video e os demais serviços só entregam licença para um app cuja CDM esteja com uma assinatura VMP válida. Quem emite essa assinatura é o serviço **EVS** da castLabs: gratuito, mas exige conta.
 
 Este documento é o procedimento inteiro. Ele é a parte do E10-02 que sobra depois do código, que já está no repositório.

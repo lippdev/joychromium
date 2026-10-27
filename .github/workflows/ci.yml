@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -24,34 +24,12 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: app/package-lock.json
-      - name: RPM tools (Linux only, for the rpm target)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y rpm
-        working-directory: .
-      # The AT-SPI half of screen-reader.spec.ts reads the tree Orca reads, and orca.spec.ts has Orca speak the
-      # same tree into speech-dispatcher's dummy module so the words can be asserted. Without the packages both
-      # skip; with them the capture runs on every pull request.
-      - name: Screen reader (Linux only)
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y python3-pyatspi python3-gi gir1.2-atspi-2.0 at-spi2-core dbus orca speech-dispatcher speech-dispatcher-audio-plugins
-        working-directory: .
       - run: npm ci
       - run: npm run typecheck
       - name: Unit tests
         run: npm test
       - name: End-to-end (real Electron, Windows)
         if: runner.os == 'Windows'
-        run: npm run test:e2e
-      - name: End-to-end (real Electron, Linux under Xvfb)
-        if: runner.os == 'Linux'
-        run: |
-          # Electron's SUID sandbox needs a root-owned helper; npm unpacks it without the setuid bit. Without it a plain
-          # second launch (launch.spec.ts) aborts, and so does the Wayland smoke below.
-          sudo chown root:root node_modules/electron/dist/chrome-sandbox
-          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
-          xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" npm run test:e2e
-      - name: End-to-end (real Electron, macOS)
-        if: runner.os == 'macOS'
         run: npm run test:e2e
       # The two time budgets of the PRD, section 11, as the e2e measured them on this runner. It prints on every run,
       # so a slow machine leaves a number in the log instead of a mystery; the file rides along in the job artifact.
@@ -62,49 +40,10 @@ jobs:
           if(!fs.existsSync(p)){console.log('no metrics.json: the e2e did not reach the metrics spec');process.exit(0);}
           for(const m of JSON.parse(fs.readFileSync(p,'utf8')).measured)
           console.log(m.name + ': ' + m.valueMs + ' ms (goal ' + m.goalMs + ' ms, fails above ' + m.limitMs + ' ms)')"
-      # Native Wayland, no X11: a headless Weston compositor, DISPLAY unset, and the app has to boot and paint in it.
-      - name: Wayland smoke test (no XWayland)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y weston
-          npm run build
-          node scripts/wayland-smoke.mjs
       - name: Package (no publish) to prove the installers build
         run: npm run build && npx electron-builder --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # A Mac tells ad-hoc from broken by verifying the seal; the second half prints what Gatekeeper says, since a
-      # build without a Developer ID is expected to be rejected there.
-      - name: Check the macOS bundle (signature valid, notarization absent)
-        if: runner.os == 'macOS'
-        run: |
-          set -euo pipefail
-          app=$(ls -d release/mac*/JoyChromium.app | head -1)
-          codesign --verify --deep --strict --verbose=2 "$app"
-          codesign -dv --verbose=2 "$app" 2>&1 | grep -E "Identifier|Signature|TeamIdentifier"
-          echo "--- Gatekeeper (ad-hoc build, not notarized: rejection here is expected)"
-          spctl -a -vvv -t exec "$app" 2>&1 || true
-      # The installers build; this proves one of them installs and the installed app actually starts.
-      - name: Smoke test the installed package (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          # apt (not dpkg) so the declared dependencies are pulled in, the way people install it.
-          sudo apt-get update
-          sudo apt-get install -y ./release/*-amd64.deb
-          profile=$(mktemp -d)
-          echo '{"onboardingCompleted":true,"startup":"NewTab","windowMode":"window"}' > "$profile/settings.json"
-          JOYCHROMIUM_DATA="$profile" xvfb-run --auto-servernum --server-args="-screen 0 1600x900x24" joychromium &
-          app=$!
-          started=no
-          for _ in $(seq 1 40); do
-            if grep -qs "starting" "$profile"/logs/*.log 2>/dev/null; then started=yes; break; fi
-            sleep 1
-          done
-          kill "$app" 2>/dev/null || true
-          grep -h "starting" "$profile"/logs/*.log || true
-          [ "$started" = yes ] || { echo "The installed app never started"; exit 1; }
       - name: Smoke test the installed package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -127,18 +66,11 @@ jobs:
           Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           Get-ChildItem (Join-Path $profile 'logs') -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object { Get-Content $_.FullName -TotalCount 1 }
           if (-not $started) { Write-Error 'The installed app never started'; exit 1; }
-      # macOS is not in this check: the app installed from the dmg runs in the runner but writes no log at all
-      # (it never reaches its first line), while the e2e in the same job launches Electron fine. The dmg is still
-      # built here, and docs/RELEASE.md keeps the manual check for the machine it ships to.
       - uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.os }}
           path: |
             app/release/*.exe
-            app/release/*.AppImage
-            app/release/*.deb
-            app/release/*.rpm
-            app/release/*.dmg
             app/release/*.zip
             app/test-results/metrics.json
           if-no-files-found: ignore

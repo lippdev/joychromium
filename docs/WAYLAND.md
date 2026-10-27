@@ -1,5 +1,7 @@
 # Wayland, X11 e Steam Deck
 
+> **Escopo:** referência técnica para o roadmap Linux/Steam Deck. Wayland, Linux e Steam Deck não são alvos do alpha atual e não bloqueiam o alpha Windows. Veja [ROADMAP.md](ROADMAP.md).
+
 O JoyChromium roda nas duas plataformas gráficas do Linux sem código condicional no app: quem escolhe é o Chromium, e o Electron expõe a escolha por `--ozone-platform`. O que o repositório garante é que o caminho Wayland é testado a cada PR, e não só quando alguém tem uma máquina com GNOME ou KDE.
 
 ## O que o CI prova em todo PR
