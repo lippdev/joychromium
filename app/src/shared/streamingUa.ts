@@ -2,7 +2,7 @@ import { hostOf } from "./security";
 
 /**
  * Streaming hosts that may ask for a rendition from the user agent. An entry covers its subdomains, and a host
- * belongs here only when a row in docs/DRM-UAS.md recorded a better rendition with the desktop agent.
+ * belongs here when the desktop agent plays better there (docs/DRM-UAS.md).
  */
 export const STREAMING_HOSTS: readonly string[] = [
   "netflix.com",
@@ -21,8 +21,16 @@ export interface UserAgentChoice {
   desktop: string;
   /** The same agent with the TV marker appended. */
   tv: string;
-  /** Whether a listed host gets the desktop agent. Off until a measurement shows a gain. */
+  /** Whether a listed host gets the desktop agent. On by default: Prime Video refuses to play with the TV one. */
   enabled: boolean;
+}
+
+/**
+ * Chromium's agent as Chrome sends it: Electron appends its own and the app's tokens, and Prime Video answers an agent
+ * that carries them with error 7132 ("old or incompatible browser").
+ */
+export function chromeUserAgent(agent: string): string {
+  return agent.replace(/\s(?:Electron|JoyChromium)\/\S+/gi, "");
 }
 
 /** Exact host or a subdomain of it. "netflix.com.evil.example" is neither and does not match. */

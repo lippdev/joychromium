@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { isStreamingHost, matchesHost, STREAMING_HOSTS, userAgentForUrl } from "../../src/shared/streamingUa";
+import { chromeUserAgent, isStreamingHost, matchesHost, STREAMING_HOSTS, userAgentForUrl } from "../../src/shared/streamingUa";
 
 const desktop = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/150.0.0.0 Safari/537.36";
 const tv = `${desktop} JoyChromiumTV/1.0 (TV; SmartTV)`;
 
 describe("per-site streaming user agent", () => {
+  it("drops the Electron and app tokens, as Chrome's own agent has neither", () => {
+    expect(chromeUserAgent("Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) JoyChromium/0.1.1-alpha Chrome/152.0.0.0 Electron/44.9.3 Safari/537.36"))
+      .toBe("Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36");
+    expect(chromeUserAgent(tv)).toBe(tv);
+  });
   it("matches a listed host and its subdomains only", () => {
     expect(matchesHost("netflix.com", "netflix.com")).toBe(true);
     expect(matchesHost("www.netflix.com", "netflix.com")).toBe(true);

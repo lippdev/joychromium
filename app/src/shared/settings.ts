@@ -182,7 +182,7 @@ export function defaultSettings(): AppSettings {
     crashReports: false,
     vibration: false,
     sitePermissions: {},
-    streamingDesktopUa: false,
+    streamingDesktopUa: true,
     newTabBackground: "Wallpaper",
     newTabSites: true,
   };
@@ -194,7 +194,7 @@ const bool = (value: unknown, fallback: boolean): boolean => (typeof value === "
 const webUrl = (value: unknown, fallback: string): string => (isWebUrl(value as string) ? (value as string) : fallback);
 
 /** Bumped whenever a stored file needs a new shape; migrations below bring older files forward. */
-export const SETTINGS_SCHEMA_VERSION = 5;
+export const SETTINGS_SCHEMA_VERSION = 6;
 
 /**
  * Old versions this app wrote. The file is plain JSON with every field optional, so the only migrations needed are
@@ -205,6 +205,8 @@ export const SETTINGS_SCHEMA_VERSION = 5;
  *           docs/DRM-UAS.md justifies turning it on. Nothing to rewrite — a missing key parses as off.
  *   3 -> 4  haptic feedback arrived, off: an older file gets the switch written as false, so the living room stays
  *           quiet until someone turns it on.
+ *   5 -> 6  the streaming user agent became the default: Prime Video refuses the TV agent (error 7132). It was off for
+ *           every profile, never a choice anyone made, so every older file gets it turned on.
  */
 export function migrateSettings(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;
@@ -219,6 +221,7 @@ export function migrateSettings(raw: unknown): unknown {
   // A list the user edited is theirs and stays; the untouched old defaults go.
   if (version < 5 && Array.isArray(migrated.shortcuts)
     && migrated.shortcuts.map((s) => (s as { url?: unknown })?.url).join("|") === RETIRED_SHORTCUT_URLS.join("|")) migrated.shortcuts = [];
+  if (version < 6) migrated.streamingDesktopUa = true;
   migrated.schemaVersion = SETTINGS_SCHEMA_VERSION;
   return migrated;
 }
