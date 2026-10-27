@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 import { controllerFamily, type ControllerFamily } from "../../shared/controllerGlyphs";
-import { Button, DOUBLE_PRESS_MS, directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
+import { Button, DOUBLE_PRESS_MS, STICK_DEADZONE, directionOf, stickToScroll, stickToVelocity, type Direction } from "../../shared/controllerInput";
 import { activePad, padsInUse, startedUsing, type PadSample } from "../../shared/controllerSelection";
 import { GAMEPAD_POLL_MS, gamepadPoll, STICK_INTERVAL_MS } from "../../shared/gamepadLoop";
 import type { ShellState } from "../../shared/ipc";
@@ -106,6 +106,10 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         bridge().controller({ type: "connected", connected: true, family: family.current });
       }
 
+      // The pad is what is driving: its focus moves must be drawn (tokens.css), whatever the mouse did before.
+      if (pad.buttons.some((b) => b.pressed) || pad.axes.some((axis) => Math.abs(axis) > STICK_DEADZONE)) {
+        document.documentElement.dataset.input = "pad";
+      }
       const s = stateRef.current;
       const openOverlay = overlayRef.current;
       const overlayOpen = openOverlay !== "none" || Boolean(s.keyboard) || Boolean(s.permission);
@@ -217,6 +221,10 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
     }
     // Up from the top of the page: the main process hands the focus over and the address field takes it.
     bridge().onFocusChrome(() => document.getElementById("address")?.focus());
+    // A click or a key on a real keyboard hands focus drawing back to the browser's own rules.
+    const notPad = (): void => { delete document.documentElement.dataset.input; };
+    addEventListener("pointerdown", notPad, true);
+    addEventListener("keydown", notPad, true);
     resume();
     const visibility = (): void => {
       if (!document.hidden) resume();
@@ -228,6 +236,8 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
     });
     return () => {
       stop();
+      removeEventListener("pointerdown", notPad, true);
+      removeEventListener("keydown", notPad, true);
       document.removeEventListener("visibilitychange", visibility);
       stopActivity();
     };

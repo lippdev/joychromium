@@ -74,7 +74,11 @@ button { cursor: pointer; }
 
 :focus { outline: none; }
 
-:focus-visible {
+/* The controller moves the focus by script, and after any mouse click Chromium stops drawing :focus-visible for that:
+   the D-pad then walked the keyboard with nothing lit. While the pad is in use (data-input, set by gamepad.ts) every
+   focus is drawn. A dialog that takes the focus only to be announced (tabindex -1) gets no ring. */
+:focus-visible,
+:root[data-input="pad"] :focus:not([tabindex="-1"]) {
   outline: var(--focus-ring) solid var(--accent);
   outline-offset: calc(2 * var(--u));
 }
