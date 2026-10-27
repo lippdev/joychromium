@@ -78,6 +78,12 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git tag -a "v${{ needs.decide.outputs.version }}" -m "JoyChromium ${{ needs.decide.outputs.version }}"
           git push origin "v${{ needs.decide.outputs.version }}"
+      # electron-builder uploads each architecture in parallel; with no release to find, each upload creates its own and
+      # the tag ends up with two. This draft is the one release they all upload to; `notes` publishes it.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "v${{ needs.decide.outputs.version }}" --draft --verify-tag --title "${{ needs.decide.outputs.version }}" --notes ""
 
   build:
     needs: [decide, tag]
@@ -145,7 +151,7 @@ jobs:
             | node app/scripts/release-notes.mjs "${previous:-}" "${VERSION#v}" > notes.md
           # Alpha and other prerelease builds stay out of the installed app's latest update channel.
           if [ "$PRERELEASE" = "true" ]; then
-            gh release edit "$VERSION" --notes-file notes.md --prerelease --latest=false
+            gh release edit "$VERSION" --notes-file notes.md --draft=false --prerelease --latest=false
           else
-            gh release edit "$VERSION" --notes-file notes.md
+            gh release edit "$VERSION" --notes-file notes.md --draft=false
           fi
