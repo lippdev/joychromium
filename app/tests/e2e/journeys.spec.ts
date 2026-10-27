@@ -324,12 +324,12 @@ test("first boot: onboarding tests the controller, then language and search engi
   const saved = () => JSON.parse(readFileSync(join(h.data, "settings.json"), "utf8"));
   await expect.poll(() => saved().searchEngine?.name).toBe("DuckDuckGo");
 
-  await focusOn(h, "page", "document.getElementById('next')", "Next"); // Next: the new-tab step
-  await press(h, Pad.A);
-  await expect.poll(() => pageEval<string>(h, "document.querySelector('.step.show').dataset.step")).toBe("3");
-  await focusOn(h, "page", "document.getElementById('next')", "Next"); // Next: the summary
-  await press(h, Pad.A);
-  await expect.poll(() => pageEval<string>(h, "document.querySelector('.step.show').dataset.step")).toBe("4");
+  // Controls, tabs, address, new tab, privacy and the last screen are all Next.
+  for (const step of ["3", "4", "5", "6", "7", "8"]) {
+    await focusOn(h, "page", "document.getElementById('next')", "Next");
+    await press(h, Pad.A);
+    await expect.poll(() => pageEval<string>(h, "document.querySelector('.step.show').dataset.step")).toBe(step);
+  }
   await focusOn(h, "page", "document.getElementById('next')", "Start");
   await press(h, Pad.A);
 
