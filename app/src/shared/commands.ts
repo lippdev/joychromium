@@ -63,6 +63,7 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
     case "new-tab":
     case "reopen-tab":
     case "toggle-favorite":
+    case "toggle-adblock":
     case "fullscreen-toggle":
     case "window-mode":
     case "find-close":

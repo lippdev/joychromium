@@ -2,160 +2,364 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Bem-vindo</title>
+<title>JoyChromium</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="design/tokens.css">
 <link rel="stylesheet" href="pages.css">
 <style>
-  body { display: grid; place-items: center; min-height: 100vh; }
-  .card { width: min(calc(960 * var(--u)), 92vw); padding: var(--space-6); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
-  .steps { display: flex; gap: var(--space-1); margin-bottom: var(--space-5); }
-  .steps span { flex: 1; height: calc(4 * var(--u)); border-radius: calc(2 * var(--u)); background: var(--border); }
-  .steps span.done { background: var(--accent); }
-  .step { display: none; }
-  .step.show { display: block; }
-  .pad { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius); background: var(--input); margin: var(--space-4) 0; }
-  .pad .dot { width: calc(18 * var(--u)); height: calc(18 * var(--u)); border-radius: 50%; background: var(--faint); }
-  .pad.found { border-color: var(--accent); }
-  .pad.found .dot { background: var(--accent); box-shadow: 0 0 0 calc(6 * var(--u)) color-mix(in srgb, var(--accent) 25%, transparent); }
-  .nav { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-5); }
-  .opt { display: flex; gap: var(--space-3); align-items: center; width: 100%; padding: var(--space-3) var(--space-4); border: 2px solid var(--border); border-radius: var(--radius); background: var(--input); color: var(--text); text-align: left; }
-  .opt.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--input)); }
-  .swatch { width: calc(28 * var(--u)); height: calc(28 * var(--u)); border-radius: 50%; border: 3px solid; flex: none; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--u)), 1fr)); gap: var(--space-3); }
+  body { display:grid; place-items:center; min-height:100vh; padding:var(--space-4); box-sizing:border-box; }
+  .card { width:min(calc(960 * var(--u)), 96vw); max-height:calc(100vh - 2 * var(--space-4)); overflow:auto; padding:var(--space-6); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface); box-sizing:border-box; }
+  .steps { display:flex; gap:var(--space-1); margin-bottom:var(--space-5); }
+  .steps span { flex:1; height:calc(4 * var(--u)); border-radius:calc(2 * var(--u)); background:var(--border); }
+  .steps span.done { background:var(--accent); }
+  .step { display:none; min-height:calc(230 * var(--u)); padding:0; border:0; background:none; margin:0; }
+  .step + .step { margin-top:0; }
+  .step.show { display:block; }
+  .stage { position:relative; min-height:calc(230 * var(--u)); }
+  .stage > .step { position:absolute; inset:0 auto auto 0; width:100%; box-sizing:border-box; }
+  .provider-icon, .newtab-icon { box-sizing:content-box; width:calc(24 * var(--u)); height:calc(24 * var(--u)); padding:calc(5 * var(--u)); border-radius:calc(8 * var(--u)); background:#F4F5F7; object-fit:contain; flex:none; }
+  .pad { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--border); border-radius:var(--radius); background:var(--input); margin:var(--space-4) 0; }
+  .pad .dot { width:calc(14 * var(--u)); height:calc(14 * var(--u)); border-radius:50%; background:var(--faint); flex:none; }
+  .pad.found { border-color:var(--accent); } .pad.found .dot { background:var(--accent); }
+  .nav { display:flex; justify-content:space-between; gap:var(--space-3); margin-top:var(--space-5); }
+  .opt { display:flex; gap:var(--space-3); align-items:center; width:100%; min-height:calc(50 * var(--u)); padding:var(--space-3) var(--space-4); border:2px solid var(--border); border-radius:var(--radius); background:var(--input); color:var(--text); text-align:left; }
+  .opt.active { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--input)); }
+  .swatch { width:calc(28 * var(--u)); height:calc(28 * var(--u)); border-radius:50%; border:3px solid; flex:none; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,calc(200 * var(--u))),1fr)); gap:var(--space-3); }
+  .keys { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-2); margin-top:var(--space-4); }
+  .keyhint { border:1px solid var(--border); border-radius:var(--radius-sm); padding:var(--space-2) var(--space-3); color:var(--muted); font-size:var(--text-sm); line-height:1.45; }
+  .practice { margin-top:var(--space-4); }
+  .practice .grid { margin-top:var(--space-2); }
+  .nav { position:sticky; bottom:calc(-1 * var(--space-6)); padding:var(--space-3) 0; background:var(--surface); }
+  kbd { display:inline-block; min-width:1.5em; margin-right:.35em; padding:.08em .35em; border:1px solid var(--border); border-radius:4px; color:var(--text); text-align:center; font:600 .9em system-ui; }
+  .counter { color:var(--muted); font-size:var(--text-sm); margin-bottom:var(--space-2); }
+  @media (max-width:600px) { .card { padding:var(--space-4); } .step { min-height:0; } .keys { grid-template-columns:1fr; } .nav { bottom:calc(-1 * var(--space-4)); } }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="steps"><span class="done"></span><span></span><span></span><span></span><span></span></div>
-
-  <div class="step show" data-step="0">
+<main class="card" aria-label="JoyChromium onboarding">
+  <div class="counter" id="counter" aria-live="polite"></div>
+  <div class="steps" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="stage" id="stage">
+  <section class="step show" data-step="0">
     <h1 data-i18n="welcome.title">Bem-vindo ao JoyChromium</h1>
     <p class="lead" data-i18n="welcome.lead">Um navegador feito para a TV e para o controle.</p>
-    <div class="choices" id="languages"></div>
-    <div class="pad" id="pad"><span class="dot"></span><span id="padText" data-i18n="welcome.pad">Aperte qualquer botão do controle</span></div>
-    <p class="lead">D-pad move · A escolhe · B volta. Teclado e mouse também funcionam.</p>
-  </div>
-
-  <div class="step" data-step="1">
-    <h1 data-i18n="settings.theme">Tema</h1>
-    <p class="lead">Dá para ajustar as cores depois, em Configurações.</p>
+    <h3 data-i18n="onboard.language">Idioma</h3><div class="choices" id="languages"></div>
+    <div class="pad" id="pad"><span class="dot"></span><span id="padText"></span></div>
+    <p class="lead" data-i18n="onboard.optional">Você pode seguir com controle, teclado ou mouse. Conectar um controle é opcional.</p>
+  </section>
+  <section class="step" data-step="1">
+    <h1 data-i18n="settings.theme">Tema</h1><p class="lead" data-i18n="onboard.theme">Escolha as cores da interface. Você pode trocar isso depois em Configurações.</p>
     <div class="grid" id="themes"></div>
-  </div>
-
-  <div class="step" data-step="2">
-    <h1 data-i18n="welcome.search">Mecanismo de busca</h1>
-    <p class="lead">Usado quando você digita algo que não é um endereço.</p>
+  </section>
+  <section class="step" data-step="2">
+    <h1 data-i18n="welcome.search">Mecanismo de busca</h1><p class="lead" data-i18n="onboard.searchEngine">Escolha o buscador usado quando você digita palavras em vez de um endereço. Você pode mudar depois em Configurações.</p>
     <div class="grid" id="engines"></div>
-  </div>
-
-  <div class="step" data-step="3">
-    <h1 data-i18n="settings.newTab">Nova aba abre</h1>
-    <p class="lead">Onde as abas novas começam. Você pode mudar depois.</p>
+  </section>
+  <section class="step" data-step="3">
+    <h1 data-i18n="onboard.controlsTitle">Navegue pela tela</h1><p class="lead" data-i18n="onboard.controlsLead">O controle pode mover o cursor ou navegar entre os elementos. Use o modo que ficar mais natural.</p>
+    <div class="keys" id="controlHints"></div>
+    <div class="practice"><p class="lead" data-i18n="onboard.practice">Pratique: use o D-pad para focar um cartão e confirme para ativá-lo. Isso não abre outra página.</p><div class="grid"><button class="opt practice-target" type="button" data-i18n="onboard.practiceOne">Cartão de exemplo A</button><button class="opt practice-target" type="button" data-i18n="onboard.practiceTwo">Cartão de exemplo B</button></div><p class="lead" id="practiceStatus" aria-live="polite"></p></div>
+    <p class="lead" id="mouseKeys"></p>
+  </section>
+  <section class="step" data-step="4">
+    <h1 data-i18n="onboard.tabsTitle">Abas e navegação</h1><p class="lead" data-i18n="onboard.tabsLead">Abra páginas em abas separadas e volte sem perder o que já estava aberto.</p>
+    <div class="keys" id="tabHints"></div>
+    <p class="lead" id="newTabAction"></p><p class="lead" id="favoriteHint"></p>
+  </section>
+  <section class="step" data-step="5">
+    <h1 data-i18n="onboard.addressTitle">Endereço ou pesquisa</h1><p class="lead" data-i18n="onboard.addressLead">Na barra superior, digite um endereço completo para abrir um site; digite palavras para pesquisar com seu buscador escolhido.</p>
+    <div class="keys" id="addressHints"></div>
+  </section>
+  <section class="step" data-step="6">
+    <h1 data-i18n="settings.newTab">Nova aba abre</h1><p class="lead" data-i18n="onboard.newTab">Escolha o que aparece ao abrir uma aba. A página inicial reúne busca, favoritos e histórico; também dá acesso às Configurações.</p>
     <div class="grid" id="newtab"></div>
+  </section>
+  <section class="step" data-step="7">
+    <h1 data-i18n="settings.adblock">Bloquear anúncios e rastreadores</h1><p class="lead" data-i18n="onboard.privacy">O escudo na barra abre o bloqueador. No menu, veja o estado e ligue ou desligue a proteção para o navegador.</p>
+    <div class="keys" id="privacyHints"></div>
+    <p class="lead" data-i18n="onboard.permissions">Permissões como câmera e microfone aparecem como uma pergunta. Se não reconhecer o pedido, negue. As opções de privacidade ficam em Configurações.</p>
+  </section>
+  <section class="step" data-step="8">
+    <h1 data-i18n="onboard.readyTitle">Tudo pronto</h1><p class="lead" data-i18n="onboard.readyLead">Se precisar, reveja ou ajuste essas opções em Configurações. Vamos navegar.</p>
+  </section>
   </div>
-
-  <div class="step" data-step="4">
-    <h1 data-i18n="settings.adblock">Bloquear anúncios e rastreadores</h1>
-    <p class="lead">Já vem ligado. Mantenha ligado para páginas mais limpas e rápidas.</p>
-    <p class="lead">Também ligados: somente HTTPS, proteção contra rastreamento, downloads perigosos bloqueados, câmera e microfone perguntando sempre.</p>
-  </div>
-
   <div class="nav">
-    <button class="ghost" id="back" style="visibility:hidden">Voltar</button>
-    <button class="primary" id="next" autofocus data-i18n="welcome.start">Começar</button>
+    <button class="ghost" id="back" style="visibility:hidden" data-i18n="welcome.back">Voltar</button>
+    <button class="primary" id="next" autofocus data-i18n="welcome.next">Próximo</button>
   </div>
-</div>
+</main>
 <script src="i18n.js"></script>
 <script>
-  let step = 0, presets = {}, engines = [], theme = null, engine = null, language = 'pt-BR';
+  const COPY = {
+    'pt-BR': {
+      'welcome.title': 'Bem-vindo ao JoyChromium', 'welcome.lead': 'Um navegador feito para a TV e para o controle.',
+      'welcome.next': 'Próximo', 'welcome.start': 'Começar', 'welcome.back': 'Voltar',
+      'settings.theme': 'Tema', 'welcome.search': 'Mecanismo de busca', 'settings.newTab': 'Nova aba abre',
+      'settings.adblock': 'Bloquear anúncios e rastreadores',
+      'onboard.language': 'Idioma',
+      'onboard.optional': 'Você pode seguir com controle, teclado ou mouse. Conectar um controle é opcional.',
+      'onboard.searchEngine': 'Escolha o buscador usado quando você digita palavras em vez de um endereço. Você pode mudar depois em Configurações.',
+      'onboard.theme': 'Escolha as cores da interface. Você pode trocar isso depois em Configurações.',
+      'onboard.controlsTitle': 'Navegue pela tela',
+      'onboard.controlsLead': 'O controle pode mover o cursor ou navegar entre os elementos. Use o modo que ficar mais natural.',
+      'onboard.practice': 'Pratique: use o D-pad para focar um cartão e confirme para ativá-lo. Isso não abre outra página.',
+      'onboard.practiceOne': 'Cartão de exemplo A', 'onboard.practiceTwo': 'Cartão de exemplo B',
+      'onboard.practiceDone': 'Boa! O cartão foi ativado sem sair do tutorial.',
+      'onboard.tabsTitle': 'Abas e navegação', 'onboard.tabsLead': 'Abra páginas em abas separadas e volte sem perder o que já estava aberto.',
+      'onboard.addressTitle': 'Endereço ou pesquisa',
+      'onboard.addressLead': 'Na barra superior, digite um endereço completo para abrir um site; digite palavras para pesquisar com seu buscador escolhido.',
+      'onboard.newTab': 'Escolha o que aparece ao abrir uma aba. A página inicial reúne busca, favoritos e histórico; também dá acesso às Configurações.',
+      'onboard.privacy': 'O escudo na barra abre o bloqueador. No menu, veja o estado e ligue ou desligue a proteção para o navegador.',
+      'onboard.permissions': 'Permissões como câmera e microfone aparecem como uma pergunta. Se não reconhecer o pedido, negue. As opções de privacidade ficam em Configurações.',
+      'onboard.readyTitle': 'Tudo pronto', 'onboard.readyLead': 'Se precisar, reveja ou ajuste essas opções em Configurações. Vamos navegar.',
+      'onboard.dpad': 'No navegador, o D-pad move o foco e o cursor acompanha. Em páginas, o resultado depende do modo escolhido.',
+      'onboard.left': 'Analógico esquerdo: move o cursor pela página e pela barra.',
+      'onboard.right': 'Analógico direito: rola a página. Clique no analógico direito ({r3}) para alternar Spatial, Cursor e Arrows. Em Arrows, o D-pad envia setas à página; sites de TV podem navegar melhor assim.',
+      'onboard.a': 'Ativa o item focado ou clica na posição do cursor, conforme o modo e o último controle usado.',
+      'onboard.b': 'Fecha menu/teclado; na página volta; na barra retorna à página.',
+      'onboard.tabs': 'Aba anterior / próxima.', 'onboard.closeTab': 'Fecha a aba atual; fechar a última aba também fecha o navegador.',
+      'onboard.lb': 'Volta no histórico.', 'onboard.rb': 'Avança no histórico.', 'onboard.reload': 'Recarrega a página.',
+      'onboard.y': 'Abre o teclado na barra de endereço.', 'onboard.menu': 'Fora do teclado, abre o menu do navegador.',
+      'onboard.search': 'No teclado na tela, {start} confirma; {x} apaga; {y} insere espaço; {lt} ativa Shift; clicar o analógico esquerdo ({l3}) troca a camada de teclas.',
+      'onboard.ad': 'Escudo: abre as opções do bloqueador e mostra se está ativo.',
+      'onboard.mouseKeys': 'Mouse: clique para ativar. Teclado físico: Tab/Shift+Tab move o foco e Enter ativa.',
+      'onboard.newTabAction': 'O botão + abre uma aba pronta para pesquisar ou digitar um endereço. O × em cada aba fecha aquela aba.',
+      'onboard.favorite': 'A estrela salva o site atual nos Favoritos. Na página inicial, abra Favoritos, Histórico ou Configurações.',
+      'onboard.count': 'Etapa {n} de 9', 'welcome.pad': 'Aperte um botão do controle para identificá-lo (opcional)', 'welcome.padFound': 'Controle detectado'
+    },
+    en: {
+      'welcome.title': 'Welcome to JoyChromium', 'welcome.lead': 'A browser made for the TV and the controller.',
+      'welcome.next': 'Next', 'welcome.start': 'Start', 'welcome.back': 'Back',
+      'settings.theme': 'Theme', 'welcome.search': 'Search engine', 'settings.newTab': 'New tab opens',
+      'settings.adblock': 'Block ads and trackers',
+      'onboard.language': 'Language',
+      'onboard.optional': 'Continue with a controller, keyboard, or mouse. A controller is optional.',
+      'onboard.searchEngine': 'Choose the search engine used when you enter words instead of a web address. You can change this later in Settings.',
+      'onboard.theme': 'Choose the interface colors. You can change them later in Settings.',
+      'onboard.controlsTitle': 'Move around the screen',
+      'onboard.controlsLead': 'The controller can move a cursor or move focus between controls. Choose the style that feels natural.',
+      'onboard.practice': 'Try it: use the D-pad to focus a card and confirm to activate it. This will not open another page.',
+      'onboard.practiceOne': 'Sample card A', 'onboard.practiceTwo': 'Sample card B',
+      'onboard.practiceDone': 'Nice! The card was activated without leaving the tutorial.',
+      'onboard.tabsTitle': 'Tabs and navigation', 'onboard.tabsLead': 'Keep pages in separate tabs and return without losing what you already opened.',
+      'onboard.addressTitle': 'Address or search',
+      'onboard.addressLead': 'In the top bar, enter a full address to open a site, or enter words to search with your selected search engine.',
+      'onboard.newTab': 'Choose what opens in a new tab. The start page brings together search, favorites, and history, and links to Settings.',
+      'onboard.privacy': 'The shield in the toolbar opens the blocker. Its menu shows the status and lets you turn protection on or off for the browser.',
+      'onboard.permissions': 'Camera and microphone requests appear as a prompt. Deny requests you do not recognize. Privacy options are in Settings.',
+      'onboard.readyTitle': 'You’re ready', 'onboard.readyLead': 'You can revisit these choices in Settings at any time. Let’s browse.',
+      'onboard.dpad': 'In browser controls, the D-pad moves focus and the cursor follows. On web pages, behavior depends on the selected mode.',
+      'onboard.left': 'Left stick: move the cursor across the page and toolbar.',
+      'onboard.right': 'Right stick: scroll the page. Click the right stick ({r3}) to cycle Spatial, Cursor, and Arrows. In Arrows, the D-pad sends arrow keys to the page; TV sites may work better this way.',
+      'onboard.a': 'Activates the focused item or clicks at the cursor, depending on mode and which control you used last.',
+      'onboard.b': 'Closes a menu/keyboard; goes back on a page; returns to the page from the toolbar.',
+      'onboard.tabs': 'Previous / next tab.', 'onboard.closeTab': 'Closes the current tab; closing the last tab also closes the browser.',
+      'onboard.lb': 'Go back in history.', 'onboard.rb': 'Go forward in history.', 'onboard.reload': 'Reload the page.',
+      'onboard.y': 'Opens the address bar keyboard.', 'onboard.menu': 'Outside the keyboard, opens the browser menu.',
+      'onboard.search': 'On the on-screen keyboard, {start} submits; {x} deletes; {y} types a space; {lt} holds Shift; clicking the left stick ({l3}) changes the key layer.',
+      'onboard.ad': 'Shield: open blocker options and see whether it is active.',
+      'onboard.mouseKeys': 'Mouse: click to activate. Physical keyboard: Tab/Shift+Tab moves focus and Enter activates.',
+      'onboard.newTabAction': 'The + button opens a tab ready for a search or address. The × on a tab closes that tab; closing the last one closes the browser.',
+      'onboard.favorite': 'The star saves the current site to Favorites. The start page links to Favorites, History, and Settings.',
+      'onboard.count': 'Step {n} of 9', 'welcome.pad': 'Press a controller button to identify it (optional)', 'welcome.padFound': 'Controller detected'
+    }
+  };
+
+  let step = 0;
+  let presets = {};
+  let theme = null;
+  let language = 'pt-BR';
+  let newTab = 'NewTabPage';
+  let family = 'generic';
+  let dictionary = {};
+  let transitionAnimation = null;
   const $ = (id) => document.getElementById(id);
-  const post = (type, payload) => { try { window.joy.post({ type, ...payload }); } catch (_) {} };
-
-  function paint(t) {
-    const r = document.documentElement.style;
-    r.setProperty('--accent', t.accent);
-    r.setProperty('--bg', t.background);
-    r.setProperty('--surface', t.surface);
-    r.setProperty('--text', t.text);
-    const v = parseInt(t.accent.slice(1), 16);
-    r.setProperty('--accent-text', (0.2126 * (v >> 16 & 255) + 0.7152 * (v >> 8 & 255) + 0.0722 * (v & 255)) / 255 > 0.45 ? '#0A0F1A' : '#FFFFFF');
+  const post = (type, payload = {}) => {
+    try { window.joy.post({ type, ...payload }); } catch (_) { /* bridge may not be ready yet */ }
+  };
+  function measureStage() {
+    const stage = $('stage');
+    const width = stage.getBoundingClientRect().width;
+    let maxHeight = 0;
+    const panels = [...stage.querySelectorAll('.step')];
+    const saved = panels.map((panel) => ({ hidden: panel.hidden, className: panel.className, cssText: panel.style.cssText }));
+    panels.forEach((panel) => {
+      panel.hidden = false;
+      panel.classList.add('show');
+      Object.assign(panel.style, { display: 'block', position: 'absolute', visibility: 'hidden', width: `${width}px` });
+      maxHeight = Math.max(maxHeight, panel.scrollHeight);
+    });
+    panels.forEach((panel, index) => {
+      panel.hidden = saved[index].hidden;
+      panel.className = saved[index].className;
+      panel.style.cssText = saved[index].cssText;
+    });
+    stage.style.minHeight = `${maxHeight}px`;
   }
-
-  function show(n) {
-    step = n;
-    document.querySelectorAll('.step').forEach((el) => el.classList.toggle('show', Number(el.dataset.step) === n));
-    document.querySelectorAll('.steps span').forEach((el, i) => el.classList.toggle('done', i <= n));
-    $('back').style.visibility = n === 0 ? 'hidden' : 'visible';
-    $('next').textContent = n === 0 || n === 4 ? i18n.t('welcome.start') : i18n.t('welcome.next');
-    const first = document.querySelector('.step.show .opt.active, .step.show .opt, .step.show input');
-    (first || $('next')).focus();
+  const messages = () => COPY[language === 'en' ? 'en' : 'pt-BR'];
+  function tr(key, values = {}) {
+    let value = dictionary[key] || messages()[key] || key;
+    for (const [name, replacement] of Object.entries(values)) value = value.replaceAll(`{${name}}`, replacement);
+    return value;
   }
-
-  function options(box, items, render, isActive, onPick) {
-    // Choosing a language re-renders every list from the new dictionary: without this the focus would fall to the
-    // document and a controller user would have to find the card again.
+  function paint(nextTheme) {
+    const root = document.documentElement.style;
+    root.setProperty('--accent', nextTheme.accent);
+    root.setProperty('--bg', nextTheme.background);
+    root.setProperty('--surface', nextTheme.surface);
+    root.setProperty('--text', nextTheme.text);
+    const color = parseInt(nextTheme.accent.slice(1), 16);
+    const luminance = (0.2126 * (color >> 16 & 255) + 0.7152 * (color >> 8 & 255) + 0.0722 * (color & 255)) / 255;
+    root.setProperty('--accent-text', luminance > 0.45 ? '#0A0F1A' : '#FFFFFF');
+  }
+  function glyphs() {
+    if (family === 'playstation') return { select: '×', back: '○', reload: '□', keyboard: '△', lt: 'L2', rt: 'R2', lb: 'L1', rb: 'R1', start: '≡', view: 'Create', r3: 'R3', l3: 'L3' };
+    if (family === 'switch') return { select: 'A', back: 'B', reload: 'Y', keyboard: 'X', lt: 'ZL', rt: 'ZR', lb: 'L', rb: 'R', start: '+', view: '−', r3: 'R3', l3: 'L3' };
+    return { select: 'A', back: 'B', reload: 'X', keyboard: 'Y', lt: 'LT', rt: 'RT', lb: 'LB', rb: 'RB', start: '≡', view: 'View', r3: 'R3', l3: 'L3' };
+  }
+  const key = (label) => `<kbd>${label}</kbd>`;
+  function renderHints(boxId, entries) {
+    $(boxId).replaceChildren(...entries.map(([symbol, description]) => {
+      const item = document.createElement('div');
+      item.className = 'keyhint';
+      item.innerHTML = symbol;
+      const text = document.createElement('span');
+      text.textContent = description;
+      item.append(text);
+      return item;
+    }));
+  }
+  function fillHints() {
+    const g = glyphs();
+    renderHints('controlHints', [
+      [key('D-pad'), tr('onboard.dpad')], [key('LS'), tr('onboard.left')],
+      [key(g.r3), tr('onboard.right', { r3: g.r3 })], [key(g.select), tr('onboard.a')], [key(g.back), tr('onboard.b')]
+    ]);
+    renderHints('tabHints', [
+      [key(`${g.lt} / ${g.rt}`), tr('onboard.tabs')], [key(g.lb), tr('onboard.lb')], [key(g.rb), tr('onboard.rb')],
+      [key(g.reload), tr('onboard.reload')], [key(g.view), tr('onboard.closeTab')]
+    ]);
+    renderHints('addressHints', [
+      [key(g.keyboard), tr('onboard.y')], [key(g.start), tr('onboard.menu')],
+      [key(g.start), tr('onboard.search', { start: g.start, x: g.reload, y: g.keyboard, lt: g.lt, l3: g.l3 })]
+    ]);
+    renderHints('privacyHints', [[key('🛡'), tr('onboard.ad')]]);
+    $('mouseKeys').textContent = tr('onboard.mouseKeys');
+    $('newTabAction').textContent = tr('onboard.newTabAction');
+    $('favoriteHint').textContent = tr('onboard.favorite');
+  }
+  function show(nextStep, animate = true) {
+    const previousStep = step;
+    const direction = nextStep >= previousStep ? 1 : -1;
+    transitionAnimation?.cancel();
+    transitionAnimation = null;
+    step = nextStep;
+    document.querySelectorAll('.step').forEach((element) => {
+      const active = Number(element.dataset.step) === step;
+      element.classList.toggle('show', active);
+      element.hidden = !active;
+      element.inert = !active;
+    });
+    document.querySelectorAll('.steps span').forEach((element, index) => element.classList.toggle('done', index <= step));
+    $('counter').textContent = tr('onboard.count').replace('{n}', String(step + 1));
+    $('back').style.visibility = step === 0 ? 'hidden' : 'visible';
+    $('next').textContent = step === 8 ? tr('welcome.start') : tr('welcome.next');
+    const target = document.querySelector('.step.show .opt.active, .step.show .opt, .step.show button');
+    (target || $('next')).focus();
+    const incoming = document.querySelector('.step.show');
+    if (animate && previousStep !== step && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const animation = incoming.animate([
+        { opacity: 0, transform: `translateX(${direction * 14}px)` },
+        { opacity: 1, transform: 'translateX(0)' }
+      ], { duration: 190, easing: 'cubic-bezier(.2,.75,.25,1)' });
+      transitionAnimation = animation;
+      animation.onfinish = () => { if (transitionAnimation === animation && step === nextStep) transitionAnimation = null; };
+    }
+  }
+  function options(boxId, items, render, isActive, onPick) {
+    const box = $(boxId);
     const hadFocus = box.contains(document.activeElement);
     box.replaceChildren(...items.map((item) => {
-      const b = document.createElement('button');
-      b.className = 'opt' + (isActive(item) ? ' active' : '');
-      b.setAttribute('aria-pressed', String(isActive(item)));
-      b.innerHTML = render(item);
-      b.addEventListener('click', () => {
+      const button = document.createElement('button');
+      button.className = `opt${isActive(item) ? ' active' : ''}`;
+      button.setAttribute('aria-pressed', String(isActive(item)));
+      button.innerHTML = render(item);
+      button.addEventListener('click', () => {
         onPick(item);
-        [...box.children].forEach((c) => { c.classList.toggle('active', c === b); c.setAttribute('aria-pressed', String(c === b)); });
+        [...box.children].forEach((child) => {
+          child.classList.toggle('active', child === button);
+          child.setAttribute('aria-pressed', String(child === button));
+        });
       });
-      return b;
+      return button;
     }));
     if (hadFocus) (box.querySelector('.opt.active') || box.querySelector('button'))?.focus();
   }
-
-  $('next').addEventListener('click', () => {
-    if (step === 4) { post('onboarding-done', {}); return; }
-    show(step + 1);
-  });
-  $('back').addEventListener('click', () => show(step - 1));
-
-  // The controller test: the shell owns the one Gamepad poll, so the page shows what the shell reports instead of
-  // polling a second time from the tab renderer, where the pad is not guaranteed to be visible.
-  const FAMILIES = { xbox: 'Xbox', playstation: 'PlayStation', switch: 'Switch' };
-  let padSeen = false;
-  function paintPad(connected, family) {
-    padSeen = Boolean(connected);
-    $('pad').classList.toggle('found', padSeen);
-    const label = i18n.t(padSeen ? 'welcome.padFound' : 'welcome.pad');
-    $('padText').textContent = padSeen && FAMILIES[family] ? `${label} · ${FAMILIES[family]}` : label;
+  function updateLanguage(nextLanguage) {
+    language = nextLanguage;
+    Object.assign(dictionary, COPY[language === 'en' ? 'en' : 'pt-BR']);
+    i18n.set(dictionary, language);
+    post('ui-settings', { language });
+    fillHints();
+    makeNewTabOptions();
+    show(step, false);
+    measureStage();
   }
-
+  function paintPad(connected, nextFamily) {
+    if (nextFamily) family = nextFamily;
+    $('pad').classList.toggle('found', Boolean(connected));
+    const familyName = { xbox: 'Xbox', playstation: 'PlayStation', switch: 'Switch', generic: 'Generic' }[family] || 'Generic';
+    $('padText').textContent = connected ? `${tr('welcome.padFound')} · ${familyName}` : tr('welcome.pad');
+    fillHints();
+  }
+  function makeNewTabOptions() {
+    const cards = [
+      { mode: 'NewTabPage', label: language === 'en' ? 'Start page' : 'Página de nova aba', hint: language === 'en' ? 'Search, favorites, history' : 'Busca, favoritos e histórico' },
+      { mode: 'Home', label: 'YouTube TV', hint: language === 'en' ? 'Open YouTube TV' : 'Abrir YouTube TV' }
+    ];
+    cards[0].icon = 'logo.png';
+    cards[1].icon = 'onboarding/youtube.svg';
+    options('newtab', cards, (card) => `<img class="newtab-icon" src="${card.icon}" alt="" aria-hidden="true"><span><b>${card.label}</b><br><small style="color:var(--muted)">${card.hint}</small></span>`, (card) => card.mode === newTab, (card) => {
+      newTab = card.mode;
+      post('general-save', { newTab: card.mode, startup: card.mode === 'Home' ? 'Home' : 'NewTab' });
+    });
+  }
+  function setup(msg) {
+    presets = msg.presets;
+    theme = msg.theme;
+    newTab = msg.newTab || 'NewTabPage';
+    family = msg.controllerFamily || 'generic';
+    language = msg.language || 'pt-BR';
+    dictionary = { ...msg.dictionary, ...COPY[language === 'en' ? 'en' : 'pt-BR'] };
+    i18n.set(dictionary, language);
+    paint(theme);
+    paintPad(msg.controllerConnected, family);
+    options('languages', [['pt-BR', 'Português (Brasil)'], ['en', 'English']], ([, label]) => `<span>${label}</span>`, ([id]) => id === language, ([id]) => updateLanguage(id));
+    options('themes', Object.entries(presets), ([name, preset]) => `<span class="swatch" style="background:${preset.surface};border-color:${preset.accent}"></span><span>${name}</span>`, ([, preset]) => JSON.stringify(preset) === JSON.stringify(theme), ([, preset]) => {
+      theme = preset;
+      paint(preset);
+      post('theme-save', { theme: preset });
+    });
+    const providerIcons = { Google: 'google', DuckDuckGo: 'duckduckgo', Bing: 'bing', Brave: 'brave', Startpage: 'startpage' };
+    options('engines', msg.searchEngines, (engine) => {
+      const icon = providerIcons[engine.name];
+      return `${icon ? `<img class="provider-icon" src="onboarding/${icon}.svg" alt="" aria-hidden="true">` : ''}<span>${engine.name}</span>`;
+    }, (engine) => engine.template === msg.searchEngine.template, (engine) => post('search-save', { searchEngine: engine }));
+    makeNewTabOptions();
+    show(step);
+    measureStage();
+  }
+  $('next').addEventListener('click', () => step === 8 ? post('onboarding-done') : show(step + 1));
+  $('back').addEventListener('click', () => show(step - 1));
+  window.addEventListener('resize', measureStage);
+  document.querySelectorAll('.practice-target').forEach((button) => button.addEventListener('click', () => { $('practiceStatus').textContent = tr('onboard.practiceDone'); }));
   window.joy.onMessage((msg) => {
     if (msg.type === 'controller') { paintPad(msg.connected, msg.family); return; }
-    if (msg.type !== 'init') return;
-    presets = msg.presets;
-    engines = msg.searchEngines;
-    theme = msg.theme;
-    engine = msg.searchEngine;
-    language = msg.language || 'pt-BR';
-    i18n.set(msg.dictionary, language);
-    paint(theme);
-    paintPad(msg.controllerConnected, msg.controllerFamily);
-    options($('languages'), [['pt-BR', 'Português (Brasil)'], ['en', 'English']],
-      ([id, name]) => `<span>${name}</span>`, ([id]) => id === language,
-      ([id]) => { language = id; post('ui-settings', { language: id }); });
-    options($('themes'), Object.entries(presets),
-      ([name, t]) => `<span class="swatch" style="background:${t.surface};border-color:${t.accent}"></span><span>${name}</span>`,
-      ([, t]) => JSON.stringify(t) === JSON.stringify(theme),
-      ([, t]) => { theme = t; paint(t); post('theme-save', { theme: t }); });
-    options($('engines'), engines, (e) => `<span>${e.name}</span>`, (e) => e.template === engine.template,
-      (e) => { engine = e; post('search-save', { searchEngine: e }); });
-    options($('newtab'), [
-      { mode: 'NewTabPage', label: 'Página de nova aba', hint: 'Busca e atalhos' },
-      { mode: 'Home', label: 'YouTube TV', hint: 'Direto para o sofá' },
-    ], (c) => `<span><b>${c.label}</b><br><small style="color:var(--muted)">${c.hint}</small></span>`,
-      (c) => c.mode === msg.newTab,
-      (c) => post('general-save', { newTab: c.mode, startup: c.mode === 'Home' ? 'Home' : 'NewTab' }));
+    if (msg.type === 'init') setup(msg);
   });
-  post('ready', {});
+  post('ready');
 </script>
 </body>
 </html>

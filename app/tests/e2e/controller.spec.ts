@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Two pads on at once: the shell follows the one the user picked up, and the button hints turn into that pad's letters
+// Two pads on at once: the shell follows the one the user picked up, and the glyphs it draws turn into that pad's letters
 // in the same window — no restart, no menu.
 let data: string;
 let app: ElectronApplication;
@@ -15,7 +15,6 @@ const DUALSENSE = "DualSense Wireless Controller";
 
 test.beforeEach(async () => {
   data = mkdtempSync(join(tmpdir(), "joychromium-controller-"));
-  // TV mode keeps the controller hints in the bar, which is where the glyphs show up.
   writeFileSync(join(data, "settings.json"), JSON.stringify({ onboardingCompleted: true, startup: "NewTab", language: "pt-BR" }));
   app = await electron.launch({ args: ["."], env: { ...process.env, JOYCHROMIUM_DATA: data } });
   chrome = await app.firstWindow();
@@ -28,7 +27,8 @@ test.afterEach(async () => {
 });
 
 const tabs = () => app.evaluate(() => globalThis.joy.tabs());
-const hints = () => chrome.locator(".pad-hints").textContent();
+/** The family of the pad that owns the input, which is what picks the glyphs the shell draws. */
+const pad = () => chrome.locator(".shell").getAttribute("data-pad");
 
 /**
  * Synthetic pads in the slots the Gamepad API would use, so the real polling loop runs without hardware. The counter is
@@ -75,22 +75,23 @@ async function press(pad: number, button: number): Promise<void> {
   await expect.poll(polls, { timeout: 10_000, message: "the shell's controller loop never read the release, so the next press would count as a hold" }).toBeGreaterThan(up);
 }
 
-/** How far the page's own cursor overlay has moved horizontally, and whether it is drawn at all. */
-const cursor = () => app.evaluate(() => globalThis.joy.pageEval(
-  "(() => { const c = document.getElementById('__joy-cursor'); return c ? { shown: c.style.display === 'block', x: parseFloat((c.style.transform.match(/translate\\(([-\\d.]+)px/) || [0, '0'])[1]) } : null; })()",
-)) as Promise<{ shown: boolean; x: number } | null>;
+/** How far the pointer has moved horizontally, and whether it is drawn at all. It lives in its own window, pointer.html. */
+const cursor = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()
+  .find((w) => w.webContents.getURL().endsWith("pointer.html"))?.webContents.executeJavaScript(
+    "(() => { const c = document.getElementById('__joy-cursor'); return c ? { shown: c.style.display === 'block', x: parseFloat((c.style.transform.match(/translate\\(([-\\d.]+)px/) || [0, '0'])[1]) } : null; })()",
+  )) as Promise<{ shown: boolean; x: number } | null>;
 
-test("the right stick turns the pointer on and the left stick moves it", async () => {
+test("the right stick cycles the mode and the left stick moves the pointer", async () => {
   await installPads([XBOX]);
-  await expect.poll(hints, { timeout: 15_000 }).toContain("R3 cursor");
-  const mode = () => chrome.locator(".status-line .mode").textContent();
-  expect(await mode()).toBe("SPATIAL");
+  await expect.poll(pad, { timeout: 15_000 }).toBe("xbox");
+  const mode = () => chrome.locator(".shell").getAttribute("data-mode");
+  expect(await mode()).toBe("Spatial");
 
   // The right stick is buttons[11]: pressing buttons[10] is the left stick and must not change the mode.
   await press(0, 10);
-  expect(await mode()).toBe("SPATIAL");
+  expect(await mode()).toBe("Spatial");
   await press(0, 11);
-  await expect.poll(mode, { timeout: 10_000 }).toBe("CURSOR");
+  await expect.poll(mode, { timeout: 10_000 }).toBe("Cursor");
   await expect.poll(cursor, { timeout: 10_000 }).toMatchObject({ shown: true });
 
   // In Cursor mode the stick drives the page's pointer instead of walking the focus.
@@ -100,24 +101,21 @@ test("the right stick turns the pointer on and the left stick moves it", async (
   await chrome.evaluate(() => { (window as unknown as { __pads: { axes: number[] }[] }).__pads[0]!.axes[0] = 0; });
 });
 
-test("the pad last used owns the input and the hints follow it", async () => {
+test("the pad last used owns the input and the glyphs follow it", async () => {
   await installPads([XBOX, DUALSENSE]);
-  await expect.poll(hints, { timeout: 15_000 }).toContain("B voltar");
-  expect(await hints()).toContain("A abrir");
+  await expect.poll(pad, { timeout: 15_000 }).toBe("xbox");
 
-  // The Xbox pad is already the one in the bar; using it changes nothing.
+  // The Xbox pad already owns the input; using it changes nothing.
   await press(0, Button.X);
-  expect(await hints()).toContain("B voltar");
+  expect(await pad()).toBe("xbox");
 
   // The DualSense, in the same window, brings its own letters.
   await press(1, Button.X);
-  await expect.poll(hints).toContain("○ voltar");
-  expect(await hints()).toContain("✕ abrir");
+  await expect.poll(pad).toBe("playstation");
 
   // And back to the Xbox pad, still without restarting anything.
   await press(0, Button.X);
-  await expect.poll(hints).toContain("B voltar");
-  expect(await hints()).toContain("A abrir");
+  await expect.poll(pad).toBe("xbox");
 
   // Same window, same page: the injected pads are still there, so nothing restarted.
   expect(await chrome.evaluate(() => Boolean((window as unknown as { __pads?: unknown[] }).__pads))).toBe(true);
@@ -126,14 +124,14 @@ test("the pad last used owns the input and the hints follow it", async () => {
 
 test("a pad that connects but is not used does not take the input", async () => {
   await installPads([XBOX]);
-  await expect.poll(hints, { timeout: 15_000 }).toContain("B voltar");
+  await expect.poll(pad, { timeout: 15_000 }).toBe("xbox");
 
   // The DualSense appears mid-session: the Xbox pad keeps the input until the new one is actually used.
   await installPads([XBOX, DUALSENSE]);
-  await expect.poll(hints).toContain("B voltar");
+  await expect.poll(pad).toBe("xbox");
 
   await press(1, Button.X);
-  await expect.poll(hints).toContain("○ voltar");
+  await expect.poll(pad).toBe("playstation");
 });
 
 // ---- Text fields, the controller keyboard and the toolbar, with the D-pad only ----
@@ -161,7 +159,7 @@ const shellFocus = () => chrome.evaluate(() => {
   const el = document.activeElement as HTMLElement | null;
   return el ? el.id || el.getAttribute("aria-label") || (el.textContent ?? "").trim() : "";
 });
-const shellHasWindowFocus = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.isFocused());
+const shellHasWindowFocus = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => !w.getParentWindow())!.webContents.isFocused());
 const keyboards = () => chrome.locator("#keyboard").count();
 
 test("A on a text field opens the controller keyboard, which the D-pad walks, every time", async () => {
@@ -169,7 +167,7 @@ test("A on a text field opens the controller keyboard, which the D-pad walks, ev
   await openForm();
   // As after the keyboard was used once: the tab holds the window's focus. That is when the keys used to look dead.
   await app.evaluate(({ BrowserWindow, webContents }) => {
-    const shell = BrowserWindow.getAllWindows()[0]!.webContents;
+    const shell = BrowserWindow.getAllWindows().find((w) => !w.getParentWindow())!.webContents;
     webContents.getAllWebContents().find((wc) => wc !== shell)!.focus();
   });
 
@@ -249,7 +247,7 @@ const tilt = (axis: number, value: number) => chrome.evaluate(([a, v]) => {
   (window as unknown as { __pads: { axes: number[] }[] }).__pads[0]!.axes[a] = v;
 }, [axis, value] as const);
 const pageLog = () => app.evaluate(() => globalThis.joy.pageEval("window.__log.join(',')")) as Promise<string>;
-const pointerShown = () => app.evaluate(() => globalThis.joy.pageEval("(document.getElementById('__joy-cursor') || {}).style?.display === 'block'"));
+const pointerShown = async () => Boolean((await cursor())?.shown);
 
 test("the left stick points and A clicks there, twice for a right click, and the D-pad takes A back", async () => {
   await installPads([XBOX]);

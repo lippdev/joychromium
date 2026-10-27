@@ -1,12 +1,12 @@
 import type { WebContents } from "electron";
 import type { ControllerEvent } from "../../shared/ipc";
 import type { InputMode } from "../../shared/settings";
-import { sendArrow, sendKey, spatialActivate, spatialMove, spatialPlayPause, type VirtualCursor } from "../controllerActions";
+import { sendArrow, sendKey, spatialActivate, spatialFocusPoint, spatialMove, spatialPlayPause } from "../controllerActions";
 
 export interface InputHost {
   readonly activeWebContents: WebContents | undefined;
   readonly inputMode: InputMode;
-  pageSize(): { width: number; height: number };
+  focusPageCursor(x: number, y: number): void;
   /** Whether the active tab is playing media, from the shell's own tab state. */
   isPlayingMedia(): boolean;
   setControllerConnected(connected: boolean, family?: "xbox" | "playstation" | "switch" | "generic"): void;
@@ -16,11 +16,11 @@ export interface InputHost {
 }
 
 /**
- * Turns gamepad events into page interaction. Which thing happens depends on the site's input mode: Spatial moves DOM
- * focus, Cursor drives the virtual pointer and Arrows hands the D-pad to the page.
+ * Turns D-pad page events into page interaction. The window-level pointer is routed by Shell so the stick works over
+ * every surface; this router handles mode-specific D-pad behavior and activation inside the page.
  */
 export class InputRouter {
-  constructor(private readonly host: InputHost, private readonly cursor: VirtualCursor) {}
+  constructor(private readonly host: InputHost) {}
 
   async run(input: ControllerEvent): Promise<void> {
     const wc = this.host.activeWebContents;
@@ -30,20 +30,20 @@ export class InputRouter {
         break;
       case "direction":
         if (!wc) return;
-        if (this.host.inputMode === "Spatial") {
-          if ((await spatialMove(wc, input.direction)) === "edge") this.host.enterChrome();
-        } else if (this.host.inputMode === "Cursor") {
-          const size = this.host.pageSize();
-          const step = 24;
-          const dx = input.direction === "left" ? -step : input.direction === "right" ? step : 0;
-          const dy = input.direction === "up" ? -step : input.direction === "down" ? step : 0;
-          await this.cursor.moveBy(wc, dx, dy, size.width, size.height);
-        } else sendArrow(wc, input.direction);
+        if (this.host.inputMode === "Arrows") {
+          sendArrow(wc, input.direction);
+          const point = await spatialFocusPoint(wc);
+          if (point) this.host.focusPageCursor(point.x, point.y);
+          break;
+        }
+        if ((await spatialMove(wc, input.direction)) === "edge") { this.host.enterChrome(); break; }
+        const point = await spatialFocusPoint(wc);
+        if (point) this.host.focusPageCursor(point.x, point.y);
         break;
       case "activate":
         if (!wc) return;
         if (this.host.inputMode === "Cursor") {
-          this.cursor.click(wc);
+          if ((await spatialActivate(wc)) === "edit") this.host.openKeyboard("page");
           break;
         }
         // The tab state is the cheap gate: a page that never played media keeps A on focus, with no round trip.
@@ -51,23 +51,6 @@ export class InputRouter {
         if (this.host.inputMode === "Spatial") {
           if ((await spatialActivate(wc)) === "edit") this.host.openKeyboard("page");
         } else sendKey(wc, "Return");
-        break;
-      // The stick's pointer works in every mode but Arrows, whose sites (YouTube TV, Twitch) are built for the arrow keys.
-      case "cursor-move":
-        if (wc && this.host.inputMode !== "Arrows") {
-          const size = this.host.pageSize();
-          await this.cursor.moveBy(wc, input.dx, input.dy, size.width, size.height);
-        }
-        break;
-      case "cursor-click": if (wc && this.host.inputMode !== "Arrows") this.cursor.click(wc, input.button); break;
-      case "scroll":
-        if (!wc) return;
-        // Never pointed anywhere yet: the wheel turns over the middle of the page, not over a corner.
-        if (!this.cursor.placed) {
-          const size = this.host.pageSize();
-          this.cursor.place(size.width / 2, size.height / 2, size.width, size.height);
-        }
-        this.cursor.scroll(wc, input.notches, input.sideways);
         break;
     }
   }

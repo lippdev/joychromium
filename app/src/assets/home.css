@@ -42,7 +42,10 @@ main {
   box-sizing: border-box;
 }
 
-.hero { display: grid; gap: var(--space-4); justify-items: center; width: 100%; margin-top: -8vh; }
+.hero { display: grid; gap: var(--space-4); justify-items: center; width: 100%; margin-top: -8vh; animation: home-enter 240ms cubic-bezier(.2,.7,.2,1) both; }
+.tiles:not([hidden]) { animation: home-enter 260ms cubic-bezier(.2,.7,.2,1) 40ms both; }
+main > footer { animation: home-enter 260ms cubic-bezier(.2,.7,.2,1) 80ms both; }
+@keyframes home-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
 .logo { display: flex; align-items: center; gap: var(--space-3); }
 .logo img { width: calc(64 * var(--u)); height: calc(64 * var(--u)); }

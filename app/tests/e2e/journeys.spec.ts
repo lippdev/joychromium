@@ -293,7 +293,7 @@ async function typeOnKeyboard(h: Harness, text: string, submit = true): Promise<
 test("first boot: onboarding tests the controller, then language and search engine, then the home screen", async () => {
   const h = await launch();
   // TV mode is the default: the window is fullscreen before anything else is on screen.
-  expect(await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFullScreen())).toBe(true);
+  expect(await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => !w.getParentWindow())?.isFullScreen())).toBe(true);
 
   await expect.poll(() => activeUrl(h), { timeout: 30_000 }).toBe("joychromium://welcome");
   await waitForPage(h, "document.querySelectorAll('#languages .opt').length >= 2");
@@ -377,7 +377,7 @@ test("home to YouTube TV in Arrows mode, a video in fullscreen, and B back to th
   await waitForPage(h, "document.readyState === 'complete' && Boolean(document.getElementById('watch'))");
 
   // A host with its own arrow-key navigation gets the D-pad, not the spatial walker.
-  await expect.poll(() => h.chrome.locator(".status-line .mode").textContent()).toBe("ARROWS");
+  await expect.poll(() => h.chrome.locator(".shell").getAttribute("data-mode")).toBe("Arrows");
   expect(await pageEval<string>(h, "document.activeElement.id")).toBe("watch");
 
   // A: the page's own Enter handler starts the video and takes the screen.
@@ -430,7 +430,7 @@ test("searching with the virtual keyboard and its suggestions, then opening the 
   await waitForPage(h, "Boolean(document.getElementById('tomorrow'))");
 
   // The result page is a web page, so the D-pad walks its real DOM focus and A follows the link.
-  await expect.poll(() => h.chrome.locator(".status-line .mode").textContent()).toBe("SPATIAL");
+  await expect.poll(() => h.chrome.locator(".shell").getAttribute("data-mode")).toBe("Spatial");
   await focusOn(h, "page", "document.getElementById('tomorrow')", "the Tomorrow link");
   expect(await pageEval<string>(h, "document.activeElement.id")).toBe("tomorrow");
   await press(h, Pad.A);

@@ -8,7 +8,7 @@ import { bridge, cmd } from "./bridge";
 import { trackActivePad, vibrate } from "./haptics";
 
 
-type Overlay = "none" | "tabs" | "menu";
+type Overlay = "none" | "tabs" | "menu" | "adblock";
 
 /** The controller keyboard's shortcuts (keyboard.tsx draws each glyph on the key it presses). */
 const KEYBOARD_SHORTCUTS: readonly [number, string][] = [
@@ -40,6 +40,9 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
    * The last one used wins, so both can be mixed on the same page.
    */
   const pointing = useRef(false);
+  // D-pad navigation takes activation from the pointer. In Cursor mode the pointer remains visible, but A activates the
+  // newly focused control after the D-pad has moved it.
+  const focusDriven = useRef(false);
   /** A single A at the pointer waits here for a possible second one, which would make it a right click. */
   const pendingClick = useRef<number | undefined>(undefined);
   const lastTick = useRef(0);
@@ -48,6 +51,12 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
   // Read through a ref so the loop below is created once and keeps a single activity subscription for its lifetime.
   const overlayRef = useRef(overlay);
   overlayRef.current = overlay;
+
+  useEffect(() => {
+    // A newly selected or navigated page has not been focused by this pad yet.
+    pointing.current = false;
+    focusDriven.current = false;
+  }, [state.activeUrl, state.tabs.find((tab) => tab.isActive)?.id, state.inputMode]);
 
   useEffect(() => {
     let timer: number | undefined;
@@ -142,9 +151,10 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         return;
       }
       if (justPressed(Button.A)) {
-        if (openOverlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
+        if (pointing.current) clickAtPointer();
+        else if (openOverlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
         else if (chrome) activateChrome();
-        else if (pointing.current || s.inputMode === "Cursor") clickAtPointer();
+        else if (pointing.current || (s.inputMode === "Cursor" && !focusDriven.current)) clickAtPointer();
         else bridge().controller({ type: "activate" });
         vibrate("confirm");
         return;
@@ -168,40 +178,35 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       const rx = pad.axes[2] ?? 0;
       const ry = pad.axes[3] ?? 0;
       const dpad = { up: down(Button.DpadUp), down: down(Button.DpadDown), left: down(Button.DpadLeft), right: down(Button.DpadRight) };
-      // On a page the left stick is the pointer and the right stick the wheel. Arrows mode keeps the stick on the arrow
-      // keys its sites are built for; a dialog, the keyboard or the toolbar take the stick as a D-pad.
-      const page = !overlayOpen && !chrome;
-      const pointer = page && s.inputMode !== "Arrows";
-
       // The pointer moves on every poll, so it glides at the screen's rate instead of jumping 20 times a second; the step
       // is scaled by the time since the last one, so the speed (set per STICK_INTERVAL_MS) does not depend on the rate.
       const sinceMove = Math.min(now - lastPointerMove.current, STICK_INTERVAL_MS) / STICK_INTERVAL_MS;
       lastPointerMove.current = now;
-      if (pointer) {
-        const velocity = stickToVelocity(lx, ly);
-        if (velocity.dx !== 0 || velocity.dy !== 0) {
-          pointing.current = true;
-          bridge().controller({ type: "cursor-move", dx: velocity.dx * sinceMove, dy: velocity.dy * sinceMove });
-        }
+      // The stick is always the pointer, on every site; Arrows mode only turns the D-pad into arrow keys.
+      const velocity = stickToVelocity(lx, ly);
+      if (velocity.dx !== 0 || velocity.dy !== 0) {
+        pointing.current = true;
+        focusDriven.current = false;
+        bridge().controller({ type: "cursor-move", dx: velocity.dx * sinceMove, dy: velocity.dy * sinceMove });
       }
-      // The wheel keeps the slower cadence: one notch per STICK_INTERVAL_MS is a readable scroll speed.
-      if (page && now - lastStick.current >= STICK_INTERVAL_MS) {
+      // The wheel keeps the slower cadence and follows the same pointer across the shell and page.
+      if (now - lastStick.current >= STICK_INTERVAL_MS) {
         lastStick.current = now;
         const notches = stickToScroll(ry);
         const sideways = stickToScroll(rx);
         if (notches !== 0 || sideways !== 0) bridge().controller({ type: "scroll", notches, sideways });
       }
 
-      const direction: Direction | undefined = directionOf(dpad, pointer ? 0 : lx, pointer ? 0 : ly);
+      const direction: Direction | undefined = directionOf(dpad, 0, 0);
       if (direction && now - lastDirection.current >= 180) {
         lastDirection.current = now;
-        if (moveSuggestionFocus(direction)) { /* the D-pad walked the address suggestions */ }
-        else if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
+        pointing.current = false;
+        focusDriven.current = true;
+        if (moveSuggestionFocus(direction)) syncShellPointer();
+        else if (openOverlay !== "none" || s.permission || s.keyboard) { moveOverlayFocus(direction); syncShellPointer(); }
         // Down with nothing under the toolbar goes back into the page.
-        else if (chrome) { if (!moveFocusAmong(chromeControls(), direction) && direction === "down") leaveChrome(); }
+        else if (chrome) { if (!moveFocusAmong(chromeControls(), direction) && direction === "down") leaveChrome(); else syncShellPointer(); }
         else {
-          // The D-pad takes A back from the pointer, which stays on screen (in Cursor mode the D-pad steps the pointer itself).
-          if (s.inputMode !== "Cursor") pointing.current = false;
           bridge().controller({ type: "direction", direction });
         }
       }
@@ -223,6 +228,18 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
     bridge().onFocusChrome(() => document.getElementById("address")?.focus());
     // A click or a key on a real keyboard hands focus drawing back to the browser's own rules.
     const notPad = (): void => { delete document.documentElement.dataset.input; };
+    const syncShellPointer = (): void => {
+      if (!focusDriven.current) return;
+      const target = document.activeElement as HTMLElement | null;
+      if (!target || !target.closest("#chrome, .overlay")) return;
+      const rect = target.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      bridge().controller({ type: "cursor-focus", x, y });
+    };
+    addEventListener("focusin", syncShellPointer, true);
+    addEventListener("resize", syncShellPointer);
+    bridge().onFocusChrome(syncShellPointer);
     addEventListener("pointerdown", notPad, true);
     addEventListener("keydown", notPad, true);
     resume();
@@ -238,6 +255,8 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       stop();
       removeEventListener("pointerdown", notPad, true);
       removeEventListener("keydown", notPad, true);
+      removeEventListener("focusin", syncShellPointer, true);
+      removeEventListener("resize", syncShellPointer);
       document.removeEventListener("visibilitychange", visibility);
       stopActivity();
     };
@@ -284,7 +303,7 @@ function inChrome(): boolean {
 /** What the D-pad walks on the tabs and the toolbar. Minimize, maximize and close stay off it: one A would close the app. */
 function chromeControls(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>("#chrome button:not([disabled]), #chrome input")]
-    .filter((el) => !el.closest(".window-controls") && el.getClientRects().length > 0);
+    .filter((el) => !el.closest("[inert], .window-controls") && el.getClientRects().length > 0);
 }
 
 /** A on the toolbar: the address field opens the controller keyboard, anything else is pressed. */
@@ -301,7 +320,7 @@ function leaveChrome(): void {
 
 /** Spatial focus among the shell's own buttons, used while a dialog or the keyboard is open. */
 function moveOverlayFocus(direction: Direction): void {
-  const group = (document.querySelector('.overlay[role="dialog"]') as HTMLElement | null) ?? document.body;
+  const group = (document.querySelector('.overlay[role="dialog"], .overlay [role="menu"]') as HTMLElement | null) ?? document.body;
   const buttons = [...group.querySelectorAll<HTMLElement>("button:not([disabled])")];
   const current = document.activeElement as HTMLElement | null;
   // Nothing focused inside yet (a dialog opens with the focus on itself): the first press lands on the keyboard's "q",

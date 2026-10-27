@@ -63,6 +63,10 @@ installApplicationMenu();
 
 const dataDir = process.env.JOYCHROMIUM_DATA ?? app.getPath("userData");
 app.setPath("userData", dataDir);
+// The pointer lives in a transparent window over the whole app; Windows counts that as covering the shell, and Chromium
+// would then hide the shell page (no toolbar, no gamepad polling). Occlusion tracking stays off.
+app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
+
 const hasInstanceLock = app.requestSingleInstanceLock();
 if (!hasInstanceLock) app.quit();
 const distDir = join(__dirname, "..");

@@ -15,7 +15,9 @@ export interface ViewBounds {
 
 /** Bounds for the tab views, or undefined when the window has no size yet. Pure so it can be unit tested. */
 export function tabViewBounds(size: { width: number; height: number }, insets: LayoutInsets, chromeVisible: boolean): ViewBounds {
-  const top = chromeVisible ? insets.top : 0;
+  // A page that covers the whole window makes Chromium treat the shell as hidden, which parks the gamepad polling: with the
+  // chrome away one row of the shell stays uncovered.
+  const top = chromeVisible ? insets.top : 1;
   // The keyboard sits over the page whether or not the chrome is showing, so its room is kept either way.
   const bottom = insets.bottom;
   return { x: 0, y: top, width: size.width, height: Math.max(0, size.height - top - bottom) };

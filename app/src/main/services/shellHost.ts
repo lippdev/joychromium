@@ -48,6 +48,7 @@ export interface ShellHost {
   readonly windowMode: WindowMode;
   resolvePermission(allow: boolean, remember: boolean): void;
   toggleFavorite(): void;
+  applyAdBlock(enabled: boolean): void;
   navigate(url: string, allowHttp?: boolean): void;
   searchOrNavigate(text: string): void;
   newTab(isPrivate?: boolean): void;

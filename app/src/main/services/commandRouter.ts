@@ -1,5 +1,4 @@
 import { Pages } from "../../shared/pages";
-import { newTabTarget } from "../../shared/settings";
 import { buildSuggestions } from "../../shared/suggestion";
 import { mediaControl } from "../controllerActions";
 import { insertIntoPage, submitPage } from "./keyboard";
@@ -25,8 +24,10 @@ export class CommandRouter {
       case "new-tab": h.newTab(command.isPrivate); break;
       case "close-tab": {
         const tab = command.id === undefined ? h.tabs.active : h.tabs.byId(command.id);
-        if (tab) h.tabs.close(tab);
-        if (h.tabs.tabs.length === 0) h.tabs.open(newTabTarget(h.store.current));
+        if (tab) {
+          h.tabs.close(tab);
+          if (h.tabs.tabs.length === 0) h.window.close();
+        }
         break;
       }
       case "activate-tab": { const tab = h.tabs.byId(command.id); if (tab) h.tabs.activate(tab); break; }
@@ -45,6 +46,12 @@ export class CommandRouter {
         break;
       }
       case "toggle-favorite": h.toggleFavorite(); break;
+      case "toggle-adblock": {
+        const enabled = !h.store.current.adBlockEnabled;
+        h.store.update((s) => ({ ...s, adBlockEnabled: enabled }));
+        h.applyAdBlock(enabled);
+        break;
+      }
       case "permission": h.resolvePermission(command.allow, command.remember); break;
       case "window":
         if (command.action === "minimize") h.minimizeWindow();

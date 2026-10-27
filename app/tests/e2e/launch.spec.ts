@@ -15,7 +15,7 @@ test("command-line mode and URL, and a second launch handed to the running app",
   try {
     const tabs = () => app.evaluate(() => globalThis.joy.tabs());
     const active = async () => (await tabs()).find((t) => t.isActive)?.url;
-    const fullScreen = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFullScreen());
+    const fullScreen = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => !w.getParentWindow())?.isFullScreen());
 
     // --window wins over the saved TV mode for this run, and the URL is the first tab.
     await expect.poll(active, { timeout: 30_000 }).toBe("joychromium://history");
