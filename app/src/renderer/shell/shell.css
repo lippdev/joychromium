@@ -90,7 +90,12 @@ body {
   border-radius: var(--radius) var(--radius) 0 0;
   color: var(--muted);
   -webkit-app-region: no-drag;
+  overflow: hidden;
+  transition: flex-basis 220ms cubic-bezier(.2,.7,.2,1), min-width 220ms cubic-bezier(.2,.7,.2,1), opacity 220ms ease, transform 220ms cubic-bezier(.2,.7,.2,1);
 }
+
+.tab.entering { flex-basis: 0; min-width: 0; opacity: 0; transform: translateY(5px) scale(.97); }
+.tab.exiting { flex-basis: 0; min-width: 0; opacity: 0; transform: translateY(-4px) scale(.97); pointer-events: none; }
 
 /* A hairline between two inactive tabs, hidden next to the active or hovered one. */
 .tab + .tab::before {
@@ -384,6 +389,19 @@ body {
 .overlay.dropdown .menu h2 { display: none; }
 .overlay.dropdown .menu-item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); }
 
+.overlay.adblock-dropdown { align-items: flex-start; justify-content: flex-start; padding: 0; background: transparent; backdrop-filter: none; }
+.adblock-menu {
+  position: fixed;
+  min-width: calc(240 * var(--u));
+  max-width: min(88vw, calc(360 * var(--u)));
+  max-height: calc(100vh - 100 * var(--u));
+  overflow: auto;
+  padding: var(--space-2);
+  z-index: 1;
+}
+.adblock-status { margin: var(--space-2) var(--space-3); color: var(--muted); font-size: var(--text-sm); }
+.adblock-menu .menu-item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); }
+
 .menu-item {
   display: flex;
   align-items: center;
@@ -485,6 +503,28 @@ body {
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg) 70%, #000);
   box-shadow: 0 calc(18 * var(--u)) calc(48 * var(--u)) rgba(0, 0, 0, 0.55);
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 220ms cubic-bezier(.16,1,.3,1), opacity 180ms ease-out;
+}
+
+.keyboard-exiting > .keyboard {
+  opacity: .94;
+  transform: translateY(28px);
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(.4,0,1,1);
+}
+
+@starting-style {
+  .keyboard-open > .keyboard {
+    opacity: .94;
+    transform: translateY(28px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keyboard-open > .keyboard,
+  .keyboard-exiting > .keyboard { transition-duration: 0ms; }
 }
 
 .suggestions {

@@ -30,6 +30,11 @@ export async function spatialMove(wc: WebContents, direction: Direction): Promis
   return runInPageWorld<string>(wc, `window.__joy && window.__joy.move(${JSON.stringify(direction)})`);
 }
 
+/** Center of the page's current spatial target, used to keep the pointer in step with D-pad focus. */
+export async function spatialFocusPoint(wc: WebContents): Promise<{ x: number; y: number } | undefined> {
+  return (await runInPageWorld<{ x: number; y: number }>(wc, "window.__joy && window.__joy.focusPoint()")) ?? undefined;
+}
+
 /** "edit" when A landed on a text field, which then wants the controller keyboard. */
 export async function spatialActivate(wc: WebContents): Promise<string | undefined> {
   return runInPageWorld<string>(wc, "window.__joy && window.__joy.activate()");
@@ -79,6 +84,12 @@ export class VirtualCursor {
 
   async moveBy(wc: WebContents, dx: number, dy: number, width: number, height: number): Promise<void> {
     this.place(this.x + dx, this.y + dy, width, height);
+    wc.sendInputEvent({ type: "mouseMove", x: Math.round(this.x), y: Math.round(this.y) });
+    await this.draw(wc);
+  }
+
+  async moveTo(wc: WebContents, x: number, y: number, width: number, height: number): Promise<void> {
+    this.place(x, y, width, height);
     wc.sendInputEvent({ type: "mouseMove", x: Math.round(this.x), y: Math.round(this.y) });
     await this.draw(wc);
   }

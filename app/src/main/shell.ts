@@ -18,7 +18,7 @@ import { isShellCommand } from "../shared/commands";
 import { isFavorite, toggleFavorite, withInputMode, withPermission, type InputMode } from "../shared/settings";
 import { defaultModeFor, nextMode } from "../shared/controllerInput";
 import type { AdBlock } from "./adblock";
-import { VirtualCursor } from "./controllerActions";
+import { runInPageWorld } from "./controllerActions";
 import type { FaviconStore } from "./favicons";
 import type { History } from "./history";
 import type { Log } from "./log";
@@ -79,7 +79,13 @@ export class Shell {
   readonly permissions = new PermissionQueue();
   private readonly httpAllowedHosts = new Set<string>();
   private readonly recentPopups: number[] = [];
-  readonly cursor = new VirtualCursor();
+  private pointerX = 200;
+  private pointerY = 200;
+  private pointerPlaced = false;
+  private pointerPainting = false;
+  private pointerRepaint = false;
+  /** A transparent, click-through window above the shell and the tab views: the pointer is never under any layer. */
+  private readonly pointerWindow: BrowserWindow;
   private sleepBlocker: number | undefined;
   private readonly bridge: PageBridge;
   private readonly router: CommandRouter;
@@ -110,7 +116,7 @@ export class Shell {
     this.bridge = new PageBridge(this, deps);
     this.router = new CommandRouter(this);
     this.layout = new WindowLayout(this);
-    this.controller = new InputRouter(this, this.cursor);
+    this.controller = new InputRouter(this);
     this.navigation = new Navigation({
       tabs: this.tabs,
       settings: () => this.deps.store.current,
@@ -118,6 +124,11 @@ export class Shell {
       typeInAddress: () => this.typeInAddress(),
       closeKeyboard: () => this.closeKeyboard(),
     });
+    this.pointerWindow = new BrowserWindow({
+      parent: this.window, frame: false, transparent: true, focusable: false, skipTaskbar: true, resizable: false,
+      hasShadow: false, show: false, backgroundColor: "#00000000",
+    });
+    this.pointerWindow.setIgnoreMouseEvents(true);
     this.wireTabs();
     this.wireWindow();
     this.wireIpc();
@@ -127,6 +138,8 @@ export class Shell {
 
   async start(targets: readonly string[]): Promise<void> {
     await this.window.loadURL("joychromium://chrome/");
+    // The pointer loads after the shell, so the shell stays the app's first window (launchers and the e2e rely on it).
+    void this.pointerWindow.loadFile(join(this.deps.distDir, "assets", "pointer.html"));
     this.layout.applyMode(this.windowMode === "tv");
     this.window.show();
     const first = targets[0] === undefined ? undefined : this.tabs.open(targets[0], { activate: true });
@@ -278,9 +291,12 @@ export class Shell {
     // Whatever takes the window's focus from the shell (a click into the page, the page after the keyboard) ends the
     // D-pad's walk on the toolbar.
     this.window.webContents.on("blur", () => { this.chromeFocused = false; });
-    this.window.on("resize", () => this.layout.apply());
-    this.window.on("maximize", () => { this.layout.apply(); this.broadcast(); });
-    this.window.on("unmaximize", () => { this.layout.apply(); this.broadcast(); });
+    this.window.on("resize", () => { this.layout.apply(); void this.paintPointer(); });
+    this.window.on("move", () => this.syncPointerWindow());
+    this.window.on("enter-full-screen", () => void this.paintPointer());
+    this.window.on("leave-full-screen", () => void this.paintPointer());
+    this.window.on("maximize", () => { this.layout.apply(); void this.paintPointer(); this.broadcast(); });
+    this.window.on("unmaximize", () => { this.layout.apply(); void this.paintPointer(); this.broadcast(); });
     const onActivity = (): void => this.broadcastActivity();
     this.window.on("minimize", onActivity);
     this.window.on("show", onActivity);
@@ -301,6 +317,7 @@ export class Shell {
       this.forgetChrome();
       this.deps.log.error(`Shell UI renderer gone: ${details.reason}`);
     });
+    this.pointerWindow.webContents.on("did-finish-load", () => void this.paintPointer());
   }
 
   private readonly wired = new WeakSet<WebContents>();
@@ -339,6 +356,7 @@ export class Shell {
 
   setLayout(top: number, bottom: number): void {
     this.layout.setInsets(top, bottom);
+    void this.paintPointer();
   }
 
   /**
@@ -349,12 +367,14 @@ export class Shell {
     if (this.pageCovered === covered) return;
     this.pageCovered = covered;
     this.syncViews();
+    void this.paintPointer();
   }
 
   setChromeVisible(visible: boolean): void {
     if (!visible) clearTimeout(this.chromeHideTimer);
     this.layout.setChromeVisible(visible, () => this.windowMode === "tv");
     this.layout.apply();
+    void this.paintPointer();
     this.broadcast();
   }
 
@@ -662,16 +682,114 @@ export class Shell {
   }
 
   /**
-   * The pointer is always on screen, where it was last left: each page draws its own, so a page that loads, a tab that is
-   * switched to or a mode that changes gets it drawn again (this runs on every change of the tab, its load included). The
-   * first time it starts in the middle of the page. Arrows mode is the exception: its sites take the stick as arrow keys.
+   * Repaint the global pointer after a tab load or switch. Coordinates always belong to the window; page-local cursor
+   * coordinates are derived from the active view bounds only while the point is over that view.
    */
   private showPointer(): void {
-    const wc = this.activeWebContents;
-    if (!wc) return;
-    const size = this.pageSize();
-    if (!this.cursor.placed && size.width > 0) this.cursor.place(size.width / 2, size.height / 2, size.width, size.height);
-    void this.cursor.show(wc, this.inputMode !== "Arrows" && this.cursor.placed);
+    if (!this.pointerPlaced) {
+      const bounds = this.tabs.active?.view.getBounds();
+      const [width = 0] = this.window.getContentSize();
+      if (bounds && width > 0) {
+        this.pointerX = width / 2;
+        this.pointerY = bounds.y + bounds.height / 2;
+        this.pointerPlaced = true;
+      }
+    }
+    if (this.pointerPlaced) void this.paintPointer();
+  }
+
+  /** D-pad page focus reports page-local coordinates; place the shared pointer in window coordinates. */
+  focusPageCursor(x: number, y: number): void {
+    const bounds = this.tabs.active?.view.getBounds();
+    if (!bounds) return;
+    this.placeWindowPointer(bounds.x + x, bounds.y + y);
+  }
+
+  private placeWindowPointer(x: number, y: number): void {
+    this.pointerX = x;
+    this.pointerY = y;
+    this.pointerPlaced = true;
+    void this.paintPointer();
+  }
+
+  private pointerTarget(): { wc: WebContents; x: number; y: number; page: boolean } {
+    const tab = this.tabs.active;
+    const bounds = tab && !tab.sleeping && !this.pageCovered ? tab.view.getBounds() : undefined;
+    if (tab && bounds && this.pointerX >= bounds.x && this.pointerX < bounds.x + bounds.width
+      && this.pointerY >= bounds.y && this.pointerY < bounds.y + bounds.height) {
+      return { wc: tab.webContents, x: this.pointerX - bounds.x, y: this.pointerY - bounds.y, page: true };
+    }
+    return { wc: this.window.webContents, x: this.pointerX, y: this.pointerY, page: false };
+  }
+
+  private async paintPointer(): Promise<void> {
+    if (this.pointerPainting) {
+      this.pointerRepaint = true;
+      return;
+    }
+    this.pointerPainting = true;
+    try {
+      do {
+        this.pointerRepaint = false;
+        await this.paintPointerFrame();
+      } while (this.pointerRepaint);
+    } finally {
+      this.pointerPainting = false;
+    }
+  }
+
+  private async paintPointerFrame(): Promise<void> {
+    if (this.pointerWindow.isDestroyed()) return;
+    if (this.pointerY <= 1 && !this.chromeVisible) this.revealChrome();
+    const target = this.pointerTarget();
+    // The bar stays while the pointer is over it, so it cannot vanish on the way to a button.
+    if (!target.page && this.chromeVisible) this.scheduleChromeHide();
+    const x = Math.round(target.x), y = Math.round(target.y);
+    target.wc.sendInputEvent({ type: "mouseMove", x, y });
+    // The arrow turns into a hand over whatever is clickable under it, in the page or in the shell.
+    // A page in the middle of a navigation never answers; without a deadline one stuck call would freeze the pointer for good.
+    const soon = <T,>(p: Promise<T | undefined>): Promise<T | undefined> => Promise.race([p, new Promise<undefined>((done) => setTimeout(done, 120))]);
+    const hand = target.page
+      ? await soon(runInPageWorld<boolean>(target.wc, `window.__joyCursor && window.__joyCursor.over(${x}, ${y})`))
+      : await soon<boolean>(this.window.webContents.executeJavaScript(`(() => { const e = document.elementFromPoint(${x}, ${y}); return Boolean(e && e.closest("button, a[href], [role=tab], [role=button], [role=menuitem]")); })()`).catch(() => false));
+    this.syncPointerWindow();
+    await soon(this.pointerWindow.webContents
+      .executeJavaScript(`window.__joyCursor.show(true, ${this.pointerX}, ${this.pointerY}, "${hand ? "hand" : "arrow"}")`)
+      .catch(() => undefined));
+  }
+
+  /** The pointer window covers exactly the window content, so window coordinates are its own. */
+  private syncPointerWindow(): void {
+    if (this.pointerWindow.isDestroyed()) return;
+    const bounds = this.window.getContentBounds();
+    const now = this.pointerWindow.getBounds();
+    if (now.x !== bounds.x || now.y !== bounds.y || now.width !== bounds.width || now.height !== bounds.height) this.pointerWindow.setBounds(bounds);
+    if (!this.pointerWindow.isVisible() && this.window.isVisible() && !this.window.isMinimized()) this.pointerWindow.showInactive();
+  }
+
+  private async movePointer(dx: number, dy: number): Promise<void> {
+    if (!this.pointerPlaced) this.showPointer();
+    const [width = 0, height = 0] = this.window.getContentSize();
+    this.pointerX = Math.min(Math.max(0, this.pointerX + dx), Math.max(0, width - 1));
+    this.pointerY = Math.min(Math.max(0, this.pointerY + dy), Math.max(0, height - 1));
+    await this.paintPointer();
+  }
+
+  private async clickPointer(button: "left" | "right" = "left"): Promise<void> {
+    if (!this.pointerPlaced) this.showPointer();
+    const target = this.pointerTarget();
+    target.wc.focus();
+    const x = Math.round(target.x), y = Math.round(target.y);
+    target.wc.sendInputEvent({ type: "mouseMove", x, y });
+    target.wc.sendInputEvent({ type: "mouseDown", x, y, button, clickCount: 1 });
+    target.wc.sendInputEvent({ type: "mouseUp", x, y, button, clickCount: 1 });
+    if (!this.pointerWindow.isDestroyed()) void this.pointerWindow.webContents.executeJavaScript("window.__joyCursor.press()").catch(() => undefined);
+  }
+
+  private async scrollPointer(notches: number, sideways = 0): Promise<void> {
+    if (!this.pointerPlaced) this.showPointer();
+    const target = this.pointerTarget();
+    target.wc.sendInputEvent({ type: "mouseWheel", x: Math.round(target.x), y: Math.round(target.y), deltaX: -sideways * 120, deltaY: -notches * 120 });
   }
 
   cycleInputMode(): void {
@@ -679,7 +797,7 @@ export class Shell {
     const tab = this.tabs.active;
     const host = tab ? hostOf(tab.url) : undefined;
     if (host && tab && !isInternal(tab.url)) this.deps.store.update((s) => withInputMode(s, host, next));
-    this.applyInputMode(next, true);
+    this.applyInputMode(next, false);
     this.broadcast();
   }
 
@@ -716,6 +834,10 @@ export class Shell {
   }
 
   async handleController(input: ControllerEvent): Promise<void> {
+    if (input.type === "cursor-move") { await this.movePointer(input.dx, input.dy); return; }
+    if (input.type === "cursor-focus") { this.placeWindowPointer(input.x, input.y); return; }
+    if (input.type === "cursor-click") { await this.clickPointer(input.button); return; }
+    if (input.type === "scroll") { await this.scrollPointer(input.notches, input.sideways); return; }
     await this.controller.run(input);
   }
 

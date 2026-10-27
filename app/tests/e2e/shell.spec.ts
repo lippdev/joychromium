@@ -69,7 +69,7 @@ test("shell UI, tabs, internal pages and session", async () => {
   await command({ type: "keyboard-close" });
   await expect(chrome.locator("#keyboard")).toHaveCount(0);
 
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => !w.getParentWindow())?.close());
   await expect.poll(() => existsSync(join(data, "session.json")), { timeout: 10_000 }).toBe(true);
 });
 

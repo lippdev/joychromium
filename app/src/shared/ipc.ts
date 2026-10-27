@@ -112,6 +112,7 @@ export type ShellCommand =
   | { type: "close-other-tabs"; id: number }
   | { type: "mute-tab"; id?: number }
   | { type: "toggle-favorite" }
+  | { type: "toggle-adblock" }
   | { type: "permission"; allow: boolean; remember: boolean }
   | { type: "window"; action: "minimize" | "maximize" | "close" }
   | { type: "zoom"; delta: number }
@@ -140,6 +141,8 @@ export type ControllerEvent =
   | { type: "direction"; direction: "up" | "down" | "left" | "right" }
   | { type: "activate" }
   | { type: "cursor-move"; dx: number; dy: number }
+  /** Window-relative point of the page target currently focused by the D-pad. */
+  | { type: "cursor-focus"; x: number; y: number }
   /** A at the pointer: a left click, or a right click when A was pressed twice in a row. */
   | { type: "cursor-click"; button?: "left" | "right" }
   /** The right stick: wheel notches down (positive) and to the right (`sideways`, positive). */

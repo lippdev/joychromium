@@ -92,9 +92,9 @@ describe("downloads", () => {
 describe("window layout", () => {
   it("puts the tab views under the chrome", () => {
     expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 26 }, true)).toEqual({ x: 0, y: 90, width: 1920, height: 964 });
-    expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 0 }, false)).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
+    expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 0 }, false)).toEqual({ x: 0, y: 1, width: 1920, height: 1079 });
     // The keyboard's room at the bottom stays when the chrome hides in TV mode.
-    expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 400 }, false)).toEqual({ x: 0, y: 0, width: 1920, height: 680 });
+    expect(tabViewBounds({ width: 1920, height: 1080 }, { top: 90, bottom: 400 }, false)).toEqual({ x: 0, y: 1, width: 1920, height: 679 });
     expect(tabViewBounds({ width: 0, height: 0 }, { top: 90, bottom: 26 }, true).height).toBe(0);
   });
 });

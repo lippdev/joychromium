@@ -1,8 +1,7 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ShellState, TabState } from "../../shared/ipc";
 import { applyShellStatePatch } from "../../shared/statePatch";
-import { buttonGlyphs } from "../../shared/controllerGlyphs";
 import { isBlockedStatus } from "../../shared/haptics";
 import { t } from "../../shared/i18n";
 import { isInternal } from "../../shared/pages";
@@ -27,9 +26,11 @@ const Empty: ShellState = {
 
 export function App() {
   const [state, setState] = useState<ShellState>(Empty);
-  const [overlay, setOverlay] = useState<"none" | "tabs" | "menu">("none");
+  const [overlay, setOverlay] = useState<"none" | "tabs" | "menu" | "adblock">("none");
   const [addressFocused, setAddressFocused] = useState(false);
+  const [adBlockPosition, setAdBlockPosition] = useState({ top: 0, right: 0 });
   const chromeRef = useRef<HTMLDivElement>(null);
+  const adBlockButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // One full snapshot when the UI says it is listening, then only the areas that changed, applied over it.
@@ -110,10 +111,18 @@ export function App() {
   const tr = (key: string) => t(state.language, key);
   const tv = state.windowMode === "tv";
   const overlayOpen = overlay !== "none" || Boolean(state.keyboard) || Boolean(state.permission);
+  const openAdBlockMenu = () => {
+    const rect = adBlockButtonRef.current?.getBoundingClientRect();
+    if (rect) setAdBlockPosition({ top: rect.bottom + 4, right: Math.max(8, window.innerWidth - rect.right) });
+    setOverlay("adblock");
+  };
 
   return (
     <div
       class={`shell ${tv ? "tv" : "window"} ${state.chromeVisible ? "" : "chrome-hidden"} ${overlayOpen ? "overlay-open" : ""}`}
+      // The mode and the pad in use are no longer drawn in the bar; the e2e reads them here.
+      data-mode={state.inputMode}
+      data-pad={state.controllerFamily}
       // A screen reader learns which control has focus from the focused document: while a tab view keeps the
       // window's focus, the reader hears the address bar's value but not its name.
       onFocusIn={() => bridge().focus()}
@@ -160,15 +169,16 @@ export function App() {
               <StarIcon size={18} filled={state.isFavorite} />
             </button>
           </AddressBar>
-          {/* What used to be the status line, as toolbar indicators: Edge shows its tracking shield the same way. */}
-          <div class="status-line">
-            <span class={`indicator ${state.adBlock ? "on" : ""}`} role="img" aria-label={state.adBlock ? tr("status.adsOn") : tr("status.adsOff")} title={state.adBlock ? tr("status.adsOn") : tr("status.adsOff")}>
-              <ShieldIcon />
-            </span>
-            <span class={`indicator pad ${state.controllerConnected ? "on" : "off"}`} title={state.controllerConnected ? tr("status.padOn") : tr("status.padOff")}>
-              <GamepadIcon /> <span class="mode">{state.inputMode.toUpperCase()}</span>
-            </span>
-          </div>
+          <button
+            ref={adBlockButtonRef}
+            class={`icon-btn ${state.adBlock ? "on" : ""}`}
+            aria-label={tr(state.adBlock ? "status.adsOn" : "status.adsOff")}
+            title={tr(state.adBlock ? "status.adsOn" : "status.adsOff")}
+            aria-haspopup="menu" aria-expanded={overlay === "adblock"}
+            onClick={() => overlay === "adblock" ? setOverlay("none") : openAdBlockMenu()}
+          >
+            <ShieldIcon />
+          </button>
           <button
             class="icon-btn" aria-label={tr("nav.menu")} title={`${tr("nav.menu")} · Start`}
             aria-haspopup="dialog" aria-expanded={overlay === "menu"} onClick={() => setOverlay("menu")}
@@ -176,33 +186,108 @@ export function App() {
             <MenuIcon />
           </button>
         </div>
-        {tv && (
-          <div class="tab-hint">
-            <span class="pad-hints">
-              {(() => {
-                const g = buttonGlyphs(state.controllerFamily);
-                return `${g.back} voltar · ${g.select} abrir · ${g.reload} recarregar · ${g.keyboard} teclado · ${g.stick} cursor`;
-              })()}
-            </span>
-          </div>
-        )}
       </div>
 
       {state.permission && <PermissionDialog prompt={state.permission} language={state.language} />}
       {cover && <img class="page-cover" src={cover} alt="" style={{ top: `${state.chromeVisible ? chromeTop : 0}px` }} />}
-      {state.keyboard && <Keyboard state={state} onInset={keyboardInset} />}
+      <Keyboard state={state} onInset={keyboardInset} open={Boolean(state.keyboard)} />
       {overlay === "tabs" && <TabSwitcher tabs={state.tabs} language={state.language} onClose={() => setOverlay("none")} />}
       {overlay === "menu" && <QuickMenu state={state} onClose={() => setOverlay("none")} onTabs={() => setOverlay("tabs")} />}
+      {overlay === "adblock" && <AdBlockMenu
+        state={state}
+        position={adBlockPosition}
+        onClose={(restoreFocus) => {
+          if (restoreFocus) adBlockButtonRef.current?.focus();
+          setOverlay("none");
+        }}
+      />}
+    </div>
+  );
+}
+
+function AdBlockMenu({ state, position, onClose }: {
+  state: ShellState;
+  position: { top: number; right: number };
+  onClose: (restoreFocus: boolean) => void;
+}) {
+  const tr = (key: string) => t(state.language, key);
+  const action = state.adBlock ? "nav.adblock.disable" : "nav.adblock.enable";
+  const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => { menu.current?.querySelector<HTMLButtonElement>("[role='menuitem']")?.focus(); }, []);
+  return (
+    <div class="overlay adblock-dropdown" onClick={() => onClose(false)} onKeyDown={(e) => {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose(true); }
+    }}>
+      <div class="menu adblock-menu" ref={menu} role="menu" aria-label={tr("nav.adblock.title")} style={{ top: `${position.top}px`, right: `${position.right}px` }} onClick={(e) => e.stopPropagation()}>
+        <p class="adblock-status" role="status">{tr(state.adBlock ? "status.adsOn" : "status.adsOff")}</p>
+        <button class="menu-item" role="menuitem" onClick={() => { cmd({ type: "toggle-adblock" }); onClose(true); }}>
+          <ShieldIcon /> {tr(action)}
+        </button>
+      </div>
     </div>
   );
 }
 
 /** Edge's tab strip: every tab with its icon, title and close button, the active one joined to the toolbar below. */
 function TabStrip({ tabs, language }: { tabs: TabState[]; language: string }) {
+  const [displayed, setDisplayed] = useState(() => tabs.map((tab) => ({ tab, phase: "shown" as const })));
+  const previous = useRef(tabs);
+  const timers = useRef(new Map<string, number>());
+  // Keep the tab strip in sync before paint: the native page view switches tabs as soon as the main process
+  // receives the command, so a passive effect leaves the previous tab's active styling visible for one frame.
+  useLayoutEffect(() => {
+    const currentIds = new Set(tabs.map((tab) => tab.id));
+    const previousIds = new Set(previous.current.map((tab) => tab.id));
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const exiting = reduceMotion ? [] : displayed.filter((entry) => !currentIds.has(entry.tab.id));
+    for (const id of currentIds) {
+      const timer = timers.current.get(id);
+      if (timer) window.clearTimeout(timer);
+      timers.current.delete(id);
+    }
+    const live = tabs.map((tab) => {
+      const current = displayed.find((entry) => entry.tab.id === tab.id);
+      const phase = previousIds.has(tab.id) ? (current?.phase === "entering" ? "entering" as const : "shown" as const) : reduceMotion ? "shown" as const : "entering" as const;
+      return { tab, phase };
+    });
+    for (const entry of exiting) {
+      if (!timers.current.has(entry.tab.id)) {
+        timers.current.set(entry.tab.id, window.setTimeout(() => {
+          setDisplayed((items) => items.filter((item) => item.tab.id !== entry.tab.id));
+          timers.current.delete(entry.tab.id);
+        }, 220));
+      }
+    }
+    const ghostsBefore = new Map<string, typeof exiting>();
+    const ghostsAtEnd: typeof exiting = [];
+    for (const entry of exiting) {
+      const oldIndex = displayed.findIndex((item) => item.tab.id === entry.tab.id);
+      const nextLive = displayed.slice(oldIndex + 1).find((item) => currentIds.has(item.tab.id));
+      if (nextLive) ghostsBefore.set(nextLive.tab.id, [...(ghostsBefore.get(nextLive.tab.id) ?? []), entry]);
+      else ghostsAtEnd.push(entry);
+    }
+    const ordered: typeof displayed = [];
+    for (const entry of live) {
+      for (const ghost of ghostsBefore.get(entry.tab.id) ?? []) ordered.push({ ...ghost, phase: "exiting" });
+      ordered.push(entry);
+    }
+    for (const ghost of ghostsAtEnd) ordered.push({ ...ghost, phase: "exiting" });
+    setDisplayed(ordered);
+    previous.current = tabs;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    if (live.some((entry) => entry.phase === "entering")) {
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => setDisplayed((items) => items.map((item) => item.phase === "entering" ? { ...item, phase: "shown" } : item)));
+      });
+    }
+    return () => { window.cancelAnimationFrame(firstFrame); window.cancelAnimationFrame(secondFrame); };
+  }, [tabs]);
+  useEffect(() => () => { for (const timer of timers.current.values()) window.clearTimeout(timer); }, []);
   return (
     <nav class="tabs" aria-label={t(language, "nav.tabs")}>
-      {tabs.map((tab) => (
-        <div key={tab.id} class={`tab ${tab.isActive ? "active" : ""} ${tab.sleeping ? "sleeping" : ""}`}>
+      {displayed.map(({ tab, phase }) => (
+        <div key={tab.id} class={`tab ${tab.isActive ? "active" : ""} ${tab.sleeping ? "sleeping" : ""} ${phase}`} inert={phase === "exiting"} aria-hidden={phase === "exiting"}>
           <button
             class="tab-main"
             title={tab.title || tab.url}

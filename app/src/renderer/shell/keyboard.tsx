@@ -36,32 +36,57 @@ const SIDES: Record<Layer, [string, string]> = { letters: ["/", ".com"], symbols
  * The D-pad and the left stick walk the keys and A presses one. While the address is typed, the shell's suggestions
  * sit above the keys: D-pad up from the top row enters them, and A opens one.
  */
-export function Keyboard({ state, onInset }: { state: ShellState; onInset: (bottom: number) => void }) {
+export function Keyboard({ state, onInset, open }: { state: ShellState; onInset: (bottom: number) => void; open: boolean }) {
+  const [mounted, setMounted] = useState(open);
+  const lastState = useRef(state);
+  if (open) lastState.current = state;
+  const shownState = open ? state : lastState.current;
+  useEffect(() => {
+    if (open) { setMounted(true); return; }
+    if (!mounted) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setMounted(false); return; }
+    const timer = window.setTimeout(() => setMounted(false), 180);
+    return () => window.clearTimeout(timer);
+  }, [open, mounted]);
   const [layer, setLayer] = useState<Layer>("letters");
   const [shift, setShift] = useState(false);
   const [selected, setSelected] = useState(-1);
+  const wasOpen = useRef(false);
   const dialog = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
-  const tr = (key: string) => t(state.language, key);
-  const glyphs = buttonGlyphs(state.controllerFamily);
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      setLayer("letters");
+      setShift(false);
+      setSelected(-1);
+    }
+    wasOpen.current = open;
+  }, [open]);
+  const tr = (key: string) => t(shownState.language, key);
+  const glyphs = buttonGlyphs(shownState.controllerFamily);
   // The page shrinks to end above the keyboard, so the field being typed into stays in sight and live.
   useEffect(() => {
     const report = () => {
-      const top = panel.current?.getBoundingClientRect().top;
-      if (top !== undefined) onInset(Math.max(0, Math.round(window.innerHeight - top)));
+      const element = panel.current;
+      if (element) {
+        // Measure layout dimensions, not its animated visual position, so the native page inset stays steady.
+        const marginBottom = parseFloat(getComputedStyle(element).marginBottom) || 0;
+        onInset(Math.max(0, Math.round(element.offsetHeight + marginBottom)));
+      }
     };
     const observer = new ResizeObserver(report);
     if (panel.current) observer.observe(panel.current);
     report();
     return () => { observer.disconnect(); onInset(0); };
-  }, []);
+  }, [mounted]);
   // Opened from the controller the dialog takes focus so the screen reader announces it (the first D-pad press then
   // lands on "q"); opened by clicking the address field the field keeps it, because that is where a physical keyboard types.
   useEffect(() => {
-    if (document.activeElement?.id !== "address") dialog.current?.focus();
-  }, []);
-  const target = state.keyboard?.target ?? "address";
-  const suggestions = target === "address" ? state.suggestions : [];
+    if (open && document.activeElement?.id !== "address") dialog.current?.focus();
+  }, [open, mounted]);
+  if (!mounted) return null;
+  const target = shownState.keyboard?.target ?? "address";
+  const suggestions = target === "address" ? shownState.suggestions : [];
 
   const type = (text: string) => {
     const value = shift ? text.toUpperCase() : text;
@@ -93,7 +118,7 @@ export function Keyboard({ state, onInset }: { state: ShellState; onInset: (bott
   const [left, right] = SIDES[layer];
 
   return (
-    <div ref={dialog} tabindex={-1} class="overlay bottom" id="keyboard" role="dialog" aria-label={tr("a11y.keyboard")} aria-describedby="keyboard-hint">
+    <div ref={dialog} tabindex={-1} class={`overlay bottom ${open ? "keyboard-open" : "keyboard-exiting"}`} id="keyboard" role="dialog" aria-label={tr("a11y.keyboard")} aria-describedby="keyboard-hint" aria-hidden={!open} inert={!open}>
       <div class="keyboard" ref={panel}>
         <p id="keyboard-hint" class="sr-only">{tr("input.hint")}</p>
 

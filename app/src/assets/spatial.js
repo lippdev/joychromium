@@ -34,6 +34,12 @@
     el.classList.add('__joy-focus');
     try { el.focus({ preventScroll: true }); } catch (_) {}
     el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    // Keep the controller pointer on the item the D-pad just focused. This runs in each frame, so an iframe's
+    // focused control gets its own correctly positioned pointer too.
+    if (window.__joyCursor) {
+      const r = el.getBoundingClientRect();
+      window.__joyCursor.moveTo(r.left + r.width / 2, r.top + r.height / 2);
+    }
   };
   const focused = () => {
     const a = document.activeElement;
@@ -200,6 +206,12 @@
       // The focused frame owns the direction; one that never answers (no script, or a dead document) hands it back here.
       return frame ? call(frame, 'move', dir).then(r => (r === undefined ? moveFrom(frame, dir) : r)) : moveFrom(null, dir);
     },
+    focusPoint() {
+      const el = focused();
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    },
     activate() {
       const el = focused();
       if (!el) return 'none';
@@ -323,16 +335,25 @@
     if (drawn.x !== at.x || drawn.y !== at.y) frame = requestAnimationFrame(paint);
   };
   window.__joyCursor = {
-    show(visible, x, y) {
+    // `kind` ("arrow" or "hand") is given when the pointer is drawn apart from what lies under it (pointer.html).
+    show(visible, x, y, kind) {
       const c = ensure();
       const appearing = c.style.display !== 'block';
       at = { x, y };
       c.style.display = visible ? 'block' : 'none';
       if (!visible) return;
-      setShape(c, overClickable(x, y) ? 'hand' : 'arrow');
+      setShape(c, kind || (overClickable(x, y) ? 'hand' : 'arrow'));
       // Appearing, it shows up where it is rather than sliding in from where it was last seen.
       if (appearing || !drawn) drawn = { x, y };
       if (!frame) frame = requestAnimationFrame(paint);
+    },
+    over: overClickable,
+    moveTo(x, y) {
+      at = { x, y };
+      if (el && el.style.display === 'block') {
+        setShape(el, overClickable(x, y) ? 'hand' : 'arrow');
+        if (!frame) frame = requestAnimationFrame(paint);
+      }
     },
     // A short squeeze around the tip on every click, so a press from the sofa is seen to land.
     press() {
