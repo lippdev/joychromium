@@ -17,9 +17,11 @@ Para cada cenário: **passou / falhou**, quantos segundos demorou a primeira res
 2. **Tela inicial → YouTube TV.** Abra o app de TV pelo D-pad, entre num vídeo, veja se a barra se esconde sozinha sobre o conteúdo e se o B volta ao estado anterior. Anote se o foco "pula" algum card (pontuação do `spatial`).
 3. **Digitar sem teclado físico.** Pesquise "previsão do tempo" com o teclado virtual (incluindo uma palavra com acento, como "ação"), navegue pelas sugestões e abra o resultado. Marque se o cursor virtual (modo Spatial) chegou em tudo.
 4. **Três abas.** Abra três abas, alterne pelo seletor em grade e feche uma, só com o controle. Veja se as miniaturas aparecem e se o foco começa na aba ativa.
-5. **Permissão de microfone.** Abra um site que peça o microfone (ou o teste do WebRTC), percorra o prompt com o D-pad e escolha "permitir sempre". Confirme em Configurações que a permissão ficou salva para o site.
-6. **Atualização.** Em Windows/Linux: com uma versão nova publicada, deixe o download acontecer, feche o app e reabra; no `.deb`/`.rpm` use **Reiniciar e instalar** em Configurações → Sobre e confirme o pedido de senha. No macOS, o app deve avisar e abrir a página da release.
-7. **Streaming com DRM.** Abra a Netflix, entre na conta e toque um título. Registre a resolução que o player mostra e o que a linha "Widevine (DRM)" diz em Configurações → Sobre.
+5. **Campo de texto com A.** Numa página com um campo (a caixa de busca da nova aba, ou a do YouTube), leve o D-pad até o campo: o teclado **não** deve abrir só de passar por ele. Aperte A: o teclado abre, o D-pad e o analógico andam pelas teclas a partir da primeira, e A escreve no campo. Feche com B e repita: a segunda vez tem de funcionar igual à primeira.
+6. **Subir até a barra.** No topo de qualquer página, aperte para cima: o foco vai para a barra de endereço (sem abrir o teclado). Ande para os lados até voltar, avançar e recarregar, suba até as abas e o +, e aperte A em cada um. Para baixo (ou B) volta para a página. Os botões de minimizar, maximizar e fechar ficam de fora de propósito.
+7. **Permissão de microfone.** Abra um site que peça o microfone (ou o teste do WebRTC), percorra o prompt com o D-pad e escolha "permitir sempre". Confirme em Configurações que a permissão ficou salva para o site.
+8. **Atualização.** Em Windows/Linux: com uma versão nova publicada, deixe o download acontecer, feche o app e reabra; no `.deb`/`.rpm` use **Reiniciar e instalar** em Configurações → Sobre e confirme o pedido de senha. No macOS, o app deve avisar e abrir a página da release.
+9. **Streaming com DRM.** Abra a Netflix, entre na conta e toque um título. Registre a resolução que o player mostra e o que a linha "Widevine (DRM)" diz em Configurações → Sobre.
 
 Leitor de tela é o outro lado da mesma sessão: o roteiro de Orca, Narrator e VoiceOver está em [SCREEN-READER.md](SCREEN-READER.md).
 

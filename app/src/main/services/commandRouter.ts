@@ -67,7 +67,9 @@ export class CommandRouter {
         break;
       case "find-close": h.find = undefined; wc?.stopFindInPage("clearSelection"); h.broadcast(); break;
       case "keyboard-open": h.openKeyboard(command.target); break;
-      case "keyboard-close": h.closeKeyboard(); wc?.focus(); break;
+      // Back to where the typing came from: the page, or the toolbar when the D-pad had reached the address field.
+      case "keyboard-close": h.closeKeyboard(); if (!h.chromeFocused) wc?.focus(); break;
+      case "focus-page": h.leaveChrome(); break;
       case "keyboard-insert": if (h.keyboard?.target === "page") await insertIntoPage(wc, command.text); break;
       case "keyboard-backspace": if (h.keyboard?.target === "page") await insertIntoPage(wc, ""); break;
       case "keyboard-submit":

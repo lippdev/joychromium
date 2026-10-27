@@ -13,6 +13,8 @@ export interface ShellBridge {
   /** Whether the window is on screen, so idle loops park while it is minimized. Returns its own unsubscribe. */
   onActivity(callback: (activity: ShellActivity) => void): () => void;
   thumbnails(): Promise<{ id: number; dataUrl: string }[]>;
+  /** The D-pad went up out of the page: focus the toolbar. */
+  onFocusChrome(callback: () => void): void;
   /** The active page as an image, painted under a modal overlay while the live view is hidden. */
   snapshot(): Promise<string>;
   preferences(): Promise<ShellPreferences>;

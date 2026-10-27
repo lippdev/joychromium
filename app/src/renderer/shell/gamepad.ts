@@ -105,15 +105,18 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         cmd({ type: "close-tab" });
         return;
       }
+      const chrome = !overlayOpen && inChrome();
       if (justPressed(Button.B)) {
         if (openOverlay !== "none") setOverlay("none");
         else if (s.permission) cmd({ type: "permission", allow: false, remember: false });
         else if (s.keyboard) cmd({ type: "keyboard-close" });
+        else if (chrome) leaveChrome();
         else cmd({ type: "back" });
         return;
       }
       if (justPressed(Button.A)) {
         if (openOverlay !== "none" || s.permission || s.keyboard) (document.activeElement as HTMLElement | null)?.click();
+        else if (chrome) activateChrome();
         else bridge().controller({ type: "activate" });
         vibrate("confirm");
         return;
@@ -149,9 +152,13 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
         lastDirection.current = now;
         if (moveSuggestionFocus(direction)) { /* the D-pad walked the address suggestions */ }
         else if (openOverlay !== "none" || s.permission || s.keyboard) moveOverlayFocus(direction);
+        // Down with nothing under the toolbar goes back into the page.
+        else if (chrome) { if (!moveFocusAmong(chromeControls(), direction) && direction === "down") leaveChrome(); }
         else bridge().controller({ type: "direction", direction });
       }
     }
+    // Up from the top of the page: the main process hands the focus over and the address field takes it.
+    bridge().onFocusChrome(() => document.getElementById("address")?.focus());
     resume();
     const visibility = (): void => {
       if (!document.hidden) resume();
@@ -198,28 +205,76 @@ function moveSuggestionFocus(direction: Direction): boolean {
   return true;
 }
 
+/**
+ * The D-pad is on the tabs or the toolbar: one of their controls has the focus and the shell's document has the
+ * window's. A click into the page leaves the shell's focused element in place, which is why the window focus counts too.
+ */
+function inChrome(): boolean {
+  return document.hasFocus() && Boolean((document.activeElement as HTMLElement | null)?.closest("#chrome"));
+}
+
+/** What the D-pad walks on the tabs and the toolbar. Minimize, maximize and close stay off it: one A would close the app. */
+function chromeControls(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>("#chrome button:not([disabled]), #chrome input")]
+    .filter((el) => !el.closest(".window-controls") && el.getClientRects().length > 0);
+}
+
+/** A on the toolbar: the address field opens the controller keyboard, anything else is pressed. */
+function activateChrome(): void {
+  const el = document.activeElement as HTMLElement | null;
+  if (el?.id === "address") cmd({ type: "keyboard-open", target: "address" });
+  else el?.click();
+}
+
+function leaveChrome(): void {
+  (document.activeElement as HTMLElement | null)?.blur();
+  cmd({ type: "focus-page" });
+}
+
 /** Spatial focus among the shell's own buttons, used while a dialog or the keyboard is open. */
 function moveOverlayFocus(direction: Direction): void {
   const group = (document.querySelector('.overlay[role="dialog"]') as HTMLElement | null) ?? document.body;
   const buttons = [...group.querySelectorAll<HTMLElement>("button:not([disabled])")];
   const current = document.activeElement as HTMLElement | null;
-  const index = current ? buttons.indexOf(current) : -1;
-  if (index < 0) { buttons[0]?.focus(); return; }
-  const rect = current!.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
+  // Nothing focused inside yet (a dialog opens with the focus on itself): the first press lands on the first key of the
+  // keyboard, or the first button of any other dialog, not on the close button in the corner.
+  if (!current || !buttons.includes(current)) { (group.querySelector<HTMLElement>(".key") ?? buttons[0])?.focus(); return; }
+  moveFocusAmong(buttons, direction);
+}
+
+/** Moves the focus to the nearest control in `direction`; false when there is none, so the caller decides what that means. */
+function moveFocusAmong(controls: HTMLElement[], direction: Direction): boolean {
+  const current = document.activeElement as HTMLElement | null;
+  if (!current || !controls.includes(current)) {
+    if (!controls[0]) return false;
+    controls[0].focus();
+    return true;
+  }
+  // Measured edge to edge, like the page's spatial.js: a wide control (the address field) has its centre far from its
+  // neighbours, and centre distances sent the D-pad to the tab strip instead of the reload button beside it.
+  const from = current.getBoundingClientRect();
+  const fc = { x: from.left + from.width / 2, y: from.top + from.height / 2 };
   let best: HTMLElement | undefined;
   let bestScore = Infinity;
-  for (const button of buttons) {
-    if (button === current) continue;
-    const r = button.getBoundingClientRect();
-    const dx = r.left + r.width / 2 - cx;
-    const dy = r.top + r.height / 2 - cy;
-    const ahead = direction === "up" ? -dy : direction === "down" ? dy : direction === "left" ? -dx : dx;
-    if (ahead <= 4) continue;
-    const off = direction === "up" || direction === "down" ? Math.abs(dx) : Math.abs(dy);
-    const score = ahead + off * 2;
-    if (score < bestScore) { best = button; bestScore = score; }
+  for (const control of controls) {
+    if (control === current) continue;
+    const r = control.getBoundingClientRect();
+    const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    const vertical = direction === "up" || direction === "down";
+    // Ahead means its centre is ahead, so a control inside the current one (the close button on a tab card) is reachable;
+    // the distance is edge to edge, and overlapping the current control along the way counts as distance too.
+    const centreAhead = direction === "up" ? fc.y - c.y : direction === "down" ? c.y - fc.y : direction === "left" ? fc.x - c.x : c.x - fc.x;
+    if (centreAhead <= 4) continue;
+    const ahead = Math.abs(direction === "up" ? from.top - r.bottom : direction === "down" ? r.top - from.bottom
+      : direction === "left" ? from.left - r.right : r.left - from.right);
+    const off = vertical ? Math.abs(c.x - fc.x) : Math.abs(c.y - fc.y);
+    const overlap = vertical
+      ? Math.min(r.right, from.right) - Math.max(r.left, from.left)
+      : Math.min(r.bottom, from.bottom) - Math.max(r.top, from.top);
+    // Sharing the row or the column is what counts; the centres only break a tie between neighbours that both do.
+    const score = ahead + off * (overlap > 0 ? 0.1 : 2.2);
+    if (score < bestScore) { best = control; bestScore = score; }
   }
   best?.focus();
+  return best !== undefined;
 }

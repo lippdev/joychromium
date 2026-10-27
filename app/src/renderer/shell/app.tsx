@@ -253,7 +253,10 @@ function AddressBar({ url, focused, setFocused, language, keyboard, children }: 
         autocomplete="off"
         spellcheck={false}
         value={value}
-        onFocus={() => { setFocused(true); cmd({ type: "keyboard-open", target: "address" }); (input.current as HTMLInputElement).select(); }}
+        // A click (or A on the field from the D-pad, see gamepad.ts) opens the controller keyboard; focus alone does not, or
+        // walking the toolbar with the D-pad would pop the keyboard up on the way past.
+        onMouseDown={() => cmd({ type: "keyboard-open", target: "address" })}
+        onFocus={() => { setFocused(true); (input.current as HTMLInputElement).select(); }}
         onBlur={() => setFocused(false)}
         onKeyDown={(e) => {
           // Down leaves the field for the suggestions the controller keyboard shows, so both inputs reach them.
