@@ -126,6 +126,7 @@ describe("command validation", () => {
     expect(isShellCommand({ type: "new-tab" })).toBe(true);
     expect(isShellCommand({ type: "close-tab" })).toBe(true);
     expect(isShellCommand({ type: "close-tab", id: 3 })).toBe(true);
+    expect(isShellCommand({ type: "close-tab", keepWindow: true })).toBe(true);
     expect(isShellCommand({ type: "navigate", url: "https://a.example" })).toBe(true);
     expect(isShellCommand({ type: "permission", allow: true, remember: false })).toBe(true);
     expect(isShellCommand({ type: "window", action: "close" })).toBe(true);
@@ -138,6 +139,7 @@ describe("command validation", () => {
     expect(isShellCommand({ type: "navigate" })).toBe(false);
     expect(isShellCommand({ type: "navigate", url: "https://a.example", allowHttp: "yes" })).toBe(false);
     expect(isShellCommand({ type: "close-tab", id: "3" })).toBe(false);
+    expect(isShellCommand({ type: "close-tab", keepWindow: "yes" })).toBe(false);
     expect(isShellCommand({ type: "window", action: "explode" })).toBe(false);
     expect(isShellCommand({ type: "permission", allow: true })).toBe(false);
   });

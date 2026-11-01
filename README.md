@@ -46,7 +46,7 @@ Per-user install, no admin. Windows 10 or 11 and a controller: Xbox, PlayStation
 | **LB / RB** | Back / forward | — |
 | **LT / RT** | Previous / next tab | **LT**: Shift |
 | **Start** | Quick menu | Go |
-| **Back / View** | Closes the tab | — |
+| **Back / View** | Closes the tab (on the last tab, opens a new one; never quits) | — |
 | **Right stick click** | Switches the D-pad mode: *Spatial → Cursor → Arrows* (remembered per site) | — |
 | **Left stick click** | — | Letters → symbols → accents |
 

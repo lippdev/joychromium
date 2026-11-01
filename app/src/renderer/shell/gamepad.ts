@@ -138,7 +138,7 @@ export function useGamepad(state: ShellState, overlay: Overlay, setOverlay: (o: 
       }
       if (justPressed(Button.Back)) {
         setOverlay("none");
-        cmd({ type: "close-tab" });
+        cmd({ type: "close-tab", keepWindow: true });
         return;
       }
       const chrome = !overlayOpen && inChrome();
