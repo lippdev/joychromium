@@ -9,7 +9,7 @@ O alpha atual destina-se ao Windows 10/11. macOS e Linux estão no [roadmap](ROA
 3. Se o SmartScreen mostrar **O Windows protegeu o seu PC**, confira que baixou da página oficial de releases; para prosseguir, escolha **Mais informações → Executar assim mesmo**.
 4. Abra o JoyChromium pelo menu Iniciar. Na primeira execução, conclua o onboarding e conecte o controle que pretende usar.
 
-As versões alpha 0.x são pré-releases e não entram no canal automático: baixe manualmente cada versão nova na página de releases. O atualizador oferece versões estáveis a partir da 1.0. O instalador está sem assinatura de código, então o aviso do SmartScreen é esperado. DRM e streaming pago ainda não têm validação suficiente para serem anunciados como prontos.
+Depois de instalado, o JoyChromium se atualiza sozinho: a cada abertura ele verifica se há versão nova (pré-releases 0.x incluídas), baixa em segundo plano e instala em silêncio. Quem está numa versão anterior à 0.1.5 precisa instalar uma vez à mão a primeira versão com atualização automática. O instalador está sem assinatura de código, então o aviso do SmartScreen é esperado. DRM e streaming pago ainda não têm validação suficiente para serem anunciados como prontos.
 
 ## Primeira execução
 
@@ -21,6 +21,6 @@ O app inicia em tela cheia no modo TV. O onboarding permite escolher idioma e bu
 |---|---|
 | “O Windows protegeu o seu PC” | Confirme a origem do instalador; se quiser continuar, **Mais informações → Executar assim mesmo**. |
 | Controle não aparece | Reconecte-o, confirme que o Windows o reconhece e reinicie o app. O mapeamento depende do controle e do driver. |
-| Nova versão 0.x não aparece no atualizador | É esperado para pré-releases; baixe a versão desejada pela página de releases. |
+| Nova versão não chega sozinha | Versões até a 0.1.4 não se atualizam: instale a mais recente pela página de releases uma vez. Depois disso, confira o status em Configurações. |
 
 Para plataformas futuras, consulte os documentos técnicos a partir de [ROADMAP.md](ROADMAP.md).

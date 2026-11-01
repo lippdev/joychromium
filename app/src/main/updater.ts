@@ -1,6 +1,6 @@
 import { app, shell } from "electron";
 import { currentUpdateInstaller, installsUpdatesWithPackageManager, platformId } from "./platform";
-import { followsUpdateChannel } from "../shared/updates";
+import { followsPrereleases, installsAtLaunch } from "../shared/updates";
 import type { Log } from "./log";
 
 /** Where the updater looks for the download page when it cannot install by itself. */
@@ -9,8 +9,8 @@ export const RELEASES_URL = "https://github.com/lippdev/joychromium/releases/lat
 export const RELEASES_PAGE_URL = "https://github.com/lippdev/joychromium/releases";
 /** Release metadata electron-builder publishes next to each build. */
 const LATEST_MAC_YML = "https://github.com/lippdev/joychromium/releases/latest/download/latest-mac.yml";
-/** What the settings row says on a pre-1.0 build, which is published as a pre-release and updates by hand. */
-export const alphaUpdateStatus = (version: string): string => `v${version} is an alpha build; new versions come from the releases page`;
+/** What the settings row says on a pre-1.0 build that cannot install by itself (macOS) and so updates by hand. */
+export const alphaUpdateStatus = (version: string): string => `v${version} is a pre-release build; new versions come from the releases page`;
 
 /**
  * What the settings row says inside the Flatpak sandbox. The bundle is one unit the host updates together with its
@@ -40,7 +40,9 @@ export function versionFromUpdateYml(text: string): string | undefined {
 }
 
 /**
- * Self-update through electron-updater, fed by GitHub Releases. Checks in the background, downloads, installs on quit.
+ * Self-update through electron-updater, fed by GitHub Releases. Every launch checks in the background and downloads
+ * silently; an update ready while the app is still opening (`installsAtLaunch`) is installed with the silent NSIS
+ * installer and the app reopens on its own, and one that lands later installs silently when the app closes.
  * Versions the remote policy marks as broken are skipped. Does nothing when running unpackaged.
  *
  * macOS builds are not signed with a Developer ID (ADR-010), and Squirrel.Mac refuses to apply updates to an
@@ -49,8 +51,9 @@ export function versionFromUpdateYml(text: string): string | undefined {
  * Flatpak builds are updated by the host from Flathub, so inside the sandbox `check()` reports that and stops before
  * electron-updater (or even the release metadata) is reached.
  *
- * Pre-1.0 builds are published as pre-releases, which GitHub's `releases/latest` never serves: they do not check the
- * automatic channel either, and point the user at the release list instead.
+ * Pre-1.0 builds are published as pre-releases, which GitHub's `releases/latest` never serves: electron-updater reads
+ * the release feed for them (`allowPrerelease`). Only the macOS path, which reads `releases/latest` by hand, still
+ * points a pre-release build at the release list.
  */
 export class Updater {
   status = "Not checked yet";
@@ -58,6 +61,9 @@ export class Updater {
   private updater: typeof import("electron-updater").autoUpdater | undefined;
   /** Set when a newer version exists but the app must update by hand. */
   manualUpdate: { version: string; url: string } | undefined;
+
+  /** When the process started, to tell an update ready at launch from one that lands while the app is in use. */
+  private readonly launchedAt = Date.now();
 
   constructor(private readonly log: Log, private readonly blockedVersions: () => readonly string[]) {
     if (this.hostUpdatesIt) this.status = FLATPAK_UPDATE_STATUS;
@@ -86,13 +92,20 @@ export class Updater {
     if (!app.isPackaged || !this.installsItself) return undefined;
     if (!this.updater) {
       const { autoUpdater } = require("electron-updater") as typeof import("electron-updater");
-      autoUpdater.autoDownload = true;
+      // The download starts below, once the version is known not to be blocked by the remote policy.
+      autoUpdater.autoDownload = false;
+      // Pre-releases come from the release feed: `releases/latest` never serves them, and every build below 1.0 is one.
+      autoUpdater.allowPrerelease = followsPrereleases(app.getVersion());
       // A package manager prompt after the window closed would be a prompt nobody sees: the user starts the install.
       autoUpdater.autoInstallOnAppQuit = !this.packageManaged;
       autoUpdater.logger = { info: (m) => this.log.info(`updater: ${String(m)}`), warn: (m) => this.log.warn(`updater: ${String(m)}`), error: (m) => this.log.error(`updater: ${String(m)}`), debug: () => undefined };
       autoUpdater.on("update-downloaded", (info) => {
         this.downloaded = true;
         this.status = updateDownloadedNotice(info.version, this.packageManaged);
+        if (this.packageManaged || !installsAtLaunch(Date.now() - this.launchedAt)) return;
+        // Still opening: install now, silently, and reopen. Nothing the user started is cut off this early.
+        this.log.info(`updater: installing v${info.version} at launch`);
+        setImmediate(() => autoUpdater.quitAndInstall(true, true));
       });
       this.updater = autoUpdater;
     }
@@ -123,12 +136,12 @@ export class Updater {
       this.status = "Running unpackaged; self-update only works when installed";
       return;
     }
-    if (!followsUpdateChannel(app.getVersion())) {
+    const updater = this.autoUpdater;
+    if (!updater && followsPrereleases(app.getVersion())) {
       this.manualUpdate = { version: app.getVersion(), url: RELEASES_PAGE_URL };
       this.status = alphaUpdateStatus(app.getVersion());
       return;
     }
-    const updater = this.autoUpdater;
     if (!updater) {
       const version = await this.latestVersion();
       if (!version || version === app.getVersion()) {
@@ -147,16 +160,19 @@ export class Updater {
     try {
       const result = await updater.checkForUpdates();
       const version = result?.updateInfo.version;
-      if (!version || version === app.getVersion()) {
+      if (!version || !result.isUpdateAvailable) {
         this.status = `v${app.getVersion()} is up to date`;
         return;
       }
       if (this.blockedVersions().includes(version)) {
         this.status = `v${version} is blocked by policy; staying on v${app.getVersion()}`;
-        updater.autoDownload = false;
         return;
       }
       this.status = `v${version} available; downloading`;
+      // Not awaited: a slow download must not hold the maintenance chain; `update-downloaded` takes it from here.
+      updater.downloadUpdate().catch((error: unknown) => {
+        this.status = `Update download failed: ${error instanceof Error ? error.message : String(error)}`;
+      });
     } catch (error) {
       this.status = `Update check failed: ${error instanceof Error ? error.message : String(error)}`;
     }

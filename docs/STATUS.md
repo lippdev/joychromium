@@ -16,7 +16,7 @@ O alpha destina-se somente ao Windows 10/11, x64 e arm64. macOS, Linux, Steam De
 
 - Sessão em TV com controle físico, registrada pelo [roteiro](CONTROLLER-TEST.md).
 - Widevine/DRM em serviço real no Windows. Até haver reprodução verificada, streaming pago não está pronto nem prometido.
-- Atualização: abaixo da 1.0 o app não se atualiza sozinho; Configurações → Sobre leva à página de releases.
+- Atualização: no Windows o app se atualiza sozinho a cada abertura, pré-releases 0.x incluídas (verifica, baixa e instala em silêncio; pronto nos primeiros 45 s instala e reabre, senão instala ao fechar). Versões até a 0.1.4 não têm isso e precisam de uma instalação manual. O caminho real de atualização (instalar a 0.1.5 sobre a anterior) ainda precisa ser provado numa máquina Windows.
 
 A ausência de assinatura do instalador pode mostrar o aviso do SmartScreen. Ela não substitui nenhuma das validações acima.
 
