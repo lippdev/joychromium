@@ -104,7 +104,8 @@ export type ShellCommand =
   | { type: "home" }
   | { type: "settings" }
   | { type: "new-tab"; isPrivate?: boolean }
-  | { type: "close-tab"; id?: number }
+  /** `keepWindow`: the last tab gives way to a new one instead of closing the window (the controller's View button). */
+  | { type: "close-tab"; id?: number; keepWindow?: boolean }
   | { type: "activate-tab"; id: number }
   | { type: "switch-tab"; offset: number }
   | { type: "reopen-tab" }

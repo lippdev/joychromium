@@ -46,7 +46,7 @@ Instala só para o seu usuário, sem administrador. Requer Windows 10 ou 11 e um
 | **LB / RB** | Voltar / avançar | — |
 | **LT / RT** | Aba anterior / próxima | **LT**: Shift |
 | **Start** | Menu rápido | Enviar |
-| **Back / View** | Fecha a aba | — |
+| **Back / View** | Fecha a aba (na última, abre uma nova; nunca fecha o navegador) | — |
 | **Clique do analógico direito** | Troca o modo do D-pad: *Espacial → Cursor → Setas* (lembrado por site) | — |
 | **Clique do analógico esquerdo** | — | Letras → símbolos → acentos |
 

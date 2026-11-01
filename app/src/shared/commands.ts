@@ -26,6 +26,7 @@ export function isShellCommand(raw: unknown): raw is ShellCommand {
     case "address-input":
       return typeof c.text === "string";
     case "close-tab":
+      return optionalNumber(c.id) && (c.keepWindow === undefined || typeof c.keepWindow === "boolean");
     case "mute-tab":
       return optionalNumber(c.id);
     case "activate-tab":

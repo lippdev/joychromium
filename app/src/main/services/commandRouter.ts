@@ -25,6 +25,8 @@ export class CommandRouter {
       case "close-tab": {
         const tab = command.id === undefined ? h.tabs.active : h.tabs.byId(command.id);
         if (tab) {
+          // One press of View on the last tab must not quit a TV browser: a new tab takes its place first.
+          if (command.keepWindow && h.tabs.tabs.length === 1) h.newTab();
           h.tabs.close(tab);
           if (h.tabs.tabs.length === 0) h.window.close();
         }

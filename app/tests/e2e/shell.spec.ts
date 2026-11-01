@@ -60,6 +60,14 @@ test("shell UI, tabs, internal pages and session", async () => {
   await command({ type: "close-tab" });
   await expect.poll(tabs).toHaveLength(1);
 
+  // The controller's View button on the last tab puts a new tab in its place instead of closing the browser.
+  await command({ type: "navigate", url: "about:blank" });
+  await settle();
+  await command({ type: "close-tab", keepWindow: true });
+  await expect.poll(async () => (await tabs()).map((t) => t.url)).toEqual(["joychromium://newtab"]);
+  await settle();
+  await command({ type: "keyboard-close" });
+
   // Blocked scheme never navigates; a toast says why.
   await command({ type: "navigate", url: "file:///C:/Windows" });
   await expect(chrome.locator(".toasts")).toContainText("BLOCKED");
