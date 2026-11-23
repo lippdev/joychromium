@@ -12,21 +12,27 @@ Um navegador para a TV que você usa com o **controle de videogame**, do sofá. 
 [English](README.md) · Português (Brasil)
 
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
-![Versão](https://img.shields.io/github/v/release/lippdev/joychromium?include_prereleases&label=vers%C3%A3o&color=orange)
+![Versão](https://img.shields.io/github/v/release/lippdev/joychromium?label=vers%C3%A3o&color=orange)
 ![Licença](https://img.shields.io/github/license/lippdev/joychromium?label=licen%C3%A7a)
 
 <img src="docs/assets/demo.gif" alt="Tour do JoyChromium: o analógico esquerdo move o ponteiro, o D-pad pula entre os links, o teclado na tela digita um endereço e o analógico direito rola a página." width="800">
 
 ## Baixar
 
-Baixe a **[0.1.0-alpha](https://github.com/lippdev/joychromium/releases/tag/v0.1.0-alpha)**, a primeira versão pública de teste:
+### Windows 10/11
 
-- **`JoyChromium-0.1.0-alpha-win-x64.exe`**: a maioria dos PCs (Intel e AMD).
-- **`JoyChromium-0.1.0-alpha-win-arm64.exe`**: PCs com processador Snapdragon (ARM).
+Baixe o **[JoyChromium 0.1.5](https://github.com/lippdev/joychromium/releases/tag/v0.1.5)**, a primeira versão estável para Windows.
+
+- **`JoyChromium-0.1.5-win-x64.exe`** para PCs Intel e AMD.
+- **`JoyChromium-0.1.5-win-arm64.exe`** para PCs com Windows em ARM.
 
 Instala só para o seu usuário, sem administrador. Requer Windows 10 ou 11 e um controle: Xbox, PlayStation (DualShock / DualSense), Switch Pro, 8BitDo ou qualquer um que o Windows reconheça como gamepad.
 
-> **Esta é uma alpha.** Espere arestas. Ela ainda não se atualiza sozinha: as versões novas aparecem na [página de releases](https://github.com/lippdev/joychromium/releases) (para ser avisado, clique em *Watch* → *Custom* → *Releases*). Netflix e outros serviços de streaming pagos ainda não foram validados.
+O JoyChromium verifica atualizações estáveis ao abrir e instala em silêncio. Se você usa a 0.1.4-beta ou anterior, instale esta versão manualmente uma vez. A reprodução na Netflix e em outros serviços de streaming pagos ainda precisa de validação.
+
+### Linux (CachyOS)
+
+O AppImage alfa x64 está disponível para testes pelo [GitHub Actions](https://github.com/lippdev/joychromium/actions/workflows/ci.yml). A validação no CachyOS está em andamento. As atualizações são manuais.
 
 ## Como funciona
 
@@ -61,16 +67,6 @@ No controle de PlayStation as letras viram ✕ ○ □ △; os símbolos do tecl
 - Abas com miniaturas, abas anônimas, histórico, favoritos e ícones dos sites
 - Abre a partir de launchers: flags `--tv` / `--window` / `--new-tab` e links `joychromium://`, para o [Console Mode](https://github.com/lippdev/consolemode), o Playnite ou a Steam abrirem o app ([integrações](docs/INTEGRATIONS.md))
 - Português e inglês
-
-## Novidades da 0.1.0-alpha
-
-A primeira versão pública:
-
-- **Ponteiro no analógico esquerdo**, que desliza pela página, pela barra e pelos menus, com o A para clicar e o analógico direito como roda do mouse
-- **Teclado no estilo do Xbox:** X apaga, Y dá espaço, LT é o Shift, Start envia e o clique do analógico esquerdo troca a camada
-- **O D-pad chega em tudo:** para cima, do topo da página, vai para a barra de endereço, os botões e as abas; uma aba nova começa na barra de endereço
-- **Bloqueador de anúncios na barra:** o escudo liga e desliga
-- **Onboarding novo**, com a escolha do buscador (Google, DuckDuckGo, Bing, Brave ou Startpage) e um teste do controle
 
 ## Roadmap
 
