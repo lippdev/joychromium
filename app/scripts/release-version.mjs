@@ -12,7 +12,7 @@ function parseSemver(version) {
 export function isPrerelease(version) {
   const match = parseSemver(version);
   if (!match) throw new Error(`Invalid SemVer version: ${version}`);
-  return Boolean(match[4]) || Number(match[1]) === 0;
+  return Boolean(match[4]);
 }
 
 export function selectReleaseVersion({ requested, current, latest, bump = "patch" }) {

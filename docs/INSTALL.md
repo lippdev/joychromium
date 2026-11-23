@@ -1,6 +1,6 @@
 # Instalando o JoyChromium no Windows
 
-O alpha atual destina-se ao Windows 10/11. macOS e Linux estão no [roadmap](ROADMAP.md); os guias antigos dessas plataformas não são instruções de instalação do alpha atual.
+O JoyChromium oferece instaladores para Windows 10/11. O AppImage x64 para CachyOS está em validação alfa no GitHub Actions. O macOS está no [roadmap](ROADMAP.md).
 
 ## Windows
 
@@ -9,7 +9,7 @@ O alpha atual destina-se ao Windows 10/11. macOS e Linux estão no [roadmap](ROA
 3. Se o SmartScreen mostrar **O Windows protegeu o seu PC**, confira que baixou da página oficial de releases; para prosseguir, escolha **Mais informações → Executar assim mesmo**.
 4. Abra o JoyChromium pelo menu Iniciar. Na primeira execução, conclua o onboarding e conecte o controle que pretende usar.
 
-Depois de instalado, o JoyChromium se atualiza sozinho: a cada abertura ele verifica se há versão nova (pré-releases 0.x incluídas), baixa em segundo plano e instala em silêncio. Quem está numa versão anterior à 0.1.5 precisa instalar uma vez à mão a primeira versão com atualização automática. O instalador está sem assinatura de código, então o aviso do SmartScreen é esperado. DRM e streaming pago ainda não têm validação suficiente para serem anunciados como prontos.
+Depois de instalado, o JoyChromium verifica novas versões a cada abertura, baixa em segundo plano e instala em silêncio. As versões estáveis seguem o canal estável. Quem está na 0.1.4-beta ou anterior precisa atualizar manualmente uma vez. DRM e streaming pago ainda precisam de validação.
 
 ## Primeira execução
 

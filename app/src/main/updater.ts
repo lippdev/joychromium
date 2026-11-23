@@ -5,11 +5,11 @@ import type { Log } from "./log";
 
 /** Where the updater looks for the download page when it cannot install by itself. */
 export const RELEASES_URL = "https://github.com/lippdev/joychromium/releases/latest";
-/** The whole release list, which is where a pre-1.0 build has to look: `latest` never points at a pre-release. */
+/** The whole release list, including pre-releases. */
 export const RELEASES_PAGE_URL = "https://github.com/lippdev/joychromium/releases";
 /** Release metadata electron-builder publishes next to each build. */
 const LATEST_MAC_YML = "https://github.com/lippdev/joychromium/releases/latest/download/latest-mac.yml";
-/** What the settings row says on a pre-1.0 build that cannot install by itself (macOS) and so updates by hand. */
+/** What the settings row says on a pre-release that updates by hand. */
 export const alphaUpdateStatus = (version: string): string => `v${version} is a pre-release build; new versions come from the releases page`;
 
 /**
@@ -51,9 +51,8 @@ export function versionFromUpdateYml(text: string): string | undefined {
  * Flatpak builds are updated by the host from Flathub, so inside the sandbox `check()` reports that and stops before
  * electron-updater (or even the release metadata) is reached.
  *
- * Pre-1.0 builds are published as pre-releases, which GitHub's `releases/latest` never serves: electron-updater reads
- * the release feed for them (`allowPrerelease`). Only the macOS path, which reads `releases/latest` by hand, still
- * points a pre-release build at the release list.
+ * Windows pre-releases use the release feed through `allowPrerelease`. Experimental Linux pre-releases
+ * are distributed separately and updated by hand.
  */
 export class Updater {
   status = "Not checked yet";
@@ -75,7 +74,9 @@ export class Updater {
   }
 
   private get installsItself(): boolean {
-    return platformId() !== "darwin" && !this.hostUpdatesIt;
+    const platform = platformId();
+    return platform !== "darwin" && !this.hostUpdatesIt
+      && !(platform === "linux" && followsPrereleases(app.getVersion()));
   }
 
   /** True on a deb or rpm install, where the downloaded package goes through dpkg/rpm as root. */
@@ -94,7 +95,7 @@ export class Updater {
       const { autoUpdater } = require("electron-updater") as typeof import("electron-updater");
       // The download starts below, once the version is known not to be blocked by the remote policy.
       autoUpdater.autoDownload = false;
-      // Pre-releases come from the release feed: `releases/latest` never serves them, and every build below 1.0 is one.
+      // Pre-releases come from the release feed: `releases/latest` never serves them.
       autoUpdater.allowPrerelease = followsPrereleases(app.getVersion());
       // A package manager prompt after the window closed would be a prompt nobody sees: the user starts the install.
       autoUpdater.autoInstallOnAppQuit = !this.packageManaged;

@@ -16,6 +16,7 @@ test("a clean release reset uses package metadata, ignoring historic tags", () =
 });
 
 test("manual versions accept stable SemVer and reject malformed input", () => {
+  assert.equal(isPrerelease("0.1.5"), false);
   assert.equal(selectReleaseVersion({ requested: "1.0.0", current: "0.1.0-alpha" }), "1.0.0");
   assert.equal(selectReleaseVersion({ requested: "0.1.0-alpha.1", current: "0.1.0-alpha" }), "0.1.0-alpha.1");
   assert.throws(() => selectReleaseVersion({ requested: "v01.0.0", current: "0.1.0-alpha" }), /Invalid requested/);

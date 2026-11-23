@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest";
 import { followsPrereleases, installsAtLaunch, LAUNCH_INSTALL_WINDOW_MS } from "../../src/shared/updates";
 
 describe("update channel", () => {
-  it("follows the pre-releases below 1.0 and on suffixed versions", () => {
-    expect(followsPrereleases("0.1.0")).toBe(true);
+  it("follows the pre-releases on suffixed versions", () => {
     expect(followsPrereleases("0.1.4-beta")).toBe(true);
     expect(followsPrereleases("0.1.0-alpha.1")).toBe(true);
     expect(followsPrereleases("2.0.0-beta.1")).toBe(true);
   });
 
-  it("follows the stable releases from 1.0 on", () => {
+  it("follows the stable releases on versions without a pre-release suffix", () => {
+    expect(followsPrereleases("0.1.5")).toBe(false);
+    expect(followsPrereleases("0.1.5+build-test")).toBe(false);
     expect(followsPrereleases("1.0.0")).toBe(false);
     expect(followsPrereleases("1.2.3")).toBe(false);
     expect(followsPrereleases("10.0.0")).toBe(false);

@@ -5,8 +5,8 @@ name: Release
 #   2. A manual dispatch with an optional exact SemVer version or a bump level.
 # Versions advance from published GitHub Releases, never historic tags. Windows builds with that version injected,
 # then installers + update metadata go to a GitHub Release
-# and installed apps pick it up through electron-updater. Anything below 1.0 is published as a pre-release: 0.x builds
-# are for trying out, not for the `latest` channel an installed app follows.
+# and installed apps pick it up through electron-updater. Only versions with a SemVer pre-release suffix
+# are published outside the stable channel.
 on:
   push:
     branches: [main]
@@ -153,5 +153,5 @@ jobs:
           if [ "$PRERELEASE" = "true" ]; then
             gh release edit "$VERSION" --notes-file notes.md --draft=false --prerelease --latest=false
           else
-            gh release edit "$VERSION" --notes-file notes.md --draft=false
+            gh release edit "$VERSION" --notes-file notes.md --draft=false --latest
           fi

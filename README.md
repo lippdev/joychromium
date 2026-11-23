@@ -12,21 +12,27 @@ A web browser for the TV that you drive with a **game controller** from the couc
 English · [Português (Brasil)](README.pt-BR.md)
 
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
-![Version](https://img.shields.io/github/v/release/lippdev/joychromium?include_prereleases&label=version&color=orange)
+![Version](https://img.shields.io/github/v/release/lippdev/joychromium?label=version&color=orange)
 ![License](https://img.shields.io/github/license/lippdev/joychromium)
 
 <img src="docs/assets/demo.gif" alt="JoyChromium tour: the left stick moves the pointer, the D-pad jumps between links, the on-screen keyboard types an address and the right stick scrolls the page." width="800">
 
 ## Download
 
-Get **[0.1.0-alpha](https://github.com/lippdev/joychromium/releases/tag/v0.1.0-alpha)**, the first public test version:
+### Windows 10/11
 
-- **`JoyChromium-0.1.0-alpha-win-x64.exe`**: most PCs (Intel and AMD).
-- **`JoyChromium-0.1.0-alpha-win-arm64.exe`**: PCs with a Snapdragon (ARM) processor.
+Download **[JoyChromium 0.1.5](https://github.com/lippdev/joychromium/releases/tag/v0.1.5)**, the first stable Windows release.
+
+- **`JoyChromium-0.1.5-win-x64.exe`** for Intel and AMD PCs.
+- **`JoyChromium-0.1.5-win-arm64.exe`** for Windows on ARM PCs.
 
 Per-user install, no admin. Windows 10 or 11 and a controller: Xbox, PlayStation (DualShock / DualSense), Switch Pro, 8BitDo or any pad Windows sees as a gamepad.
 
-> **This is an alpha.** Expect rough edges. It does not update itself yet: new versions show up on the [releases page](https://github.com/lippdev/joychromium/releases) (watch the repo → *Custom* → *Releases* to be told). Netflix and other paid streaming services are not validated yet.
+JoyChromium checks for stable updates on launch and installs them silently. If you use 0.1.4-beta or earlier, install this release manually once. Playback on Netflix and other paid streaming services still needs validation.
+
+### Linux (CachyOS)
+
+The x64 AppImage alpha is available for testing through [GitHub Actions](https://github.com/lippdev/joychromium/actions/workflows/ci.yml). CachyOS validation is in progress. Updates are manual.
 
 ## How it works
 
@@ -61,16 +67,6 @@ On a PlayStation pad the letters become ✕ ○ □ △; the keyboard's button g
 - Tabs with previews, private tabs, history, favorites and site icons
 - Opens from launchers: `--tv` / `--window` / `--new-tab` flags and `joychromium://` links, so [Console Mode](https://github.com/lippdev/consolemode), Playnite or Steam can start it ([integrations](docs/INTEGRATIONS.md))
 - English and Portuguese
-
-## What's new in 0.1.0-alpha
-
-The first public build:
-
-- **A pointer on the left stick** that glides over the page, the toolbar and the menus, with A to click and the right stick as the wheel
-- **Xbox-style keyboard:** X deletes, Y adds a space, LT is Shift, Start sends, and the left stick click changes the layer
-- **The D-pad reaches everything:** up from the top of a page goes to the address bar, the buttons and the tabs; a new tab starts on the address bar
-- **Ad blocker on the toolbar:** the shield turns it on or off
-- **New onboarding** with your search engine (Google, DuckDuckGo, Bing, Brave or Startpage) and a controller test
 
 ## Roadmap
 
