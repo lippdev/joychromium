@@ -1,16 +1,8 @@
-/**
- * Which channel a build follows (E9-04 / release policy) and when a downloaded update is applied.
- *
- * Every release below 1.0 is published as a GitHub pre-release, and `releases/latest` never points at one. electron-
- * updater's `allowPrerelease` reads the release feed instead, so a pre-1.0 or suffixed build follows the pre-releases
- * and still updates by itself.
- */
-
-/** True when the build must look at pre-releases too: anything below 1.0, or any version with a pre-release suffix. */
+/** Whether a build with a SemVer pre-release suffix follows the GitHub pre-release feed. */
 export function followsPrereleases(version: string): boolean {
-  const match = /^(\d+)\.\d+\.\d+(-[0-9A-Za-z.-]+)?/.exec(version);
+  const match = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(version);
   if (!match) return true;
-  return Number(match[1]) < 1 || Boolean(match[2]);
+  return Boolean(match[1]);
 }
 
 /**

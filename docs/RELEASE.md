@@ -1,6 +1,6 @@
-# Release do alpha Windows
+# Releases do JoyChromium
 
-Este documento descreve o processo de release destinado ao alpha Windows. Builds para macOS/Linux, Flathub e suas atualizações são trabalho futuro listado em [ROADMAP.md](ROADMAP.md).
+O workflow de release publica os instaladores Windows. O CI gera o AppImage x64 experimental para validação no CachyOS como artefato separado. O AppImage alfa é atualizado manualmente.
 
 ## Quando uma release acontece
 
@@ -8,7 +8,7 @@ O workflow de release tem dois gatilhos: push na `main` de um commit `chore(deps
 
 ## Artefatos Windows
 
-As releases Windows publicam instaladores x64 e arm64 (`.exe`) e o metadado do atualizador (`latest.yml`). Consulte a [página de releases](https://github.com/lippdev/joychromium/releases) e confirme os nomes efetivamente publicados. No Windows, o app se atualiza sozinho, inclusive nas pré-releases 0.x (o `electron-updater` lê o feed de releases com `allowPrerelease`): a cada abertura ele verifica, baixa em segundo plano e instala em silêncio; se o download fica pronto nos primeiros 45 s, instala e reabre na hora, senão instala ao fechar. Uma build estável (1.0 sem sufixo) só segue releases estáveis.
+As releases Windows publicam instaladores x64 e arm64 (`.exe`) e o metadado do atualizador (`latest.yml`). A partir da 0.1.5-beta, o app verifica atualizações a cada abertura, baixa em segundo plano e instala em silêncio. Se o download fica pronto nos primeiros 45 s, instala e reabre na hora. Depois disso, instala ao fechar. Versões com sufixo alfa ou beta seguem pré-releases. Versões sem sufixo, como a 0.1.5, seguem o canal estável.
 
 O instalador não tem certificado de assinatura; o SmartScreen pode exibir um aviso. A presença do instalador não prova DRM funcional: Widevine e reprodução em serviços pagos continuam gates de validação do alpha.
 
